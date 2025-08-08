@@ -54,11 +54,11 @@ app.add_middleware(
 )
 
 # Montagem dos routers
-app.include_router(alunos_fastapi.router, prefix="/api/v1")
-app.include_router(professores_fastapi.router, prefix="/api/v1")
-app.include_router(turmas_fastapi.router, prefix="/api/v1")
-app.include_router(eventos_fastapi.router, prefix="/api/v1")
-app.include_router(financeiro_fastapi.router, prefix="/api/v1")
+app.include_router(alunos_fastapi.router, prefix="/api/v1/alunos")
+app.include_router(professores_fastapi.router, prefix="/api/v1/professores")
+app.include_router(turmas_fastapi.router, prefix="/api/v1/turmas")
+app.include_router(eventos_fastapi.router, prefix="/api/v1/eventos")
+app.include_router(financeiro_fastapi.router, prefix="/api/v1/financeiro")
 
 # Servir arquivos estáticos
 static_dir = Path(__file__).parent / "src" / "static"
@@ -81,3 +81,4 @@ async def root():
             {"financeiro": "/api/v1/financeiro/transacoes"}
         ]
     }
+

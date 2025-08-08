@@ -15,7 +15,6 @@ from src.models.professor import Professor # Importar para verificar existência
 from src.schemas.turma import TurmaCreate, TurmaRead, TurmaUpdate
 
 router = APIRouter(
-    prefix="/api/v1/turmas",
     tags=["Turmas"],
     responses={404: {"description": "Não encontrado"}},
 )

@@ -31,7 +31,6 @@ except Exception as e:
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 router = APIRouter(
-    prefix="/api/v1/alunos",
     tags=["Alunos"],
     responses={404: {"description": "Aluno não encontrado"}},
 )
@@ -274,3 +273,4 @@ def delete_aluno(aluno_id: int, db: Session = Depends(get_db)):
     db.delete(db_aluno)
     db.commit()
     return None
+

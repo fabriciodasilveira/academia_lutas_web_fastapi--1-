@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+
+{% block title %}
+{% if professor %}Editar Professor{% else %}Novo Professor{% endif %} - Academia de Lutas
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h3 mb-0">
+                <i class="fas fa-user-{% if professor %}edit{% else %}plus{% endif %} me-2"></i>
+                {% if professor %}Editar Professor{% else %}Novo Professor{% endif %}
+            </h1>
+            <a href="{{ url_for('professores_list') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>
+                Voltar
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Informações do Professor
+                </h5>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('professores_salvar') }}" method="POST" enctype="multipart/form-data">
+                    {% if professor %}
+                    <input type="hidden" name="id" value="{{ professor.id }}">
+                    {% endif %}
+                    
+                    <div class="row g-3">
+                        <!-- Nome -->
+                        <div class="col-md-6">
+                            <label for="nome" class="form-label">
+                                <i class="fas fa-user me-1"></i>
+                                Nome Completo *
+                            </label>
+                            <input type="text" class="form-control" id="nome" name="nome" 
+                                   value="{{ professor.nome if professor else '' }}" required>
+                        </div>
+
+                        <!-- Email -->
+                        <div class="col-md-6">
+                            <label for="email" class="form-label">
+                                <i class="fas fa-envelope me-1"></i>
+                                Email
+                            </label>
+                            <input type="email" class="form-control" id="email" name="email" 
+                                   value="{{ professor.email if professor else '' }}">
+                        </div>
+
+                        <!-- Telefone -->
+                        <div class="col-md-6">
+                            <label for="telefone" class="form-label">
+                                <i class="fas fa-phone me-1"></i>
+                                Telefone
+                            </label>
+                            <input type="tel" class="form-control" id="telefone" name="telefone" 
+                                   value="{{ professor.telefone if professor else '' }}" placeholder="(11) 99999-9999">
+                        </div>
+
+                        <!-- Especialidade -->
+                        <div class="col-md-6">
+                            <label for="especialidade" class="form-label">
+                                <i class="fas fa-medal me-1"></i>
+                                Especialidade *
+                            </label>
+                            <select class="form-select" id="especialidade" name="especialidade" required>
+                                <option value="">Selecione uma especialidade</option>
+                                <option value="jiu-jitsu" {% if professor and professor.especialidade == 'jiu-jitsu' %}selected{% endif %}>Jiu-Jitsu</option>
+                                <option value="muay-thai" {% if professor and professor.especialidade == 'muay-thai' %}selected{% endif %}>Muay Thai</option>
+                                <option value="boxe" {% if professor and professor.especialidade == 'boxe' %}selected{% endif %}>Boxe</option>
+                                <option value="mma" {% if professor and professor.especialidade == 'mma' %}selected{% endif %}>MMA</option>
+                                <option value="karate" {% if professor and professor.especialidade == 'karate' %}selected{% endif %}>Karatê</option>
+                                <option value="taekwondo" {% if professor and professor.especialidade == 'taekwondo' %}selected{% endif %}>Taekwondo</option>
+                                <option value="judo" {% if professor and professor.especialidade == 'judo' %}selected{% endif %}>Judô</option>
+                            </select>
+                        </div>
+
+                        <!-- Data de Contratação -->
+                        <div class="col-md-6">
+                            <label for="data_contratacao" class="form-label">
+                                <i class="fas fa-calendar me-1"></i>
+                                Data de Contratação
+                            </label>
+                            <input type="date" class="form-control" id="data_contratacao" name="data_contratacao" 
+                                   value="{{ professor.data_contratacao if professor else '' }}">
+                        </div>
+
+                        <!-- Salário -->
+                        <div class="col-md-6">
+                            <label for="salario" class="form-label">
+                                <i class="fas fa-dollar-sign me-1"></i>
+                                Salário (R$)
+                            </label>
+                            <input type="number" class="form-control" id="salario" name="salario" 
+                                   value="{{ professor.salario if professor else '' }}" 
+                                   step="0.01" min="0" placeholder="0,00">
+                        </div>
+
+                        <!-- Foto de Perfil -->
+                        <div class="col-12">
+                            <label for="foto_perfil" class="form-label">
+                                <i class="fas fa-camera me-1"></i>
+                                Foto de Perfil
+                            </label>
+                            <input type="file" class="form-control" id="foto_perfil" name="foto_perfil" 
+                                   accept="image/*">
+                            <div class="form-text">
+                                Formatos aceitos: JPG, PNG, GIF. Tamanho máximo: 5MB.
+                            </div>
+                            {% if professor and professor.foto_perfil %}
+                            <div class="mt-2">
+                                <img src="{{ professor.foto_perfil }}" alt="Foto atual" class="img-thumbnail" style="max-width: 150px;">
+                                <div class="form-text">Foto atual</div>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Observações -->
+                        <div class="col-12">
+                            <label for="observacoes" class="form-label">
+                                <i class="fas fa-sticky-note me-1"></i>
+                                Observações
+                            </label>
+                            <textarea class="form-control" id="observacoes" name="observacoes" rows="3" 
+                                      placeholder="Informações adicionais sobre o professor...">{{ professor.observacoes if professor else '' }}</textarea>
+                        </div>
+                    </div>
+
+                    <!-- Botões -->
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="d-flex gap-2 justify-content-end">
+                                <a href="{{ url_for('professores_list') }}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-times me-1"></i>
+                                    Cancelar
+                                </a>
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-save me-1"></i>
+                                    {% if professor %}Atualizar{% else %}Cadastrar{% endif %}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Card de Certificações e Qualificações -->
+        <div class="card border-0 shadow-sm mt-4">
+            <div class="card-header bg-transparent border-0">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-certificate me-2"></i>
+                    Certificações e Qualificações
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="graduacao" class="form-label">
+                            <i class="fas fa-award me-1"></i>
+                            Graduação/Faixa
+                        </label>
+                        <input type="text" class="form-control" id="graduacao" name="graduacao" 
+                               placeholder="Ex: Faixa Preta 3º Dan">
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="certificacoes" class="form-label">
+                            <i class="fas fa-scroll me-1"></i>
+                            Certificações
+                        </label>
+                        <input type="text" class="form-control" id="certificacoes" name="certificacoes" 
+                               placeholder="Ex: CREF, CBJ, etc.">
+                    </div>
+                    
+                    <div class="col-12">
+                        <label for="experiencia" class="form-label">
+                            <i class="fas fa-history me-1"></i>
+                            Experiência Profissional
+                        </label>
+                        <textarea class="form-control" id="experiencia" name="experiencia" rows="3" 
+                                  placeholder="Descreva a experiência profissional do professor..."></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Máscara para telefone
+document.getElementById('telefone').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length >= 11) {
+        value = value.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+    } else if (value.length >= 7) {
+        value = value.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
+    } else if (value.length >= 3) {
+        value = value.replace(/(\d{2})(\d{0,5})/, '($1) $2');
+    }
+    e.target.value = value;
+});
+
+// Validação do formulário
+document.querySelector('form').addEventListener('submit', function(e) {
+    const nome = document.getElementById('nome').value.trim();
+    const especialidade = document.getElementById('especialidade').value;
+    
+    if (!nome) {
+        e.preventDefault();
+        alert('O nome é obrigatório!');
+        document.getElementById('nome').focus();
+        return false;
+    }
+    
+    if (!especialidade) {
+        e.preventDefault();
+        alert('A especialidade é obrigatória!');
+        document.getElementById('especialidade').focus();
+        return false;
+    }
+});
+
+// Preview da foto
+document.getElementById('foto_perfil').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const existingPreview = document.getElementById('photo-preview');
+            if (existingPreview) {
+                existingPreview.remove();
+            }
+            
+            const preview = document.createElement('div');
+            preview.id = 'photo-preview';
+            preview.className = 'mt-2';
+            preview.innerHTML = `
+                <img src="${e.target.result}" alt="Preview" class="img-thumbnail" style="max-width: 150px;">
+                <div class="form-text">Preview da nova foto</div>
+            `;
+            
+            document.getElementById('foto_perfil').parentNode.appendChild(preview);
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+// Formatação do salário
+document.getElementById('salario').addEventListener('blur', function(e) {
+    const value = parseFloat(e.target.value);
+    if (!isNaN(value)) {
+        e.target.value = value.toFixed(2);
+    }
+});
+</script>
+{% endblock %}
+

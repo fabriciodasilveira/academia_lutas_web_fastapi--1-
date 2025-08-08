@@ -31,7 +31,6 @@ except Exception as e:
     UPLOAD_DIR_EVENTOS.mkdir(parents=True, exist_ok=True)
 
 router = APIRouter(
-    prefix="/api/v1/eventos",
     tags=["Eventos"],
     responses={404: {"description": "Não encontrado"}},
 )
@@ -176,3 +175,52 @@ def delete_foto(evento_id: int, foto_id: int, db: Session = Depends(get_db)):
     db.commit()
     
     return None
+
+# @router.get("", response_model=List[EventoRead])
+# def get_eventos(
+#     skip: int = 0,
+#     limit: int = 100,
+#     db: Session = Depends(get_db)
+# ):
+#     """
+#     Retorna uma lista de todos os eventos cadastrados.
+    
+#     Parâmetros:
+#     - skip: Número de registros para pular (para paginação)
+#     - limit: Número máximo de registros para retornar
+#     """
+#     eventos = db.query(Evento).offset(skip).limit(limit).all()
+#     return eventos
+
+@router.get("", response_model=List[EventoRead])
+def get_eventos(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+):
+    eventos = db.query(Evento).offset(skip).limit(limit).all()
+    
+    # Serialização segura
+    return [
+        EventoRead.model_validate(evento.__dict__).model_dump()
+        for evento in eventos
+    ]
+
+@router.get("/{evento_id}", response_model=EventoRead)
+def get_evento_by_id(
+    evento_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Retorna um evento específico pelo seu ID.
+    
+    Parâmetros:
+    - evento_id: ID do evento a ser recuperado
+    """
+    db_evento = db.query(Evento).filter(Evento.id == evento_id).first()
+    if db_evento is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Evento não encontrado"
+        )
+    return db_evento

@@ -14,7 +14,6 @@ from src.models.financeiro import Financeiro
 from src.schemas.financeiro import FinanceiroCreate, FinanceiroRead, FinanceiroUpdate
 
 router = APIRouter(
-    prefix="/api/v1/financeiro",
     tags=["Financeiro"],
     responses={404: {"description": "Não encontrado"}},
 )

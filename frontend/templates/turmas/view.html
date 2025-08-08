@@ -1,0 +1,534 @@
+{% extends "base.html" %}
+
+{% block title %}{{ turma.nome if turma else 'Turma' }} - Academia de Lutas{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h3 mb-0">
+                <i class="fas fa-users-cog me-2"></i>
+                Detalhes da Turma
+            </h1>
+            <div class="btn-group">
+                <a href="{{ url_for('turmas_list') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>
+                    Voltar
+                </a>
+                {% if turma %}
+                <a href="{{ url_for('turmas_editar', id=turma.id) }}" class="btn btn-info">
+                    <i class="fas fa-edit me-1"></i>
+                    Editar
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if turma %}
+<div class="row">
+    <!-- Informações Principais -->
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Informações da Turma
+                    </h5>
+                    {% if turma.ativa %}
+                        <span class="badge bg-success">Ativa</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Inativa</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0">
+                                <div class="bg-info bg-opacity-10 rounded-circle p-2">
+                                    <i class="fas fa-users-cog text-info"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h6 class="mb-0">Nome da Turma</h6>
+                                <p class="mb-0 text-muted">{{ turma.nome }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0">
+                                <div class="bg-warning bg-opacity-10 rounded-circle p-2">
+                                    <i class="fas fa-medal text-warning"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h6 class="mb-0">Modalidade</h6>
+                                <p class="mb-0 text-muted">
+                                    {% if turma.modalidade %}
+                                        <span class="badge bg-warning text-dark">{{ turma.modalidade|title }}</span>
+                                    {% else %}
+                                        Não informada
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0">
+                                <div class="bg-success bg-opacity-10 rounded-circle p-2">
+                                    <i class="fas fa-chalkboard-teacher text-success"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h6 class="mb-0">Professor</h6>
+                                <p class="mb-0 text-muted">
+                                    {% if turma.professor %}
+                                        <a href="{{ url_for('professores_view', id=turma.professor.id) }}" class="text-decoration-none">
+                                            {{ turma.professor.nome }}
+                                        </a>
+                                    {% else %}
+                                        Não atribuído
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0">
+                                <div class="bg-primary bg-opacity-10 rounded-circle p-2">
+                                    <i class="fas fa-layer-group text-primary"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h6 class="mb-0">Nível</h6>
+                                <p class="mb-0 text-muted">
+                                    {% if turma.nivel %}
+                                        <span class="badge bg-primary">{{ turma.nivel|title }}</span>
+                                    {% else %}
+                                        Não informado
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0">
+                                <div class="bg-danger bg-opacity-10 rounded-circle p-2">
+                                    <i class="fas fa-clock text-danger"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h6 class="mb-0">Horário</h6>
+                                <p class="mb-0 text-muted">
+                                    {% if turma.horario %}
+                                        {{ turma.horario }}
+                                    {% else %}
+                                        Não informado
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0">
+                                <div class="bg-info bg-opacity-10 rounded-circle p-2">
+                                    <i class="fas fa-users text-info"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h6 class="mb-0">Capacidade</h6>
+                                <p class="mb-0 text-muted">
+                                    {% if turma.capacidade_maxima %}
+                                        {{ turma.total_alunos or 0 }}/{{ turma.capacidade_maxima }} alunos
+                                    {% else %}
+                                        {{ turma.total_alunos or 0 }} alunos
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if turma.valor_mensalidade %}
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0">
+                                <div class="bg-success bg-opacity-10 rounded-circle p-2">
+                                    <i class="fas fa-dollar-sign text-success"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h6 class="mb-0">Mensalidade</h6>
+                                <p class="mb-0 text-muted">R$ {{ "%.2f"|format(turma.valor_mensalidade) }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if turma.idade_minima %}
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0">
+                                <div class="bg-warning bg-opacity-10 rounded-circle p-2">
+                                    <i class="fas fa-child text-warning"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h6 class="mb-0">Idade Mínima</h6>
+                                <p class="mb-0 text-muted">{{ turma.idade_minima }} anos</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if turma.descricao %}
+                    <div class="col-12">
+                        <div class="d-flex align-items-start">
+                            <div class="flex-shrink-0">
+                                <div class="bg-secondary bg-opacity-10 rounded-circle p-2">
+                                    <i class="fas fa-align-left text-secondary"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h6 class="mb-0">Descrição</h6>
+                                <p class="mb-0 text-muted">{{ turma.descricao }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if turma.observacoes %}
+                    <div class="col-12">
+                        <div class="d-flex align-items-start">
+                            <div class="flex-shrink-0">
+                                <div class="bg-secondary bg-opacity-10 rounded-circle p-2">
+                                    <i class="fas fa-sticky-note text-secondary"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h6 class="mb-0">Observações</h6>
+                                <p class="mb-0 text-muted">{{ turma.observacoes }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Lista de Alunos -->
+        <div class="card border-0 shadow-sm mt-4">
+            <div class="card-header bg-transparent border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-users me-2"></i>
+                        Alunos Matriculados ({{ turma.total_alunos or 0 }})
+                    </h5>
+                    <button class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-plus me-1"></i>
+                        Adicionar Aluno
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if turma.alunos %}
+                <div class="row g-3">
+                    {% for aluno in turma.alunos %}
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center p-2 border rounded">
+                            <div class="flex-shrink-0">
+                                <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                    <i class="fas fa-user text-primary"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h6 class="mb-0">
+                                    <a href="{{ url_for('alunos_view', id=aluno.id) }}" class="text-decoration-none">
+                                        {{ aluno.nome }}
+                                    </a>
+                                </h6>
+                                <small class="text-muted">{{ aluno.email or 'Sem email' }}</small>
+                            </div>
+                            <div class="flex-shrink-0">
+                                <button class="btn btn-sm btn-outline-danger" onclick="removeAluno({{ aluno.id }})">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-users fa-2x text-muted mb-2"></i>
+                    <p class="text-muted mb-0">Nenhum aluno matriculado nesta turma</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Histórico de Atividades -->
+        <div class="card border-0 shadow-sm mt-4">
+            <div class="card-header bg-transparent border-0">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-history me-2"></i>
+                    Histórico
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-success"></div>
+                        <div class="timeline-content">
+                            <h6 class="mb-1">Turma criada</h6>
+                            <p class="mb-0 text-muted small">
+                                {% if turma.created_at %}
+                                    {{ turma.created_at.strftime('%d/%m/%Y às %H:%M') }}
+                                {% else %}
+                                    Data não informada
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    {% if turma.updated_at and turma.updated_at != turma.created_at %}
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-info"></div>
+                        <div class="timeline-content">
+                            <h6 class="mb-1">Dados atualizados</h6>
+                            <p class="mb-0 text-muted small">{{ turma.updated_at.strftime('%d/%m/%Y às %H:%M') }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Card de Ações -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-cogs me-2"></i>
+                    Ações
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('turmas_editar', id=turma.id) }}" class="btn btn-info">
+                        <i class="fas fa-edit me-1"></i>
+                        Editar Turma
+                    </a>
+                    <button class="btn btn-outline-primary">
+                        <i class="fas fa-calendar me-1"></i>
+                        Ver Horários
+                    </button>
+                    <button class="btn btn-outline-success">
+                        <i class="fas fa-chart-line me-1"></i>
+                        Relatórios
+                    </button>
+                    <hr>
+                    <button class="btn btn-outline-danger" onclick="confirmDelete({{ turma.id }})">
+                        <i class="fas fa-trash me-1"></i>
+                        Excluir Turma
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Estatísticas -->
+        <div class="card border-0 shadow-sm mt-4">
+            <div class="card-header bg-transparent border-0">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    Estatísticas
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-6">
+                        <div class="text-center">
+                            <div class="h4 mb-0 text-info">{{ turma.total_alunos or 0 }}</div>
+                            <small class="text-muted">Alunos</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-center">
+                            <div class="h4 mb-0 text-success">
+                                {% if turma.capacidade_maxima %}
+                                    {{ ((turma.total_alunos or 0) / turma.capacidade_maxima * 100)|round|int }}%
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </div>
+                            <small class="text-muted">Ocupação</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-center">
+                            <div class="h4 mb-0 text-warning">0</div>
+                            <small class="text-muted">Aulas</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-center">
+                            <div class="h4 mb-0 text-primary">0</div>
+                            <small class="text-muted">Eventos</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Informações do Professor -->
+        {% if turma.professor %}
+        <div class="card border-0 shadow-sm mt-4">
+            <div class="card-header bg-transparent border-0">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chalkboard-teacher me-2"></i>
+                    Professor
+                </h5>
+            </div>
+            <div class="card-body text-center">
+                <div class="bg-success bg-opacity-10 rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" 
+                     style="width: 80px; height: 80px;">
+                    <i class="fas fa-chalkboard-teacher fa-2x text-success"></i>
+                </div>
+                <h6 class="mb-1">{{ turma.professor.nome }}</h6>
+                <p class="text-muted mb-3">
+                    {% if turma.professor.especialidade %}
+                        {{ turma.professor.especialidade|title }}
+                    {% else %}
+                        Professor
+                    {% endif %}
+                </p>
+                <a href="{{ url_for('professores_view', id=turma.professor.id) }}" class="btn btn-sm btn-outline-success">
+                    Ver Perfil
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal de Confirmação de Exclusão -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Exclusão</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja excluir a turma <strong>{{ turma.nome }}</strong>?</p>
+                <p class="text-danger">Esta ação não pode ser desfeita e todos os alunos serão desvinculados da turma.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" onclick="deleteTurma()">Excluir</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<div class="row">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-users-cog fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">Turma não encontrada</h5>
+                <p class="text-muted">A turma solicitada não foi encontrada no sistema.</p>
+                <a href="{{ url_for('turmas_list') }}" class="btn btn-info">
+                    <i class="fas fa-arrow-left me-1"></i>
+                    Voltar para Lista
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #dee2e6;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -23px;
+    top: 5px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 2px #dee2e6;
+}
+
+.timeline-content {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 3px solid #17a2b8;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmDelete(id) {
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+}
+
+function deleteTurma() {
+    // Implementar a exclusão da turma
+    console.log('Deletar turma:', {{ turma.id if turma else 'null' }});
+    // Por enquanto, apenas redireciona para a lista
+    window.location.href = "{{ url_for('turmas_list') }}";
+}
+
+function removeAluno(alunoId) {
+    if (confirm('Tem certeza que deseja remover este aluno da turma?')) {
+        // Implementar a remoção do aluno da turma
+        console.log('Remover aluno:', alunoId, 'da turma:', {{ turma.id if turma else 'null' }});
+        // Por enquanto, apenas recarrega a página
+        location.reload();
+    }
+}
+</script>
+{% endblock %}
+

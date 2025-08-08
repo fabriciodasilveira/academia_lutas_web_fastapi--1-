@@ -1,0 +1,281 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Academia de Lutas{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h3 mb-0">
+                <i class="fas fa-tachometer-alt me-2"></i>
+                Dashboard
+            </h1>
+            <div class="text-muted">
+                <i class="fas fa-clock me-1"></i>
+                <span id="current-time"></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cards de Estatísticas -->
+<div class="row g-4 mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <div class="bg-primary bg-opacity-10 rounded-3 p-3">
+                            <i class="fas fa-users text-primary fa-2x"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h6 class="card-title text-muted mb-1">Total de Alunos</h6>
+                        <h3 class="mb-0">{{ stats.total_alunos }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent border-0 pt-0">
+                <a href="{{ url_for('alunos_list') }}" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-eye me-1"></i>Ver todos
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <div class="bg-success bg-opacity-10 rounded-3 p-3">
+                            <i class="fas fa-chalkboard-teacher text-success fa-2x"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h6 class="card-title text-muted mb-1">Professores</h6>
+                        <h3 class="mb-0">{{ stats.total_professores }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent border-0 pt-0">
+                <a href="{{ url_for('professores_list') }}" class="btn btn-outline-success btn-sm">
+                    <i class="fas fa-eye me-1"></i>Ver todos
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <div class="bg-warning bg-opacity-10 rounded-3 p-3">
+                            <i class="fas fa-user-friends text-warning fa-2x"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h6 class="card-title text-muted mb-1">Turmas Ativas</h6>
+                        <h3 class="mb-0">{{ stats.total_turmas }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent border-0 pt-0">
+                <a href="{{ url_for('turmas_list') }}" class="btn btn-outline-warning btn-sm">
+                    <i class="fas fa-eye me-1"></i>Ver todas
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <div class="bg-info bg-opacity-10 rounded-3 p-3">
+                            <i class="fas fa-calendar-alt text-info fa-2x"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h6 class="card-title text-muted mb-1">Eventos</h6>
+                        <h3 class="mb-0">{{ stats.total_eventos }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent border-0 pt-0">
+                <a href="{{ url_for('eventos_list') }}" class="btn btn-outline-info btn-sm">
+                    <i class="fas fa-eye me-1"></i>Ver todos
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ações Rápidas -->
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0 pb-0">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-bolt me-2"></i>
+                    Ações Rápidas
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-lg-3 col-md-6">
+                        <a href="{{ url_for('alunos_novo') }}" class="btn btn-primary w-100 py-3">
+                            <i class="fas fa-user-plus fa-2x d-block mb-2"></i>
+                            Novo Aluno
+                        </a>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <a href="{{ url_for('professores_novo') }}" class="btn btn-success w-100 py-3">
+                            <i class="fas fa-user-tie fa-2x d-block mb-2"></i>
+                            Novo Professor
+                        </a>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <a href="{{ url_for('turmas_novo') }}" class="btn btn-warning w-100 py-3">
+                            <i class="fas fa-plus-circle fa-2x d-block mb-2"></i>
+                            Nova Turma
+                        </a>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <a href="{{ url_for('eventos_novo') }}" class="btn btn-info w-100 py-3">
+                            <i class="fas fa-calendar-plus fa-2x d-block mb-2"></i>
+                            Novo Evento
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Gráfico de Atividades -->
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-line me-2"></i>
+                    Atividades Recentes
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="activityChart" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-bell me-2"></i>
+                    Notificações
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    <div class="list-group-item border-0 px-0">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0">
+                                <div class="bg-primary bg-opacity-10 rounded-circle p-2">
+                                    <i class="fas fa-user-plus text-primary"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h6 class="mb-1">Novos alunos cadastrados</h6>
+                                <p class="mb-0 text-muted small">{{ stats.total_alunos }} alunos no total</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="list-group-item border-0 px-0">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0">
+                                <div class="bg-success bg-opacity-10 rounded-circle p-2">
+                                    <i class="fas fa-calendar text-success"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h6 class="mb-1">Eventos programados</h6>
+                                <p class="mb-0 text-muted small">{{ stats.total_eventos }} eventos ativos</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="list-group-item border-0 px-0">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0">
+                                <div class="bg-warning bg-opacity-10 rounded-circle p-2">
+                                    <i class="fas fa-users text-warning"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h6 class="mb-1">Turmas em andamento</h6>
+                                <p class="mb-0 text-muted small">{{ stats.total_turmas }} turmas ativas</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Atualizar horário atual
+function updateTime() {
+    const now = new Date();
+    const timeString = now.toLocaleString('pt-BR');
+    document.getElementById('current-time').textContent = timeString;
+}
+
+updateTime();
+setInterval(updateTime, 1000);
+
+// Gráfico de atividades
+const ctx = document.getElementById('activityChart').getContext('2d');
+const activityChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'],
+        datasets: [{
+            label: 'Novos Alunos',
+            data: [12, 19, 3, 5, 2, 3],
+            borderColor: '#2563eb',
+            backgroundColor: 'rgba(37, 99, 235, 0.1)',
+            tension: 0.4
+        }, {
+            label: 'Eventos',
+            data: [2, 3, 20, 5, 1, 4],
+            borderColor: '#10b981',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            tension: 0.4
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'top',
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+</script>
+{% endblock %}
+
