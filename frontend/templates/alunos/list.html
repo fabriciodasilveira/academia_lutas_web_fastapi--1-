@@ -68,9 +68,6 @@
                         <thead class="table-light">
                             <tr>
                                 <th>Nome</th>
-                                <th>Email</th>
-                                <th>Telefone</th>
-                                <th>Data de Nascimento</th>
                                 <th>Status</th>
                                 <th width="150">Ações</th>
                             </tr>
@@ -93,15 +90,7 @@
                                         </div>
                                     </div>
                                 </td>
-                                <td>{{ aluno.email or '-' }}</td>
-                                <td>{{ aluno.telefone or '-' }}</td>
-                                <td>
-                                    {% if aluno.data_nascimento %}
-                                        {{ aluno.data_nascimento }}
-                                    {% else %}
-                                        -
-                                    {% endif %}
-                                </td>
+                            
                                 <td>
                                     <span class="badge bg-success">Ativo</span>
                                 </td>
@@ -171,12 +160,33 @@ function confirmDelete(id) {
 
 function deleteAluno() {
     if (alunoToDelete) {
-        // Aqui você implementaria a chamada para deletar o aluno
-        console.log('Deletar aluno:', alunoToDelete);
-        // Por enquanto, apenas recarrega a página
-        location.reload();
+        // Faz a requisição DELETE para a API
+        fetch(`/alunos/${alunoToDelete}/deletar`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                // Mostra mensagem de sucesso e recarrega a página
+                alert('Aluno excluído com sucesso!');
+                location.reload();
+            } else {
+                alert('Erro ao excluir aluno.');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao excluir aluno.');
+        });
+        
+        // Fecha o modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('deleteModal'));
+        modal.hide();
     }
 }
+
 
 function clearFilters() {
     document.getElementById('searchInput').value = '';

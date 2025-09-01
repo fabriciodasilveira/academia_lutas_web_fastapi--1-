@@ -19,8 +19,10 @@
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
             <a class="navbar-brand" href="{{ url_for('index') }}">
-                <i class="fas fa-fist-raised me-2"></i>
-                Academia de Lutas
+                <img src="{{ url_for('static', filename='img/nova.png') }}" alt="Logo Academia de Lutas" class="d-inline-block align-text-top" style="height:150px;"><br/>
+                <div class="text-center">
+                    Academia de Lutas
+                </div>
             </a>
             
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -47,6 +49,11 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('turmas_list') }}">
                             <i class="fas fa-user-friends me-1"></i>Turmas
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('matriculas_list') }}">
+                            <i class="fas fa-user-friends me-1"></i>Matriculas
                         </a>
                     </li>
                     <li class="nav-item">

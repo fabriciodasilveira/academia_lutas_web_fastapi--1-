@@ -36,59 +36,25 @@
                     {% endif %}
                     
                     <div class="row g-3">
-                        <!-- Nome da Turma -->
-                        <div class="col-md-6">
-                            <label for="nome" class="form-label">
-                                <i class="fas fa-users-cog me-1"></i>
-                                Nome da Turma *
-                            </label>
-                            <input type="text" class="form-control" id="nome" name="nome" 
-                                   value="{{ turma.nome if turma else '' }}" required
-                                   placeholder="Ex: Jiu-Jitsu Iniciante - Manhã">
+                        <div class="col-md-12">
+                            <label for="nome" class="form-label">Nome da Turma</label>
+                            <input type="text" class="form-control" id="nome" name="nome" value="{{ turma.nome if turma }}" required>
                         </div>
 
-                        <!-- Modalidade -->
                         <div class="col-md-6">
-                            <label for="modalidade" class="form-label">
-                                <i class="fas fa-medal me-1"></i>
-                                Modalidade *
-                            </label>
+                            <label for="modalidade" class="form-label">Modalidade</label>
                             <select class="form-select" id="modalidade" name="modalidade" required>
-                                <option value="">Selecione uma modalidade</option>
+                                <option value="">Selecione a modalidade</option>
                                 <option value="jiu-jitsu" {% if turma and turma.modalidade == 'jiu-jitsu' %}selected{% endif %}>Jiu-Jitsu</option>
                                 <option value="muay-thai" {% if turma and turma.modalidade == 'muay-thai' %}selected{% endif %}>Muay Thai</option>
                                 <option value="boxe" {% if turma and turma.modalidade == 'boxe' %}selected{% endif %}>Boxe</option>
                                 <option value="mma" {% if turma and turma.modalidade == 'mma' %}selected{% endif %}>MMA</option>
-                                <option value="karate" {% if turma and turma.modalidade == 'karate' %}selected{% endif %}>Karatê</option>
-                                <option value="taekwondo" {% if turma and turma.modalidade == 'taekwondo' %}selected{% endif %}>Taekwondo</option>
-                                <option value="judo" {% if turma and turma.modalidade == 'judo' %}selected{% endif %}>Judô</option>
+                                <option value="yoga" {% if turma and turma.modalidade == 'yoga' %}selected{% endif %}>Yoga</option>
                             </select>
                         </div>
-
-                        <!-- Professor -->
                         <div class="col-md-6">
-                            <label for="professor_id" class="form-label">
-                                <i class="fas fa-chalkboard-teacher me-1"></i>
-                                Professor
-                            </label>
-                            <select class="form-select" id="professor_id" name="professor_id">
-                                <option value="">Selecione um professor</option>
-                                {% for professor in professores %}
-                                <option value="{{ professor.id }}" 
-                                        {% if turma and turma.professor_id == professor.id %}selected{% endif %}>
-                                    {{ professor.nome }} - {{ professor.especialidade|title if professor.especialidade else 'Sem especialidade' }}
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                        <!-- Nível -->
-                        <div class="col-md-6">
-                            <label for="nivel" class="form-label">
-                                <i class="fas fa-layer-group me-1"></i>
-                                Nível
-                            </label>
-                            <select class="form-select" id="nivel" name="nivel">
+                            <label for="nivel" class="form-label">Nível</label>
+                            <select class="form-select" id="nivel" name="nivel" required>
                                 <option value="">Selecione o nível</option>
                                 <option value="iniciante" {% if turma and turma.nivel == 'iniciante' %}selected{% endif %}>Iniciante</option>
                                 <option value="intermediario" {% if turma and turma.nivel == 'intermediario' %}selected{% endif %}>Intermediário</option>
@@ -96,161 +62,65 @@
                                 <option value="misto" {% if turma and turma.nivel == 'misto' %}selected{% endif %}>Misto</option>
                             </select>
                         </div>
-
-                        <!-- Horário -->
-                        <div class="col-md-6">
-                            <label for="horario" class="form-label">
-                                <i class="fas fa-clock me-1"></i>
-                                Horário
-                            </label>
-                            <input type="text" class="form-control" id="horario" name="horario" 
-                                   value="{{ turma.horario if turma else '' }}"
-                                   placeholder="Ex: Segunda e Quarta 19:00-20:30">
-                        </div>
-
-                        <!-- Capacidade Máxima -->
-                        <div class="col-md-6">
-                            <label for="capacidade_maxima" class="form-label">
-                                <i class="fas fa-users me-1"></i>
-                                Capacidade Máxima
-                            </label>
-                            <input type="number" class="form-control" id="capacidade_maxima" name="capacidade_maxima" 
-                                   value="{{ turma.capacidade_maxima if turma else '' }}" 
-                                   min="1" max="50" placeholder="20">
-                        </div>
-
-                        <!-- Valor da Mensalidade -->
-                        <div class="col-md-6">
-                            <label for="valor_mensalidade" class="form-label">
-                                <i class="fas fa-dollar-sign me-1"></i>
-                                Valor da Mensalidade (R$)
-                            </label>
-                            <input type="number" class="form-control" id="valor_mensalidade" name="valor_mensalidade" 
-                                   value="{{ turma.valor_mensalidade if turma else '' }}" 
-                                   step="0.01" min="0" placeholder="150.00">
-                        </div>
-
-                        <!-- Idade Mínima -->
-                        <div class="col-md-6">
-                            <label for="idade_minima" class="form-label">
-                                <i class="fas fa-child me-1"></i>
-                                Idade Mínima
-                            </label>
-                            <input type="number" class="form-control" id="idade_minima" name="idade_minima" 
-                                   value="{{ turma.idade_minima if turma else '' }}" 
-                                   min="3" max="100" placeholder="16">
-                        </div>
-
-                        <!-- Status -->
-                        <div class="col-md-6">
-                            <label for="ativa" class="form-label">
-                                <i class="fas fa-toggle-on me-1"></i>
-                                Status
-                            </label>
-                            <select class="form-select" id="ativa" name="ativa">
-                                <option value="1" {% if not turma or turma.ativa %}selected{% endif %}>Ativa</option>
-                                <option value="0" {% if turma and not turma.ativa %}selected{% endif %}>Inativa</option>
+                        
+                        <div class="col-md-12">
+                            <label for="professor_id" class="form-label">Professor</label>
+                            <select class="form-select" id="professor_id" name="professor_id">
+                                <option value="">Selecione o professor</option>
+                                {% for professor in professores %}
+                                    <option 
+                                        value="{{ professor.id }}" 
+                                        data-especialidade="{{ professor.especialidade }}"
+                                        {% if turma and turma.professor_id == professor.id %}selected{% endif %}>
+                                        {{ professor.nome }} - {{ professor.especialidade }}
+                                    </option>
+                                {% endfor %}
                             </select>
                         </div>
-
-                        <!-- Descrição -->
-                        <div class="col-12">
-                            <label for="descricao" class="form-label">
-                                <i class="fas fa-align-left me-1"></i>
-                                Descrição
-                            </label>
-                            <textarea class="form-control" id="descricao" name="descricao" rows="3" 
-                                      placeholder="Descreva os objetivos e características da turma...">{{ turma.descricao if turma else '' }}</textarea>
+                        
+                        <div class="col-md-6">
+                            <label for="horario" class="form-label">Horário</label>
+                            <input type="text" class="form-control" id="horario" name="horario" value="{{ turma.horario if turma }}">
                         </div>
-
-                        <!-- Observações -->
-                        <div class="col-12">
-                            <label for="observacoes" class="form-label">
-                                <i class="fas fa-sticky-note me-1"></i>
-                                Observações
-                            </label>
-                            <textarea class="form-control" id="observacoes" name="observacoes" rows="2" 
-                                      placeholder="Informações adicionais sobre a turma...">{{ turma.observacoes if turma else '' }}</textarea>
+                        <div class="col-md-6">
+                            <label for="capacidade_maxima" class="form-label">Capacidade Máxima</label>
+                            <input type="number" class="form-control" id="capacidade_maxima" name="capacidade_maxima" value="{{ turma.capacidade_maxima if turma }}">
                         </div>
-                    </div>
-
-                    <!-- Botões -->
-                    <div class="row mt-4">
-                        <div class="col-12">
-                            <div class="d-flex gap-2 justify-content-end">
-                                <a href="{{ url_for('turmas_list') }}" class="btn btn-outline-secondary">
-                                    <i class="fas fa-times me-1"></i>
-                                    Cancelar
-                                </a>
-                                <button type="submit" class="btn btn-info">
-                                    <i class="fas fa-save me-1"></i>
-                                    {% if turma %}Atualizar{% else %}Cadastrar{% endif %}
-                                </button>
+                        
+                        <div class="col-md-6">
+                            <label for="valor_mensalidade" class="form-label">Valor da Mensalidade</label>
+                            <div class="input-group">
+                                <span class="input-group-text">R$</span>
+                                <input type="number" step="0.01" class="form-control" id="valor_mensalidade" name="valor_mensalidade" value="{{ '%.2f'|format(turma.valor_mensalidade) if turma and turma.valor_mensalidade is not none }}">
                             </div>
                         </div>
+                        <div class="col-md-6">
+                            <label for="idade_minima" class="form-label">Idade Mínima</label>
+                            <input type="number" class="form-control" id="idade_minima" name="idade_minima" value="{{ turma.idade_minima if turma }}">
+                        </div>
+
+                        <div class="col-md-12 form-check form-switch mt-3">
+                            <input class="form-check-input" type="checkbox" role="switch" id="ativa" name="ativa" value="1" {% if turma and turma.ativa %}checked{% endif %}>
+                            <label class="form-check-label" for="ativa">Turma Ativa</label>
+                        </div>
+                        
+                        <div class="col-md-12">
+                            <label for="descricao" class="form-label">Descrição</label>
+                            <textarea class="form-control" id="descricao" name="descricao" rows="3">{{ turma.descricao if turma }}</textarea>
+                        </div>
+                        <div class="col-md-12">
+                            <label for="observacoes" class="form-label">Observações</label>
+                            <textarea class="form-control" id="observacoes" name="observacoes" rows="3">{{ turma.observacoes if turma }}</textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 d-flex justify-content-end">
+                        <button type="submit" class="btn btn-info me-2">
+                            <i class="fas fa-save me-1"></i>
+                            Salvar Turma
+                        </button>
                     </div>
                 </form>
-            </div>
-        </div>
-
-        <!-- Card de Dicas -->
-        <div class="card border-0 shadow-sm mt-4">
-            <div class="card-header bg-transparent border-0">
-                <h5 class="card-title mb-0">
-                    <i class="fas fa-lightbulb me-2"></i>
-                    Dicas para Cadastro de Turmas
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <div class="d-flex">
-                            <div class="flex-shrink-0">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                            </div>
-                            <div class="flex-grow-1">
-                                <h6 class="mb-1">Nome da Turma</h6>
-                                <small class="text-muted">Use nomes descritivos que incluam modalidade, nível e período (ex: "Jiu-Jitsu Iniciante - Manhã")</small>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <div class="d-flex">
-                            <div class="flex-shrink-0">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                            </div>
-                            <div class="flex-grow-1">
-                                <h6 class="mb-1">Horários</h6>
-                                <small class="text-muted">Seja específico com dias e horários (ex: "Segunda e Quarta 19:00-20:30")</small>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <div class="d-flex">
-                            <div class="flex-shrink-0">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                            </div>
-                            <div class="flex-grow-1">
-                                <h6 class="mb-1">Capacidade</h6>
-                                <small class="text-muted">Considere o espaço físico e a qualidade do ensino ao definir a capacidade máxima</small>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <div class="d-flex">
-                            <div class="flex-shrink-0">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                            </div>
-                            <div class="flex-grow-1">
-                                <h6 class="mb-1">Professor</h6>
-                                <small class="text-muted">Associe professores com especialidade compatível com a modalidade da turma</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
@@ -259,75 +129,41 @@
 
 {% block extra_js %}
 <script>
-// Validação do formulário
-document.querySelector('form').addEventListener('submit', function(e) {
-    const nome = document.getElementById('nome').value.trim();
-    const modalidade = document.getElementById('modalidade').value;
-    
-    if (!nome) {
-        e.preventDefault();
-        alert('O nome da turma é obrigatório!');
-        document.getElementById('nome').focus();
-        return false;
-    }
-    
-    if (!modalidade) {
-        e.preventDefault();
-        alert('A modalidade é obrigatória!');
-        document.getElementById('modalidade').focus();
-        return false;
-    }
-});
-
-// Formatação do valor da mensalidade
-document.getElementById('valor_mensalidade').addEventListener('blur', function(e) {
-    const value = parseFloat(e.target.value);
-    if (!isNaN(value)) {
-        e.target.value = value.toFixed(2);
-    }
-});
-
-// Filtrar professores por especialidade
-document.getElementById('modalidade').addEventListener('change', function() {
-    const modalidade = this.value;
+document.addEventListener('DOMContentLoaded', function() {
+    const modalidadeSelect = document.getElementById('modalidade');
     const professorSelect = document.getElementById('professor_id');
-    const options = professorSelect.querySelectorAll('option');
+    const professorOptions = professorSelect.querySelectorAll('option[data-especialidade]');
     
-    options.forEach(option => {
-        if (option.value === '') {
-            option.style.display = '';
-            return;
-        }
-        
-        const text = option.textContent.toLowerCase();
-        if (!modalidade || text.includes(modalidade.replace('-', ' '))) {
-            option.style.display = '';
-        } else {
-            option.style.display = 'none';
-        }
+    // Inicializa a lista de professores com base na modalidade pré-selecionada (se houver)
+    filterProfessors(modalidadeSelect.value);
+
+    // Adiciona o evento de 'change' para a seleção da modalidade
+    modalidadeSelect.addEventListener('change', function() {
+        const selectedModalidade = this.value;
+        filterProfessors(selectedModalidade);
     });
-    
-    // Reset selection if current option is hidden
-    if (professorSelect.selectedOptions[0] && professorSelect.selectedOptions[0].style.display === 'none') {
+
+    function filterProfessors(modalidade) {
+        // Normaliza a modalidade selecionada para comparação
+        const normalizedModalidade = modalidade ? modalidade.toLowerCase().replace('-', ' ') : null;
+
+        // Limpa a seleção atual do professor
         professorSelect.value = '';
+        
+        // Exibe ou esconde os professores baseados na especialidade
+        professorOptions.forEach(option => {
+            const especialidade = option.dataset.especialidade;
+            // Normaliza a especialidade do professor para comparação
+            const normalizedEspecialidade = especialidade ? especialidade.toLowerCase().replace('-', ' ') : null;
+
+            // Se nenhuma modalidade for selecionada, ou se a especialidade corresponder
+            if (!normalizedModalidade || normalizedEspecialidade === normalizedModalidade) {
+                option.style.display = '';
+            } else {
+                option.style.display = 'none';
+            }
+        });
     }
 });
-
-// Auto-sugerir nome da turma baseado na modalidade e nível
-function updateTurmaNome() {
-    const modalidade = document.getElementById('modalidade').value;
-    const nivel = document.getElementById('nivel').value;
-    const nomeInput = document.getElementById('nome');
-    
-    if (modalidade && nivel && !nomeInput.value.trim()) {
-        const modalidadeFormatted = modalidade.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
-        const nivelFormatted = nivel.charAt(0).toUpperCase() + nivel.slice(1);
-        nomeInput.value = `${modalidadeFormatted} ${nivelFormatted}`;
-    }
-}
-
-document.getElementById('modalidade').addEventListener('change', updateTurmaNome);
-document.getElementById('nivel').addEventListener('change', updateTurmaNome);
 </script>
 {% endblock %}
-

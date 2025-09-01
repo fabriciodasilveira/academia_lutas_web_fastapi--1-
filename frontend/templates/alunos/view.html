@@ -105,11 +105,11 @@
                                 <p class="mb-0 text-muted">
                                     {% if aluno.data_nascimento %}
                                         {{ aluno.data_nascimento }}
-                                        {% set idade = (moment().year - moment(aluno.data_nascimento).year) %}
-                                        <small class="text-muted">({{ idade }} anos)</small>
+                                        <!-- Idade removida temporariamente -->
                                     {% else %}
                                         Não informada
                                     {% endif %}
+                                    
                                 </p>
                             </div>
                         </div>
@@ -193,8 +193,8 @@
         <!-- Foto do Aluno -->
         <div class="card border-0 shadow-sm">
             <div class="card-body text-center">
-                {% if aluno.foto_perfil %}
-                    <img src="{{ aluno.foto_perfil }}" alt="Foto de {{ aluno.nome }}" 
+                {% if aluno.foto %}
+                    <img src="http://localhost:8500{{ aluno.foto }}" alt="Foto de {{ aluno.nome }}" 
                          class="img-fluid rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;">
                 {% else %}
                     <div class="bg-primary bg-opacity-10 rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" 

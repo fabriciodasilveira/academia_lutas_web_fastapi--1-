@@ -181,8 +181,14 @@ function confirmDelete(id) {
 
 function deleteProfessor() {
     if (professorToDelete) {
-        console.log('Deletar professor:', professorToDelete);
-        location.reload();
+        // Cria um formulário dinamicamente para enviar a requisição POST
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/professores/${professorToDelete}/deletar`;
+
+        // Adiciona o formulário ao corpo do documento e o envia
+        document.body.appendChild(form);
+        form.submit();
     }
 }
 

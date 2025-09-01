@@ -31,7 +31,6 @@ except Exception as e:
     UPLOAD_DIR_PROFESSORES.mkdir(parents=True, exist_ok=True)
 
 router = APIRouter(
-    prefix="/api/v1/professores",
     tags=["Professores"],
     responses={404: {"description": "Não encontrado"}},
 )

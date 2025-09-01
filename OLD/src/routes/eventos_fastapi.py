@@ -31,7 +31,6 @@ except Exception as e:
     UPLOAD_DIR_EVENTOS.mkdir(parents=True, exist_ok=True)
 
 router = APIRouter(
-    prefix="/api/v1/eventos",
     tags=["Eventos"],
     responses={404: {"description": "Não encontrado"}},
 )

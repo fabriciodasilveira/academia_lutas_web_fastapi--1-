@@ -1,0 +1,120 @@
+# -*- coding: utf-8 -*-
+"""
+Rotas FastAPI para o CRUD de Matrículas.
+"""
+
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
+import logging
+
+from src.database import get_db
+from src.models.matricula import Matricula
+from src.models.aluno import Aluno
+from src.models.turma import Turma
+from src.schemas.matricula import MatriculaCreate, MatriculaRead, MatriculaUpdate
+
+router = APIRouter(
+    tags=["Matrículas"],
+    responses={404: {"description": "Matrícula não encontrada"}},
+)
+
+# --- CRUD Endpoints --- 
+
+@router.post("", response_model=MatriculaRead, status_code=status.HTTP_201_CREATED)
+def create_matricula(matricula: MatriculaCreate, db: Session = Depends(get_db)):
+    """
+    Cria uma nova matrícula de um aluno em uma turma.
+    """
+    db_aluno = db.query(Aluno).filter(Aluno.id == matricula.aluno_id).first()
+    if not db_aluno:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Aluno não encontrado")
+
+    db_turma = db.query(Turma).filter(Turma.id == matricula.turma_id).first()
+    if not db_turma:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Turma não encontrada")
+
+    # Verifica se a matrícula já existe
+    db_matricula = db.query(Matricula).filter(
+        Matricula.aluno_id == matricula.aluno_id,
+        Matricula.turma_id == matricula.turma_id
+    ).first()
+    if db_matricula:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Aluno já matriculado nesta turma")
+
+    db_matricula = Matricula(**matricula.dict())
+    
+    try:
+        db.add(db_matricula)
+        db.commit()
+        db.refresh(db_matricula)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Erro de integridade ao criar a matrícula. Verifique os IDs de aluno e turma.")
+
+    return db_matricula
+
+@router.get("", response_model=List[MatriculaRead])
+def read_matriculas(
+    skip: int = 0,
+    limit: int = 100,
+    aluno_id: Optional[int] = None,
+    turma_id: Optional[int] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Lista matrículas com filtros opcionais por aluno e turma.
+    """
+    query = db.query(Matricula)
+    if aluno_id:
+        query = query.filter(Matricula.aluno_id == aluno_id)
+    if turma_id:
+        query = query.filter(Matricula.turma_id == turma_id)
+        
+    matriculas = query.order_by(Matricula.data_matricula.desc()).offset(skip).limit(limit).all()
+    return matriculas
+
+@router.get("/{matricula_id}", response_model=MatriculaRead)
+def read_matricula(matricula_id: int, db: Session = Depends(get_db)):
+    """
+    Obtém os detalhes de uma matrícula específica pelo ID.
+    """
+    db_matricula = db.query(Matricula).filter(Matricula.id == matricula_id).first()
+    if db_matricula is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Matrícula não encontrada")
+    return db_matricula
+
+@router.put("/{matricula_id}", response_model=MatriculaRead)
+def update_matricula(
+    matricula_id: int,
+    matricula_update: MatriculaUpdate,
+    db: Session = Depends(get_db)
+):
+    """
+    Atualiza os dados de uma matrícula existente (ex: status ativa/inativa).
+    """
+    db_matricula = db.query(Matricula).filter(Matricula.id == matricula_id).first()
+    if db_matricula is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Matrícula não encontrada")
+
+    update_data = matricula_update.dict(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_matricula, key, value)
+
+    db.commit()
+    db.refresh(db_matricula)
+    return db_matricula
+
+@router.delete("/{matricula_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_matricula(matricula_id: int, db: Session = Depends(get_db)):
+    """
+    Exclui uma matrícula.
+    """
+    db_matricula = db.query(Matricula).filter(Matricula.id == matricula_id).first()
+    if db_matricula is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Matrícula não encontrada")
+
+    db.delete(db_matricula)
+    db.commit()
+    return None

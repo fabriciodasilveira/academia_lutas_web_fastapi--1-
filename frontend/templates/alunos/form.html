@@ -53,7 +53,7 @@
                                 Email
                             </label>
                             <input type="email" class="form-control" id="email" name="email" 
-                                   value="{{ aluno.email if aluno else \'\' }}">
+                                   value="{{ aluno.email if aluno else  ''}}">
                         </div>
 
                         <!-- CPF -->
@@ -63,7 +63,7 @@
                                 CPF
                             </label>
                             <input type="text" class="form-control" id="cpf" name="cpf" 
-                                   value="{{ aluno.cpf if aluno else \'\' }}" placeholder="000.000.000-00">
+                                   value="{{ aluno.cpf if aluno else '' }}" placeholder="000.000.000-00">
                         </div>
 
                         <!-- Telefone -->

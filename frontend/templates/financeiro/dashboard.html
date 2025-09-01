@@ -15,7 +15,7 @@
                     <i class="fas fa-list me-1"></i>
                     Ver Transações
                 </a>
-                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#novaTransacaoModal">
+                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#novaTransacaoModal" onclick="if(typeof prepareModal==='function'){prepareModal('novo');}">
                     <i class="fas fa-plus me-1"></i>
                     Nova Transação
                 </button>
@@ -24,7 +24,6 @@
     </div>
 </div>
 
-<!-- Cards de Resumo Financeiro -->
 <div class="row g-4 mb-4">
     <div class="col-xl-3 col-md-6">
         <div class="card border-0 shadow-sm h-100">
@@ -37,7 +36,7 @@
                     </div>
                     <div class="flex-grow-1 ms-3">
                         <h6 class="card-title text-muted mb-1">Receitas</h6>
-                        <h3 class="mb-0 text-success">R$ {{ "%.2f"|format(stats.receitas) }}</h3>
+                        <h3 class="mb-0 text-success">R$ {{ "%.2f"|format(stats.get('receitas', 0)) }}</h3>
                     </div>
                 </div>
             </div>
@@ -61,7 +60,7 @@
                     </div>
                     <div class="flex-grow-1 ms-3">
                         <h6 class="card-title text-muted mb-1">Despesas</h6>
-                        <h3 class="mb-0 text-danger">R$ {{ "%.2f"|format(stats.despesas) }}</h3>
+                        <h3 class="mb-0 text-danger">R$ {{ "%.2f"|format(stats.get('despesas', 0)) }}</h3>
                     </div>
                 </div>
             </div>
@@ -79,14 +78,14 @@
             <div class="card-body">
                 <div class="d-flex align-items-center">
                     <div class="flex-shrink-0">
-                        <div class="bg-{% if stats.saldo >= 0 %}primary{% else %}warning{% endif %} bg-opacity-10 rounded-3 p-3">
-                            <i class="fas fa-wallet text-{% if stats.saldo >= 0 %}primary{% else %}warning{% endif %} fa-2x"></i>
+                        <div class="bg-{% if stats.get('saldo', 0) >= 0 %}primary{% else %}warning{% endif %} bg-opacity-10 rounded-3 p-3">
+                            <i class="fas fa-wallet text-{% if stats.get('saldo', 0) >= 0 %}primary{% else %}warning{% endif %} fa-2x"></i>
                         </div>
                     </div>
                     <div class="flex-grow-1 ms-3">
                         <h6 class="card-title text-muted mb-1">Saldo</h6>
-                        <h3 class="mb-0 text-{% if stats.saldo >= 0 %}primary{% else %}warning{% endif %}">
-                            R$ {{ "%.2f"|format(stats.saldo) }}
+                        <h3 class="mb-0 text-{% if stats.get('saldo', 0) >= 0 %}primary{% else %}warning{% endif %}">
+                            R$ {{ "%.2f"|format(stats.get('saldo', 0)) }}
                         </h3>
                     </div>
                 </div>
@@ -111,7 +110,7 @@
                     </div>
                     <div class="flex-grow-1 ms-3">
                         <h6 class="card-title text-muted mb-1">Transações</h6>
-                        <h3 class="mb-0">{{ stats.total_transacoes }}</h3>
+                        <h3 class="mb-0">{{ stats.get('total_transacoes', 0) }}</h3>
                     </div>
                 </div>
             </div>
@@ -125,7 +124,6 @@
     </div>
 </div>
 
-<!-- Gráficos -->
 <div class="row g-4 mb-4">
     <div class="col-lg-8">
         <div class="card border-0 shadow-sm">
@@ -156,7 +154,6 @@
     </div>
 </div>
 
-<!-- Transações Recentes -->
 <div class="row">
     <div class="col-12">
         <div class="card border-0 shadow-sm">
@@ -188,17 +185,26 @@
                             {% for transacao in transacoes %}
                             <tr>
                                 <td>
-                                    {% if transacao.data %}
-                                        {{ transacao.data }}
-                                    {% else %}
-                                        -
-                                    {% endif %}
+                                    <div class="d-flex flex-column">
+                                        <span class="fw-medium">
+                                            {% if transacao.data %}
+                                                {{ transacao.data.strftime('%d/%m/%Y') }}
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </span>
+                                        <small class="text-muted">
+                                            {% if transacao.data %}
+                                                {{ transacao.data.strftime('%H:%M') }}
+                                            {% endif %}
+                                        </small>
+                                    </div>
                                 </td>
                                 <td>
                                     <div class="d-flex align-items-center">
                                         <div class="flex-shrink-0">
-                                            <div class="bg-{% if transacao.tipo == 'receita' %}success{% else %}danger{% endif %} bg-opacity-10 rounded-circle p-2">
-                                                <i class="fas fa-{% if transacao.tipo == 'receita' %}plus{% else %}minus{% endif %} text-{% if transacao.tipo == 'receita' %}success{% else %}danger{% endif %}"></i>
+                                            <div class="bg-{% if transacao.tipo == 'receita' %}success{% else %}danger{% endif %} bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
+                                                <i class="fas fa-{% if transacao.tipo == 'receita' %}arrow-up{% else %}arrow-down{% endif %} text-{% if transacao.tipo == 'receita' %}success{% else %}danger{% endif %}"></i>
                                             </div>
                                         </div>
                                         <div class="flex-grow-1 ms-3">
@@ -236,7 +242,7 @@
                     <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
                     <h5 class="text-muted">Nenhuma transação registrada</h5>
                     <p class="text-muted">Comece adicionando a primeira transação financeira.</p>
-                    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#novaTransacaoModal">
+                    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#novaTransacaoModal" onclick="prepareModal('novo')">
                         <i class="fas fa-plus me-1"></i>
                         Adicionar Primeira Transação
                     </button>
@@ -247,18 +253,18 @@
     </div>
 </div>
 
-<!-- Modal Nova Transação -->
 <div class="modal fade" id="novaTransacaoModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">
+                <h5 class="modal-title" id="transacaoModalLabel">
                     <i class="fas fa-plus me-2"></i>
                     Nova Transação
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form id="transacaoForm">
+            <form id="transacaoForm" action="{{ url_for('financeiro_salvar_transacao') }}" method="POST">
+                <input type="hidden" id="transacao_id" name="id">
                 <div class="modal-body">
                     <div class="row g-3">
                         <div class="col-md-6">
@@ -282,43 +288,60 @@
                         </div>
                         
                         <div class="col-md-6">
-                            <label for="categoria" class="form-label">Categoria</label>
-                            <select class="form-select" id="categoria" name="categoria">
-                                <option value="">Selecione uma categoria</option>
-                                <option value="mensalidade">Mensalidade</option>
-                                <option value="matricula">Matrícula</option>
-                                <option value="equipamentos">Equipamentos</option>
-                                <option value="salarios">Salários</option>
-                                <option value="aluguel">Aluguel</option>
-                                <option value="energia">Energia</option>
-                                <option value="agua">Água</option>
-                                <option value="internet">Internet</option>
-                                <option value="marketing">Marketing</option>
-                                <option value="outros">Outros</option>
+                            <label for="categoria" class="form-label">Categoria *</label>
+                            <select class="form-select" id="categoria" name="categoria" required>
+                                <option value="">Selecione a categoria</option>
+                                </select>
+                        </div>
+                        
+                        <div class="col-md-8">
+                            <label for="descricao" class="form-label">Descrição *</label>
+                            <input type="text" class="form-control" id="descricao" name="descricao" required
+                                   placeholder="Ex: Mensalidade João Silva - Janeiro/2024">
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="status" class="form-label">Status</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="confirmado">Confirmado</option>
+                                <option value="pendente">Pendente</option>
+                                <option value="cancelado">Cancelado</option>
                             </select>
                         </div>
                         
                         <div class="col-12">
-                            <label for="descricao" class="form-label">Descrição *</label>
-                            <input type="text" class="form-control" id="descricao" name="descricao" 
-                                   placeholder="Descrição da transação" required>
-                        </div>
-                        
-                        <div class="col-12">
                             <label for="observacoes" class="form-label">Observações</label>
-                            <textarea class="form-control" id="observacoes" name="observacoes" rows="2" 
-                                      placeholder="Informações adicionais..."></textarea>
+                            <textarea class="form-control" id="observacoes" name="observacoes" rows="3"
+                                      placeholder="Informações adicionais sobre a transação..."></textarea>
                         </div>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-success">
-                        <i class="fas fa-save me-1"></i>
-                        Salvar Transação
-                    </button>
-                </div>
-            </form>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" onclick="salvarTransacao()">
+                    <i class="fas fa-save me-1"></i>
+                    Salvar Transação
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Exclusão</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" onclick="deleteTransacao()">Excluir</button>
+            </div>
         </div>
     </div>
 </div>
@@ -326,98 +349,263 @@
 
 {% block extra_js %}
 <script>
-// Definir data atual como padrão
-document.getElementById('data').value = new Date().toISOString().split('T')[0];
 
-// Gráfico de Fluxo de Caixa
-const ctxFluxo = document.getElementById('fluxoCaixaChart').getContext('2d');
-const fluxoCaixaChart = new Chart(ctxFluxo, {
-    type: 'line',
-    data: {
-        labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'],
-        datasets: [{
-            label: 'Receitas',
-            data: [12000, 15000, 13000, 18000, 16000, 20000],
-            borderColor: '#10b981',
-            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-            tension: 0.4,
-            fill: true
-        }, {
-            label: 'Despesas',
-            data: [8000, 9000, 7500, 10000, 9500, 11000],
-            borderColor: '#ef4444',
-            backgroundColor: 'rgba(239, 68, 68, 0.1)',
-            tension: 0.4,
-            fill: true
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: {
-                position: 'top',
-            }
-        },
-        scales: {
-            y: {
-                beginAtZero: true,
-                ticks: {
-                    callback: function(value) {
-                        return 'R$ ' + value.toLocaleString('pt-BR');
+const CATEGORIAS = {
+    'receita': [
+        { value: 'mensalidade', text: 'Mensalidade' },
+        { value: 'matricula', text: 'Matrícula' },
+        { value: 'evento', text: 'Evento' },
+        { value: 'equipamento', text: 'Venda de Equipamento' },
+        { value: 'outros', text: 'Outros' }
+    ],
+    'despesa': [
+        { value: 'salarios', text: 'Salários' },
+        { value: 'aluguel', text: 'Aluguel' },
+        { value: 'equipamento', text: 'Compra de Equipamento' },
+        { value: 'manutencao', text: 'Manutenção' },
+        { value: 'outros', text: 'Outros' }
+    ]
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Dados dinâmicos do balanço
+    const stats = {{ stats | tojson }};
+    const transacoes = {{ transacoes | tojson }};
+    
+    // Lógica para os gráficos
+    if (document.getElementById('fluxoCaixaChart')) {
+        const ctxFluxo = document.getElementById('fluxoCaixaChart').getContext('2d');
+        new Chart(ctxFluxo, {
+            type: 'bar',
+            data: {
+                labels: ['Receitas', 'Despesas', 'Balanço'],
+                datasets: [{
+                    label: 'Valores (R$)',
+                    data: [stats.receitas, stats.despesas, stats.saldo],
+                    backgroundColor: ['#10b981', '#ef4444', '#2563eb'],
+                    borderColor: ['#059669', '#dc2626', '#1d4ed8'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
                     }
                 }
             }
-        }
+        });
     }
-});
 
-// Gráfico de Categorias
-const ctxCategoria = document.getElementById('categoriaChart').getContext('2d');
-const categoriaChart = new Chart(ctxCategoria, {
-    type: 'doughnut',
-    data: {
-        labels: ['Mensalidades', 'Matrículas', 'Salários', 'Aluguel', 'Outros'],
-        datasets: [{
-            data: [60, 15, 15, 8, 2],
-            backgroundColor: [
-                '#2563eb',
-                '#10b981',
-                '#f59e0b',
-                '#ef4444',
-                '#8b5cf6'
-            ]
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: {
-                position: 'bottom',
+    if (document.getElementById('categoriaChart')) {
+        const ctxCategoria = document.getElementById('categoriaChart').getContext('2d');
+        const categoriasData = stats.graficos ? stats.graficos.categorias : {};
+        const labels = Object.keys(categoriasData);
+        const data = Object.values(categoriasData);
+
+        new Chart(ctxCategoria, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: [
+                        '#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
+                        '#3b82f6', '#6ee7b7', '#fcd34d', '#fca5a5', '#a78bfa'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                    }
+                }
             }
+        });
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const dataInput = document.getElementById('data');
+    if (dataInput) {
+        dataInput.value = today;
+    }
+
+    // Lógica para preencher categorias no modal quando o tipo muda
+    const tipoSelect = document.getElementById('tipo');
+    const categoriaSelect = document.getElementById('categoria');
+    
+    function updateCategorias(selectedTipo) {
+        categoriaSelect.innerHTML = '<option value="">Selecione a categoria</option>';
+        if (CATEGORIAS[selectedTipo]) {
+            CATEGORIAS[selectedTipo].forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.value;
+                option.textContent = cat.text;
+                categoriaSelect.appendChild(option);
+            });
+        }
+    }
+    
+    tipoSelect.addEventListener('change', function() {
+        updateCategorias(this.value);
+    });
+    
+    updateCategorias(tipoSelect.value);
+
+    const filterForm = document.getElementById('filterForm');
+    if (filterForm) {
+        filterForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const queryParams = new URLSearchParams(formData).toString();
+            window.location.href = `{{ url_for("financeiro_transacoes") }}?${queryParams}`;
+        });
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.value = urlParams.get('busca') || '';
+    }
+    document.getElementById('tipoFilter').value = urlParams.get('tipo') || '';
+    document.getElementById('categoriaFilter').value = urlParams.get('categoria') || '';
+    document.getElementById('dataInicioFilter').value = urlParams.get('data_inicio') || '';
+    document.getElementById('dataFimFilter').value = urlParams.get('data_fim') || '';
+    
+    if (document.getElementById('tipoFilter').value) {
+        const filterTipo = document.getElementById('tipoFilter').value;
+        const filterCategoriaSelect = document.getElementById('categoriaFilter');
+        const selectedCategoria = urlParams.get('categoria');
+        
+        filterCategoriaSelect.innerHTML = '<option value="">Todas categorias</option>';
+        if (CATEGORIAS_RECEITA.concat(CATEGORIAS_DESPESA).some(c => c.value === selectedCategoria)) {
+            let categorias = [];
+            if (filterTipo === 'receita') {
+                categorias = CATEGORIAS_RECEITA;
+            } else if (filterTipo === 'despesa') {
+                categorias = CATEGORIAS_DESPESA;
+            } else {
+                categorias = CATEGORIAS_RECEITA.concat(CATEGORIAS_DESPESA);
+            }
+
+            categorias.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.value;
+                option.textContent = cat.text;
+                if (cat.value === selectedCategoria) {
+                    option.selected = true;
+                }
+                filterCategoriaSelect.appendChild(option);
+            });
         }
     }
 });
 
-// Formulário de nova transação
-document.getElementById('transacaoForm').addEventListener('submit', function(e) {
-    e.preventDefault();
+function prepareModal(mode, transacao = {}) {
+    const modalLabel = document.getElementById('transacaoModalLabel');
+    const form = document.getElementById('transacaoForm');
+    const transacaoIdInput = document.getElementById('transacao_id');
+    const tipoSelect = document.getElementById('tipo');
     
-    // Aqui você implementaria o envio para a API
-    console.log('Nova transação:', new FormData(this));
+    if (mode === 'novo') {
+        modalLabel.innerHTML = '<i class="fas fa-plus me-2"></i> Nova Transação';
+        form.reset();
+        transacaoIdInput.value = '';
+        document.getElementById('data').value = new Date().toISOString().split('T')[0];
+        document.getElementById('status').value = 'confirmado';
+        
+        tipoSelect.value = '';
+        tipoSelect.dispatchEvent(new Event('change'));
+    } else if (mode === 'editar') {
+        modalLabel.innerHTML = '<i class="fas fa-edit me-2"></i> Editar Transação';
+        transacaoIdInput.value = transacao.id;
+        tipoSelect.value = transacao.tipo;
+        tipoSelect.dispatchEvent(new Event('change'));
+        document.getElementById('valor').value = transacao.valor;
+        document.getElementById('data').value = transacao.data.split('T')[0];
+        document.getElementById('categoria').value = transacao.categoria;
+        document.getElementById('descricao').value = transacao.descricao;
+        document.getElementById('observacoes').value = transacao.observacoes;
+        document.getElementById('status').value = transacao.status;
+    }
+}
+
+function salvarTransacao() {
+    const form = document.getElementById('transacaoForm');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
     
-    // Fechar modal e mostrar sucesso
-    const modal = bootstrap.Modal.getInstance(document.getElementById('novaTransacaoModal'));
-    modal.hide();
+    const formData = new FormData(form);
+    const id = formData.get('id');
     
-    showToast('Transação salva com sucesso!', 'success');
-    
-    // Recarregar página após um tempo
-    setTimeout(() => {
+    let endpoint = '{{ url_for("financeiro_salvar_transacao") }}';
+    if (id) {
+        endpoint += `?id=${id}`;
+    }
+
+    fetch(endpoint, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => { throw err; });
+        }
+        window.location.href = '{{ url_for("financeiro_dashboard") }}';
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro ao salvar transação. Detalhes no console.');
         location.reload();
-    }, 1500);
-});
+    });
+}
+
+function editTransacao(id) {
+    fetch(`/api/v1/financeiro/transacoes/${id}`)
+    .then(response => response.json())
+    .then(transacao => {
+        prepareModal('editar', transacao);
+        const modal = new bootstrap.Modal(document.getElementById('novaTransacaoModal'));
+        modal.show();
+    })
+    .catch(error => {
+        console.error('Erro ao buscar transação para edição:', error);
+        alert('Erro ao carregar dados da transação.');
+    });
+}
+
+let transacaoToDelete = null;
+
+function confirmDelete(id) {
+    transacaoToDelete = id;
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+}
+
+function deleteTransacao() {
+    if (transacaoToDelete) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/financeiro/deletar_transacao/${transacaoToDelete}`;
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+function clearFilters() {
+    window.location.href = '{{ url_for("financeiro_transacoes") }}';
+}
 </script>
 {% endblock %}
-

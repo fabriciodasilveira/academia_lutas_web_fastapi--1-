@@ -229,38 +229,26 @@
     <!-- Sidebar -->
     <div class="col-lg-4">
         <!-- Foto do Professor -->
-        <div class="card border-0 shadow-sm">
-            <div class="card-body text-center">
-                {% if professor.foto_perfil %}
-                    <img src="{{ professor.foto_perfil }}" alt="Foto de {{ professor.nome }}" 
-                         class="img-fluid rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;">
-                {% else %}
-                    <div class="bg-success bg-opacity-10 rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" 
-                         style="width: 150px; height: 150px;">
-                        <i class="fas fa-chalkboard-teacher fa-4x text-success"></i>
+        <div class="card-body">
+                <div class="row g-4">
+                    <div class="col-md-auto">
+                        {% if professor.foto %}
+                            <img src="http://localhost:8500{{ professor.foto }}" alt="Foto de {{ professor.nome }}" 
+                                 class="img-fluid rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;">
+                        {% else %}
+                            <div class="bg-success bg-opacity-10 rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" 
+                                 style="width: 150px; height: 150px;">
+                                <i class="fas fa-chalkboard-teacher fa-4x text-success"></i>
+                            </div>
+                        {% endif %}
                     </div>
-                {% endif %}
-                <h5 class="mb-1">{{ professor.nome }}</h5>
-                <p class="text-muted mb-3">
-                    {% if professor.especialidade %}
-                        Professor de {{ professor.especialidade|title }}
-                    {% else %}
-                        Professor
-                    {% endif %}
-                </p>
-                
-                <div class="d-grid gap-2">
-                    <a href="{{ url_for('professores_editar', id=professor.id) }}" class="btn btn-success">
-                        <i class="fas fa-edit me-1"></i>
-                        Editar Dados
-                    </a>
-                    <button class="btn btn-outline-danger" onclick="confirmDelete({{ professor.id }})">
-                        <i class="fas fa-trash me-1"></i>
-                        Excluir Professor
-                    </button>
+                    <div class="col">
+                        <h4 class="mb-1">{{ professor.nome }}</h4>
+                        <p class="text-muted mb-2">{{ professor.especialidade }}</p>
+                        <p class="text-muted"><i class="fas fa-id-card-alt me-2"></i>{{ professor.cpf }}</p>
+                    </div>
                 </div>
             </div>
-        </div>
         
         <!-- Estatísticas -->
         <div class="card border-0 shadow-sm mt-4">
@@ -423,15 +411,26 @@
 {% block extra_js %}
 <script>
 function confirmDelete(id) {
+    // Adiciona o id ao botão de exclusão do modal para uso posterior
+    const deleteButton = document.querySelector('#deleteModal .btn-danger');
+    deleteButton.onclick = function() {
+        deleteProfessor(id);
+    };
+    
+    // Mostra o modal de confirmação
     const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
     modal.show();
 }
 
-function deleteProfessor() {
-    // Implementar a exclusão do professor
-    console.log('Deletar professor:', {{ professor.id if professor else 'null' }});
-    // Por enquanto, apenas redireciona para a lista
-    window.location.href = "{{ url_for('professores_list') }}";
+function deleteProfessor(id) {
+    // Cria um formulário dinamicamente para enviar a requisição POST
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/professores/${id}/deletar`;
+    
+    // Adiciona o formulário ao corpo do documento e o envia
+    document.body.appendChild(form);
+    form.submit();
 }
 </script>
 {% endblock %}

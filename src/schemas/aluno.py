@@ -1,48 +1,43 @@
+# REMOVA as linhas de update_forward_refs daqui
+
 # -*- coding: utf-8 -*-
 """
 Schemas Pydantic para a entidade Aluno.
-Define a estrutura dos dados para validação e serialização.
 """
 
-from pydantic import BaseModel, Field, EmailStr
-from typing import Optional
-from datetime import date, datetime
+import datetime
+from typing import Optional, List
+from pydantic import BaseModel, Field, HttpUrl
 
-# Schema base para Aluno (campos comuns)
 class AlunoBase(BaseModel):
-    nome: str = Field(..., max_length=100)
-    data_nascimento: Optional[date] = None
-    cpf: Optional[str] = Field(None, max_length=14) # Considerar validação de formato
-    telefone: Optional[str] = Field(None, max_length=20)
-    email: Optional[EmailStr] = Field(None, max_length=100)
-    endereco: Optional[str] = Field(None, max_length=200)
-    observacoes: Optional[str] = None
-    foto: Optional[str] = Field(None, max_length=255) # Armazena o caminho/URL da foto
-
-# Schema para criação de Aluno (herda de AlunoBase)
-# Não inclui ID ou data_cadastro, que são gerados automaticamente
+    nome: str = Field(..., example="João da Silva")
+    data_nascimento: Optional[datetime.date] = Field(None, example="2000-01-01")
+    cpf: Optional[str] = Field(None, example="123.456.789-00", max_length=14)
+    telefone: Optional[str] = Field(None, example="(21) 98765-4321", max_length=20)
+    email: Optional[str] = Field(None, example="joao.silva@email.com")
+    endereco: Optional[str] = Field(None, example="Rua Principal, 123, Rio de Janeiro")
+    observacoes: Optional[str] = Field(None, example="Aluno iniciante com experiência em boxe.")
+    
+# Schema para criação de Aluno
 class AlunoCreate(AlunoBase):
     pass
 
-# Schema para atualização de Aluno (herda de AlunoBase)
-# Todos os campos são opcionais na atualização
-class AlunoUpdate(BaseModel):
-    nome: Optional[str] = Field(None, max_length=100)
-    data_nascimento: Optional[date] = None
-    cpf: Optional[str] = Field(None, max_length=14)
-    telefone: Optional[str] = Field(None, max_length=20)
-    email: Optional[EmailStr] = Field(None, max_length=100)
-    endereco: Optional[str] = Field(None, max_length=200)
-    observacoes: Optional[str] = None
-    # A atualização da foto pode precisar de um endpoint/lógica separada
-    # foto: Optional[str] = Field(None, max_length=255)
-
-# Schema para leitura/retorno de Aluno (herda de AlunoBase)
-# Inclui campos gerados automaticamente como ID e data_cadastro
+# Schema para leitura de Aluno
 class AlunoRead(AlunoBase):
     id: int
-    data_cadastro: datetime
+    foto: Optional[str] = None
+    data_cadastro: datetime.datetime  # Campo 'data_cadastro' adicionado aqui
 
     class Config:
-        orm_mode = True # Permite que o Pydantic leia dados de objetos ORM
+        orm_mode = True
+
+# Schema para atualização de Aluno
+class AlunoUpdate(BaseModel):
+    nome: Optional[str] = Field(None, example="João da Silva")
+    data_nascimento: Optional[datetime.date] = Field(None, example="2000-01-01")
+    cpf: Optional[str] = Field(None, example="123.456.789-00", max_length=14)
+    telefone: Optional[str] = Field(None, example="(21) 98765-4321", max_length=20)
+    email: Optional[str] = Field(None, example="joao.silva@email.com")
+    endereco: Optional[str] = Field(None, example="Rua Principal, 123, Rio de Janeiro")
+    observacoes: Optional[str] = Field(None, example="Aluno iniciante com experiência em boxe.")
 

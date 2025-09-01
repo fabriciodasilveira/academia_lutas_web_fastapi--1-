@@ -53,7 +53,17 @@
                                 Email
                             </label>
                             <input type="email" class="form-control" id="email" name="email" 
-                                   value="{{ aluno.email if aluno else '' }}">
+                                   value="{{ aluno.email if aluno else \'\' }}">
+                        </div>
+
+                        <!-- CPF -->
+                        <div class="col-md-6">
+                            <label for="cpf" class="form-label">
+                                <i class="fas fa-id-card me-1"></i>
+                                CPF
+                            </label>
+                            <input type="text" class="form-control" id="cpf" name="cpf" 
+                                   value="{{ aluno.cpf if aluno else \'\' }}" placeholder="000.000.000-00">
                         </div>
 
                         <!-- Telefone -->

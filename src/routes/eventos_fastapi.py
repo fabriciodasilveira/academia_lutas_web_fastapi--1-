@@ -14,8 +14,8 @@ from datetime import datetime
 import logging
 
 from src.database import get_db
-from src.models.evento import Evento, Foto
-from src.schemas.evento import EventoCreate, EventoRead, EventoUpdate, FotoCreate, FotoRead, FotoUpdate
+from src.models.evento import Evento
+from src.schemas.evento import EventoCreate, EventoRead, EventoUpdate
 
 # Configuração de diretórios - CORRIGIDO
 BASE_DIR = Path(__file__).resolve().parent.parent

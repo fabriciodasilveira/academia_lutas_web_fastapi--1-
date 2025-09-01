@@ -512,13 +512,19 @@
 function confirmDelete(id) {
     const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
     modal.show();
+    
+    const deleteButton = document.querySelector('#deleteModal .btn-danger');
+    deleteButton.onclick = function() {
+        deleteTurma(id);
+    };
 }
 
-function deleteTurma() {
-    // Implementar a exclusão da turma
-    console.log('Deletar turma:', {{ turma.id if turma else 'null' }});
-    // Por enquanto, apenas redireciona para a lista
-    window.location.href = "{{ url_for('turmas_list') }}";
+function deleteTurma(id) {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/turmas/${id}/deletar`;
+    document.body.appendChild(form);
+    form.submit();
 }
 
 function removeAluno(alunoId) {

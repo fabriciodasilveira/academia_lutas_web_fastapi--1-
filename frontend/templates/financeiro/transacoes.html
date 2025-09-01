@@ -15,7 +15,7 @@
                     <i class="fas fa-chart-line me-1"></i>
                     Dashboard
                 </a>
-                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#novaTransacaoModal">
+                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#novaTransacaoModal" onclick="prepareModal('novo')">
                     <i class="fas fa-plus me-1"></i>
                     Nova Transação
                 </button>
@@ -24,58 +24,6 @@
     </div>
 </div>
 
-<!-- Filtros e Busca -->
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card border-0 shadow-sm">
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <div class="input-group">
-                            <span class="input-group-text">
-                                <i class="fas fa-search"></i>
-                            </span>
-                            <input type="text" class="form-control" placeholder="Buscar transação..." id="searchInput">
-                        </div>
-                    </div>
-                    <div class="col-md-2">
-                        <select class="form-select" id="tipoFilter">
-                            <option value="">Todos os tipos</option>
-                            <option value="receita">Receita</option>
-                            <option value="despesa">Despesa</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <select class="form-select" id="categoriaFilter">
-                            <option value="">Todas categorias</option>
-                            <option value="mensalidade">Mensalidade</option>
-                            <option value="matricula">Matrícula</option>
-                            <option value="evento">Evento</option>
-                            <option value="equipamento">Equipamento</option>
-                            <option value="aluguel">Aluguel</option>
-                            <option value="salario">Salário</option>
-                            <option value="manutencao">Manutenção</option>
-                            <option value="outros">Outros</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <input type="date" class="form-control" id="dataInicioFilter" placeholder="Data início">
-                    </div>
-                    <div class="col-md-2">
-                        <input type="date" class="form-control" id="dataFimFilter" placeholder="Data fim">
-                    </div>
-                    <div class="col-md-1">
-                        <button class="btn btn-outline-secondary w-100" onclick="clearFilters()" title="Limpar Filtros">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Resumo Rápido -->
 <div class="row mb-4">
     <div class="col-md-3">
         <div class="card border-0 shadow-sm text-center">
@@ -83,7 +31,7 @@
                 <div class="bg-success bg-opacity-10 rounded-circle mx-auto mb-2 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
                     <i class="fas fa-arrow-up fa-lg text-success"></i>
                 </div>
-                <h4 class="mb-0 text-success">R$ 15.750,00</h4>
+                <h4 class="mb-0 text-success">R$ {{ "%.2f"|format(stats.get('receitas', 0)) }}</h4>
                 <small class="text-muted">Total Receitas</small>
             </div>
         </div>
@@ -94,7 +42,7 @@
                 <div class="bg-danger bg-opacity-10 rounded-circle mx-auto mb-2 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
                     <i class="fas fa-arrow-down fa-lg text-danger"></i>
                 </div>
-                <h4 class="mb-0 text-danger">R$ 8.200,00</h4>
+                <h4 class="mb-0 text-danger">R$ {{ "%.2f"|format(stats.get('despesas', 0)) }}</h4>
                 <small class="text-muted">Total Despesas</small>
             </div>
         </div>
@@ -105,7 +53,7 @@
                 <div class="bg-primary bg-opacity-10 rounded-circle mx-auto mb-2 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
                     <i class="fas fa-balance-scale fa-lg text-primary"></i>
                 </div>
-                <h4 class="mb-0 text-primary">R$ 7.550,00</h4>
+                <h4 class="mb-0 text-primary">R$ {{ "%.2f"|format(stats.get('saldo', 0)) }}</h4>
                 <small class="text-muted">Saldo</small>
             </div>
         </div>
@@ -116,14 +64,65 @@
                 <div class="bg-info bg-opacity-10 rounded-circle mx-auto mb-2 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
                     <i class="fas fa-list fa-lg text-info"></i>
                 </div>
-                <h4 class="mb-0">{{ transacoes|length }}</h4>
+                <h4 class="mb-0">{{ stats.get('total_transacoes', 0) }}</h4>
                 <small class="text-muted">Transações</small>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Lista de Transações -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <form id="filterForm" action="{{ url_for('financeiro_transacoes') }}" method="GET">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-search"></i>
+                                </span>
+                                <input type="text" class="form-control" placeholder="Buscar transação..." id="searchInput" name="busca" value="{{ request.args.get('busca', '') }}">
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-select" id="tipoFilter" name="tipo">
+                                <option value="" {% if not request.args.get('tipo') %}selected{% endif %}>Todos os tipos</option>
+                                <option value="receita" {% if request.args.get('tipo') == 'receita' %}selected{% endif %}>Receita</option>
+                                <option value="despesa" {% if request.args.get('tipo') == 'despesa' %}selected{% endif %}>Despesa</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-select" id="categoriaFilter" name="categoria">
+                                <option value="" {% if not request.args.get('categoria') %}selected{% endif %}>Todas categorias</option>
+                                <option value="mensalidade" {% if request.args.get('categoria') == 'mensalidade' %}selected{% endif %}>Mensalidade</option>
+                                <option value="matricula" {% if request.args.get('categoria') == 'matricula' %}selected{% endif %}>Matrícula</option>
+                                <option value="evento" {% if request.args.get('categoria') == 'evento' %}selected{% endif %}>Evento</option>
+                                <option value="equipamento" {% if request.args.get('categoria') == 'equipamento' %}selected{% endif %}>Equipamento</option>
+                                <option value="aluguel" {% if request.args.get('categoria') == 'aluguel' %}selected{% endif %}>Aluguel</option>
+                                <option value="salario" {% if request.args.get('categoria') == 'salario' %}selected{% endif %}>Salário</option>
+                                <option value="manutencao" {% if request.args.get('categoria') == 'manutencao' %}selected{% endif %}>Manutenção</option>
+                                <option value="outros" {% if request.args.get('categoria') == 'outros' %}selected{% endif %}>Outros</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <input type="date" class="form-control" id="dataInicioFilter" name="data_inicio" value="{{ request.args.get('data_inicio', '') }}">
+                        </div>
+                        <div class="col-md-2">
+                            <input type="date" class="form-control" id="dataFimFilter" name="data_fim" value="{{ request.args.get('data_fim', '') }}">
+                        </div>
+                        <div class="col-md-1">
+                            <button type="submit" class="btn btn-outline-primary w-100" title="Filtrar">
+                                <i class="fas fa-filter"></i>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="row">
     <div class="col-12">
         <div class="card border-0 shadow-sm">
@@ -161,8 +160,8 @@
                                             {% endif %}
                                         </span>
                                         <small class="text-muted">
-                                            {% if transacao.created_at %}
-                                                {{ transacao.created_at.strftime('%H:%M') }}
+                                            {% if transacao.data %}
+                                                {{ transacao.data.strftime('%H:%M') }}
                                             {% endif %}
                                         </small>
                                     </div>
@@ -222,9 +221,6 @@
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm" role="group">
-                                        <button class="btn btn-outline-primary" onclick="viewTransacao({{ transacao.id }})" title="Visualizar">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
                                         <button class="btn btn-outline-warning" onclick="editTransacao({{ transacao.id }})" title="Editar">
                                             <i class="fas fa-edit"></i>
                                         </button>
@@ -243,7 +239,7 @@
                     <i class="fas fa-exchange-alt fa-3x text-muted mb-3"></i>
                     <h5 class="text-muted">Nenhuma transação encontrada</h5>
                     <p class="text-muted">Comece registrando a primeira transação financeira.</p>
-                    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#novaTransacaoModal">
+                    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#novaTransacaoModal" onclick="prepareModal('novo')">
                         <i class="fas fa-plus me-1"></i>
                         Registrar Primeira Transação
                     </button>
@@ -254,19 +250,19 @@
     </div>
 </div>
 
-<!-- Modal Nova Transação -->
 <div class="modal fade" id="novaTransacaoModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">
+                <h5 class="modal-title" id="transacaoModalLabel">
                     <i class="fas fa-plus me-2"></i>
                     Nova Transação
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
-                <form id="transacaoForm">
+            <form id="transacaoForm" action="{{ url_for('financeiro_salvar_transacao') }}" method="POST">
+                <input type="hidden" id="transacao_id" name="id">
+                <div class="modal-body">
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label for="tipo" class="form-label">Tipo *</label>
@@ -278,18 +274,21 @@
                         </div>
                         
                         <div class="col-md-6">
+                            <label for="valor" class="form-label">Valor (R$) *</label>
+                            <input type="number" class="form-control" id="valor" name="valor" 
+                                   step="0.01" min="0" required>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="data" class="form-label">Data *</label>
+                            <input type="date" class="form-control" id="data" name="data" required>
+                        </div>
+                        
+                        <div class="col-md-6">
                             <label for="categoria" class="form-label">Categoria *</label>
                             <select class="form-select" id="categoria" name="categoria" required>
                                 <option value="">Selecione a categoria</option>
-                                <option value="mensalidade">Mensalidade</option>
-                                <option value="matricula">Matrícula</option>
-                                <option value="evento">Evento</option>
-                                <option value="equipamento">Equipamento</option>
-                                <option value="aluguel">Aluguel</option>
-                                <option value="salario">Salário</option>
-                                <option value="manutencao">Manutenção</option>
-                                <option value="outros">Outros</option>
-                            </select>
+                                </select>
                         </div>
                         
                         <div class="col-md-8">
@@ -299,17 +298,6 @@
                         </div>
                         
                         <div class="col-md-4">
-                            <label for="valor" class="form-label">Valor (R$) *</label>
-                            <input type="number" class="form-control" id="valor" name="valor" required
-                                   step="0.01" min="0" placeholder="0,00">
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <label for="data" class="form-label">Data *</label>
-                            <input type="date" class="form-control" id="data" name="data" required>
-                        </div>
-                        
-                        <div class="col-md-6">
                             <label for="status" class="form-label">Status</label>
                             <select class="form-select" id="status" name="status">
                                 <option value="confirmado">Confirmado</option>
@@ -337,7 +325,6 @@
     </div>
 </div>
 
-<!-- Modal de Confirmação de Exclusão -->
 <div class="modal fade" id="deleteModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -361,37 +348,163 @@
 <script>
 let transacaoToDelete = null;
 
-// Definir data atual como padrão
-document.getElementById('data').valueAsDate = new Date();
+const CATEGORIAS_FROM_BACKEND = {{ categorias | tojson | safe }};
+
+function updateCategorias(selectedTipo, selectedCategoria = null) {
+    const categoriaSelect = document.getElementById('categoria');
+    categoriaSelect.innerHTML = '<option value="">Selecione a categoria</option>';
+    
+    if (CATEGORIAS_FROM_BACKEND) {
+        const categoriasPorTipo = CATEGORIAS_FROM_BACKEND.filter(cat => cat.tipo === selectedTipo);
+        categoriasPorTipo.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat.nome;
+            option.textContent = cat.nome;
+            if (selectedCategoria && cat.nome === selectedCategoria) {
+                option.selected = true;
+            }
+            categoriaSelect.appendChild(option);
+        });
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const today = new Date().toISOString().split('T')[0];
+    const dataInput = document.getElementById('data');
+    if (dataInput) {
+        dataInput.value = today;
+    }
+
+    const tipoSelect = document.getElementById('tipo');
+    tipoSelect.addEventListener('change', function() {
+        updateCategorias(this.value);
+    });
+    
+    // Atualiza as categorias iniciais do modal
+    const novaTransacaoModal = document.getElementById('novaTransacaoModal');
+    if (novaTransacaoModal) {
+        novaTransacaoModal.addEventListener('show.bs.modal', function () {
+            const currentTipo = tipoSelect.value || 'receita';
+            tipoSelect.value = currentTipo;
+            updateCategorias(currentTipo);
+        });
+    }
+    
+    // Lógica dos filtros na página principal
+    const urlParams = new URLSearchParams(window.location.search);
+    document.getElementById('searchInput').value = urlParams.get('busca') || '';
+    const tipoFilter = document.getElementById('tipoFilter');
+    const categoriaFilter = document.getElementById('categoriaFilter');
+    
+    if (tipoFilter && categoriaFilter) {
+        const selectedTipoFilter = urlParams.get('tipo') || '';
+        const selectedCategoriaFilter = urlParams.get('categoria') || '';
+        tipoFilter.value = selectedTipoFilter;
+        
+        let categoriasDeFiltro = [];
+        if (selectedTipoFilter) {
+            categoriasDeFiltro = CATEGORIAS_FROM_BACKEND.filter(c => c.tipo === selectedTipoFilter);
+        } else {
+            categoriasDeFiltro = CATEGORIAS_FROM_BACKEND;
+        }
+
+        categoriaFilter.innerHTML = '<option value="">Todas categorias</option>';
+        categoriasDeFiltro.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat.nome;
+            option.textContent = cat.nome;
+            if (cat.nome === selectedCategoriaFilter) {
+                option.selected = true;
+            }
+            categoriaFilter.appendChild(option);
+        });
+        
+        tipoFilter.addEventListener('change', function() {
+            window.location.href = `{{ url_for("financeiro_transacoes") }}?tipo=${this.value}`;
+        });
+    }
+    
+    document.getElementById('dataInicioFilter').value = urlParams.get('data_inicio') || '';
+    document.getElementById('dataFimFilter').value = urlParams.get('data_fim') || '';
+});
+
+function prepareModal(mode, transacao = {}) {
+    const modalLabel = document.getElementById('transacaoModalLabel');
+    const form = document.getElementById('transacaoForm');
+    const transacaoIdInput = document.getElementById('transacao_id');
+    const tipoSelect = document.getElementById('tipo');
+    
+    if (mode === 'novo') {
+        modalLabel.innerHTML = '<i class="fas fa-plus me-2"></i> Nova Transação';
+        form.reset();
+        transacaoIdInput.value = '';
+        document.getElementById('data').value = new Date().toISOString().split('T')[0];
+        document.getElementById('status').value = 'confirmado';
+        
+        const defaultTipo = 'receita';
+        tipoSelect.value = defaultTipo;
+        updateCategorias(defaultTipo);
+    } else if (mode === 'editar') {
+        modalLabel.innerHTML = '<i class="fas fa-edit me-2"></i> Editar Transação';
+        transacaoIdInput.value = transacao.id;
+        tipoSelect.value = transacao.tipo;
+        updateCategorias(transacao.tipo, transacao.categoria);
+        document.getElementById('valor').value = transacao.valor;
+        document.getElementById('data').value = transacao.data.split('T')[0];
+        document.getElementById('categoria').value = transacao.categoria;
+        document.getElementById('descricao').value = transacao.descricao;
+        document.getElementById('observacoes').value = transacao.observacoes;
+        document.getElementById('status').value = transacao.status;
+    }
+}
 
 function salvarTransacao() {
     const form = document.getElementById('transacaoForm');
-    const formData = new FormData(form);
-    
-    // Validação básica
     if (!form.checkValidity()) {
         form.reportValidity();
         return;
     }
     
-    // Aqui você implementaria a chamada para salvar a transação
-    console.log('Salvar transação:', Object.fromEntries(formData));
+    const formData = new FormData(form);
+    const id = formData.get('id');
     
-    // Fechar modal e recarregar página
-    const modal = bootstrap.Modal.getInstance(document.getElementById('novaTransacaoModal'));
-    modal.hide();
-    location.reload();
-}
+    let endpoint = '{{ url_for("financeiro_salvar_transacao") }}';
+    if (id) {
+        endpoint += `?id=${id}`;
+    }
 
-function viewTransacao(id) {
-    // Implementar visualização da transação
-    console.log('Visualizar transação:', id);
+    fetch(endpoint, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => { throw err; });
+        }
+        window.location.href = '{{ url_for("financeiro_transacoes") }}';
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro ao salvar transação. Detalhes no console.');
+        location.reload();
+    });
 }
 
 function editTransacao(id) {
-    // Implementar edição da transação
-    console.log('Editar transação:', id);
+    fetch(`/api/v1/financeiro/transacoes/${id}`)
+    .then(response => response.json())
+    .then(transacao => {
+        prepareModal('editar', transacao);
+        const modal = new bootstrap.Modal(document.getElementById('novaTransacaoModal'));
+        modal.show();
+    })
+    .catch(error => {
+        console.error('Erro ao buscar transação para edição:', error);
+        alert('Erro ao carregar dados da transação.');
+    });
 }
+
+let transacaoToDelete = null;
 
 function confirmDelete(id) {
     transacaoToDelete = id;
@@ -401,110 +514,16 @@ function confirmDelete(id) {
 
 function deleteTransacao() {
     if (transacaoToDelete) {
-        // Aqui você implementaria a chamada para deletar a transação
-        console.log('Deletar transação:', transacaoToDelete);
-        // Por enquanto, apenas recarrega a página
-        location.reload();
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/financeiro/deletar_transacao/${transacaoToDelete}`;
+        document.body.appendChild(form);
+        form.submit();
     }
 }
 
 function clearFilters() {
-    document.getElementById('searchInput').value = '';
-    document.getElementById('tipoFilter').value = '';
-    document.getElementById('categoriaFilter').value = '';
-    document.getElementById('dataInicioFilter').value = '';
-    document.getElementById('dataFimFilter').value = '';
-    // Aqui você implementaria a lógica para limpar os filtros
+    window.location.href = '{{ url_for("financeiro_transacoes") }}';
 }
-
-// Implementar busca em tempo real
-document.getElementById('searchInput').addEventListener('input', function() {
-    const searchTerm = this.value.toLowerCase();
-    const rows = document.querySelectorAll('tbody tr');
-    
-    rows.forEach(row => {
-        const descricao = row.cells[1].textContent.toLowerCase();
-        const categoria = row.cells[2].textContent.toLowerCase();
-        
-        if (descricao.includes(searchTerm) || categoria.includes(searchTerm)) {
-            row.style.display = '';
-        } else {
-            row.style.display = 'none';
-        }
-    });
-});
-
-// Filtros
-document.getElementById('tipoFilter').addEventListener('change', function() {
-    const filterValue = this.value.toLowerCase();
-    const rows = document.querySelectorAll('tbody tr');
-    
-    rows.forEach(row => {
-        if (!filterValue) {
-            row.style.display = '';
-        } else {
-            const tipo = row.cells[3].textContent.toLowerCase();
-            if (tipo.includes(filterValue)) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
-        }
-    });
-});
-
-document.getElementById('categoriaFilter').addEventListener('change', function() {
-    const filterValue = this.value.toLowerCase();
-    const rows = document.querySelectorAll('tbody tr');
-    
-    rows.forEach(row => {
-        if (!filterValue) {
-            row.style.display = '';
-        } else {
-            const categoria = row.cells[2].textContent.toLowerCase();
-            if (categoria.includes(filterValue)) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
-        }
-    });
-});
-
-// Formatação do valor
-document.getElementById('valor').addEventListener('blur', function(e) {
-    const value = parseFloat(e.target.value);
-    if (!isNaN(value)) {
-        e.target.value = value.toFixed(2);
-    }
-});
-
-// Atualizar categorias baseado no tipo
-document.getElementById('tipo').addEventListener('change', function() {
-    const tipo = this.value;
-    const categoriaSelect = document.getElementById('categoria');
-    
-    // Limpar opções atuais
-    categoriaSelect.innerHTML = '<option value="">Selecione a categoria</option>';
-    
-    if (tipo === 'receita') {
-        categoriaSelect.innerHTML += `
-            <option value="mensalidade">Mensalidade</option>
-            <option value="matricula">Matrícula</option>
-            <option value="evento">Evento</option>
-            <option value="equipamento">Venda de Equipamento</option>
-            <option value="outros">Outros</option>
-        `;
-    } else if (tipo === 'despesa') {
-        categoriaSelect.innerHTML += `
-            <option value="aluguel">Aluguel</option>
-            <option value="salario">Salário</option>
-            <option value="equipamento">Compra de Equipamento</option>
-            <option value="manutencao">Manutenção</option>
-            <option value="outros">Outros</option>
-        `;
-    }
-});
 </script>
 {% endblock %}
-

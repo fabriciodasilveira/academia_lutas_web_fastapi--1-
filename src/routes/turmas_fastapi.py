@@ -10,8 +10,7 @@ import logging
 
 from src.database import get_db
 from src.models.turma import Turma
-from src.models.professor import Professor # Importar para verificar existência do professor
-# from src.models.matricula import Matricula # Importar se for verificar matrículas antes de excluir
+from src.models.professor import Professor
 from src.schemas.turma import TurmaCreate, TurmaRead, TurmaUpdate
 
 router = APIRouter(
@@ -26,14 +25,13 @@ def create_turma(turma: TurmaCreate, db: Session = Depends(get_db)):
     """
     Cria uma nova turma.
     """
-    # Validação: Verifica se o professor_id existe (se fornecido)
     if turma.professor_id:
         db_professor = db.query(Professor).filter(Professor.id == turma.professor_id).first()
         if not db_professor:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Professor com ID {turma.professor_id} não encontrado")
-            # Alternativamente, poderia verificar se o usuário é professor, se o modelo fosse unificado.
-
-    db_turma = Turma(**turma.dict())
+    
+    turma_data = turma.dict(exclude_unset=True)
+    db_turma = Turma(**turma_data)
     db.add(db_turma)
     db.commit()
     db.refresh(db_turma)
@@ -87,7 +85,6 @@ def update_turma(
 
     update_data = turma_update.dict(exclude_unset=True)
 
-    # Validação: Verifica se o novo professor_id existe (se fornecido e diferente do atual)
     if "professor_id" in update_data and update_data["professor_id"] is not None:
         if update_data["professor_id"] != db_turma.professor_id:
             db_professor = db.query(Professor).filter(Professor.id == update_data["professor_id"]).first()
@@ -105,35 +102,23 @@ def update_turma(
 def delete_turma(turma_id: int, db: Session = Depends(get_db)):
     """
     Exclui uma turma.
-    TODO: Adicionar verificação de dependências (ex: matrículas) antes de excluir.
     """
     db_turma = db.query(Turma).filter(Turma.id == turma_id).first()
     if db_turma is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Turma não encontrada")
 
-    # TODO: Verificar se a turma possui matrículas ativas
-    # Exemplo: if db.query(Matricula).filter(Matricula.turma_id == turma_id).first():
-    #             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Não é possível excluir turma com matrículas ativas")
-
     db.delete(db_turma)
     db.commit()
     return None
 
-# Endpoint adicional (exemplo do Flask original)
+# Endpoints adicionais para o frontend
 @router.get("/utils/modalidades", response_model=List[str])
 def list_modalidades():
-    """Retorna uma lista fixa de modalidades."""
-    # Em uma aplicação real, isso poderia vir do banco de dados
-    return ["Jiu-Jitsu", "Judô", "Muay Thai", "Boxe", "MMA"]
+    return ["Jiu-Jitsu", "Judô", "Muay Thai", "Boxe", "MMA", "Karate", "Taekwondo", "Judo"]
 
-# Endpoint adicional (exemplo do Flask original, adaptado)
-# Poderia retornar um schema mais completo do professor se necessário
-@router.get("/utils/professores", response_model=List[dict]) # Retorna dict simples por enquanto
+@router.get("/utils/professores", response_model=List[dict])
 def list_professores_ativos(db: Session = Depends(get_db)):
-    """Retorna uma lista simplificada de professores ativos."""
-    # Assume que existe um campo 'ativo' no modelo Professor ou que todos listados são ativos
-    professores = db.query(Professor).order_by(Professor.nome).all() # Adicionar filtro de ativo se existir
+    professores = db.query(Professor).order_by(Professor.nome).all()
     return [
-        {"id": prof.id, "nome": prof.nome} for prof in professores
+        {"id": prof.id, "nome": prof.nome, "especialidade": prof.especialidade} for prof in professores
     ]
-
