@@ -12,10 +12,13 @@ from datetime import date
 from src.schemas.aluno import AlunoRead
 from src.schemas.turma import TurmaRead
 
+from src.schemas.plano import PlanoRead # ADICIONAR ESTE IMPORT
+
 # Schema base para Matrícula
 class MatriculaBase(BaseModel):
     aluno_id: int
     turma_id: int
+    plano_id: int # ADICIONAR ESTA LINHA
     data_matricula: Optional[date] = None
     ativa: Optional[bool] = True
 
@@ -34,6 +37,7 @@ class MatriculaRead(MatriculaBase):
     id: int
     aluno: AlunoRead
     turma: TurmaRead
+    plano: PlanoRead # ADICIONAR ESTA LINHA
 
     class Config:
         orm_mode = True

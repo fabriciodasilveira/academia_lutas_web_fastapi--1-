@@ -864,3 +864,100 @@ def mensalidades_pagar(id):
     else:
         flash("Erro ao processar pagamento.", "error")
     return redirect(url_for("mensalidades_list"))
+
+
+# Em frontend/app.py
+
+# ... (resto do seu código) ...
+
+# === ROTA PARA GERAR LINK DE PAGAMENTO ===
+@app.route("/mensalidades/pagar-online/<int:id>", methods=["POST"])
+def mensalidades_pagar_online(id):
+    """Gera o link de pagamento do Mercado Pago e retorna como JSON."""
+    # Chama o endpoint da API que cria a preferência de pagamento
+    response = api_request(f"/pagamentos/gerar/{id}", method="POST")
+    
+    if response and response.status_code == 200:
+        return jsonify(response.json())
+    else:
+        error_message = "Falha ao gerar link de pagamento."
+        if response:
+            try:
+                error_message += f" Detalhe: {response.json().get('detail', '')}"
+            except:
+                pass
+        return jsonify({"error": error_message}), 500
+    
+    
+    # Em frontend/app.py
+
+# === ROTAS PARA PLANOS ===
+@app.route("/planos")
+def planos_list():
+    response = api_request("/planos")
+    planos = []
+    if response and response.status_code == 200:
+        planos = response.json()
+    return render_template("planos/list.html", planos=planos)
+
+@app.route("/planos/novo")
+def planos_novo():
+    return render_template("planos/form.html", plano=None)
+
+@app.route("/planos/<int:id>/editar")
+def planos_editar(id):
+    response = api_request(f"/planos/{id}")
+    plano = None
+    if response and response.status_code == 200:
+        plano = response.json()
+    else:
+        flash("Plano não encontrado.", "error")
+        return redirect(url_for("planos_list"))
+    return render_template("planos/form.html", plano=plano)
+
+@app.route("/planos/salvar", methods=["POST"])
+def planos_salvar():
+    try:
+        plano_data = {
+            "nome": request.form.get("nome"),
+            "descricao": request.form.get("descricao"),
+            "valor": float(request.form.get("valor").replace(',', '.')),
+            "periodo_meses": int(request.form.get("periodo_meses"))
+        }
+
+        plano_data = {k: v for k, v in plano_data.items() if v}
+        
+        plano_id = request.form.get("id")
+        if plano_id:
+            response = api_request(f"/planos/{plano_id}", method="PUT", json=plano_data)
+            success_message = "Plano atualizado com sucesso!"
+        else:
+            response = api_request("/planos", method="POST", json=plano_data)
+            success_message = "Plano cadastrado com sucesso!"
+
+        if response and response.status_code in [200, 201]:
+            flash(success_message, "success")
+        else:
+            error_msg = "Erro ao salvar plano."
+            if response:
+                try:
+                    error_detail = response.json().get("detail", "")
+                    if error_detail:
+                        error_msg += f" Detalhe: {error_detail}"
+                except:
+                    pass
+            flash(error_msg, "error")
+
+    except Exception as e:
+        flash(f"Erro interno ao salvar plano: {e}", "error")
+    
+    return redirect(url_for("planos_list"))
+
+@app.route("/planos/deletar/<int:id>", methods=["POST"])
+def planos_deletar(id):
+    response = api_request(f"/planos/{id}", method="DELETE")
+    if response and response.status_code == 204:
+        flash("Plano excluído com sucesso!", "success")
+    else:
+        flash("Erro ao excluir plano.", "error")
+    return redirect(url_for("planos_list"))

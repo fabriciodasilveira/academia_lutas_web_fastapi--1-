@@ -52,7 +52,15 @@
                             {% endfor %}
                         </select>
                     </div>
-                    
+                    <div class="mb-3">
+                        <label for="plano_id" class="form-label">Plano</label>
+                            <select class="form-select" id="plano_id" name="plano_id" required>
+                                <option value="">Selecione um plano</option>
+                                {% for plano in planos %}
+                                    <option value="{{ plano.id }}" {% if matricula and matricula.plano_id == plano.id %}selected{% endif %}>{{ plano.nome }} (R$ {{ "%.2f"|format(plano.valor) }})</option>
+                                {% endfor %}
+                            </select>
+                    </div>
                     {% if matricula %}
                     <div class="form-check form-switch mb-3">
                         <input class="form-check-input" type="checkbox" id="ativa" name="ativa" {% if matricula.ativa %}checked{% endif %}>

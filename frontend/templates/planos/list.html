@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Planos - Academia de Lutas{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h3 mb-0">
+                <i class="fas fa-tags me-2"></i>
+                Planos
+            </h1>
+            <a href="{{ url_for('planos_novo') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i>
+                Novo Plano
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-0">
+                {% if planos %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Nome do Plano</th>
+                                <th>Valor</th>
+                                <th>Período (Meses)</th>
+                                <th>Descrição</th>
+                                <th width="150">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for plano in planos %}
+                            <tr>
+                                <td>{{ plano.nome }}</td>
+                                <td>R$ {{ "%.2f"|format(plano.valor) }}</td>
+                                <td>{{ plano.periodo_meses }}</td>
+                                <td>{{ plano.descricao or '-' }}</td>
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a href="{{ url_for('planos_editar', id=plano.id) }}" class="btn btn-outline-warning" title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <button class="btn btn-outline-danger" onclick="confirmDelete({{ plano.id }})" title="Excluir">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <h5 class="text-muted">Nenhum plano cadastrado.</h5>
+                    <a href="{{ url_for('planos_novo') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i>
+                        Adicionar Primeiro Plano
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Exclusão</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja excluir este plano? Esta ação não pode ser desfeita.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" onclick="deletePlano()">Excluir</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let planoToDelete = null;
+
+function confirmDelete(id) {
+    planoToDelete = id;
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+}
+
+function deletePlano() {
+    if (planoToDelete) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/planos/deletar/${planoToDelete}`;
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
+{% endblock %}

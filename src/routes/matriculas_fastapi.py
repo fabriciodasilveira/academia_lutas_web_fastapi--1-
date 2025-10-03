@@ -14,6 +14,8 @@ from src.models.matricula import Matricula
 from src.models.aluno import Aluno
 from src.models.turma import Turma
 from src.schemas.matricula import MatriculaCreate, MatriculaRead, MatriculaUpdate
+from src.models.plano import Plano
+
 
 router = APIRouter(
     tags=["Matrículas"],
@@ -27,6 +29,11 @@ def create_matricula(matricula: MatriculaCreate, db: Session = Depends(get_db)):
     """
     Cria uma nova matrícula de um aluno em uma turma.
     """
+    
+    db_plano = db.query(Plano).filter(Plano.id == matricula.plano_id).first() # ADICIONAR ESTA VALIDAÇÃO
+    if not db_plano:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Plano não encontrado")
+    
     db_aluno = db.query(Aluno).filter(Aluno.id == matricula.aluno_id).first()
     if not db_aluno:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Aluno não encontrado")
