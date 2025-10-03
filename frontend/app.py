@@ -872,27 +872,6 @@ def mensalidades_deletar(id):
     return redirect(url_for("mensalidades_list"))
 
 
-if __name__ == '__main__':
-    print("Iniciando aplicação Flask de depuração...")
-    app.run(debug=False, host='0.0.0.0', port=5700)
-
-@app.route("/mensalidades")
-def mensalidades_list():
-    response = api_request("/mensalidades")
-    mensalidades = []
-    if response and response.status_code == 200:
-        mensalidades = response.json()
-    return render_template("mensalidades/list.html", mensalidades=mensalidades)
-
-@app.route("/mensalidades/pagar/<int:id>", methods=["POST"])
-def mensalidades_pagar(id):
-    response = api_request(f"/mensalidades/processar_pagamento/{id}", method="POST")
-    if response and response.status_code == 200:
-        flash("Pagamento processado com sucesso!", "success")
-    else:
-        flash("Erro ao processar pagamento.", "error")
-    return redirect(url_for("mensalidades_list"))
-
 
 # Em frontend/app.py
 
@@ -919,3 +898,9 @@ def mensalidades_pagar_online(id):
     
     # Em frontend/app.py
 
+
+
+
+if __name__ == '__main__':
+    print("Iniciando aplicação Flask de depuração...")
+    app.run(debug=False, host='0.0.0.0', port=5700)
