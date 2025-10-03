@@ -7,7 +7,7 @@ from datetime import datetime, date, timedelta
 app = Flask(__name__)
 app.secret_key = 'dev-secret-key-change-in-production'
 
-API_BASE_URL = 'http://localhost:8500'
+API_BASE_URL = 'http://localhost:8000'
 
 logging.basicConfig(
     level=logging.INFO,
