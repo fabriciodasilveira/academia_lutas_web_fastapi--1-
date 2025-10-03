@@ -393,7 +393,11 @@ def matriculas_novo():
     turmas_response = api_request("/turmas")
     turmas = turmas_response.json() if turmas_response and turmas_response.status_code == 200 else []
     
-    return render_template("matriculas/form.html", alunos=alunos, turmas=turmas, matricula=None)
+    # LINHA CORRIGIDA/ADICIONADA ABAIXO
+    planos_response = api_request("/planos")
+    planos = planos_response.json() if planos_response and planos_response.status_code == 200 else []
+    
+    return render_template("matriculas/form.html", alunos=alunos, turmas=turmas, planos=planos, matricula=None)
 
 @app.route("/matriculas/salvar", methods=["POST"])
 def matriculas_salvar():
@@ -429,6 +433,10 @@ def matriculas_editar(id):
     alunos_response = api_request("/alunos")
     turmas_response = api_request("/turmas")
     
+    # LINHA CORRIGIDA/ADICIONADA ABAIXO
+    planos_response = api_request("/planos")
+    planos = planos_response.json() if planos_response and planos_response.status_code == 200 else []
+    
     if not matricula_response or matricula_response.status_code != 200:
         flash("Matrícula não encontrada!", "error")
         return redirect(url_for("matriculas_list"))
@@ -437,7 +445,7 @@ def matriculas_editar(id):
     alunos = alunos_response.json() if alunos_response and alunos_response.status_code == 200 else []
     turmas = turmas_response.json() if turmas_response and turmas_response.status_code == 200 else []
     
-    return render_template("matriculas/form.html", matricula=matricula, alunos=alunos, turmas=turmas)
+    return render_template("matriculas/form.html", matricula=matricula, alunos=alunos, turmas=turmas, planos=planos)
 
 @app.route("/matriculas/salvar_edicao", methods=["POST"])
 def matriculas_salvar_edicao():
