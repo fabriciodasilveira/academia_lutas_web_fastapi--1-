@@ -193,11 +193,18 @@ def get_balanco(
     for cat, valor in categorias_query:
         categorias_data[cat] = valor
 
+    # Busca por mensalidades pendentes
+    mensalidades_pendentes = db.query(Mensalidade).filter(
+        Mensalidade.status == 'pendente',
+        Mensalidade.data_vencimento <= hoje
+    ).all()
+
     return {
         "receitas": receitas,
         "despesas": despesas,
         "saldo": receitas - despesas,
         "total_transacoes": total_transacoes,
+        "mensalidades_pendentes": len(mensalidades_pendentes),
         "graficos": {
             "categorias": categorias_data
         }

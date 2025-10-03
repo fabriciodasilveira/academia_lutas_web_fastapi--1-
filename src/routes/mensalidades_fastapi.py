@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from datetime import date
+from src.models.financeiro import Financeiro
 import logging
 
 from src.database import get_db
@@ -120,7 +121,8 @@ def delete_mensalidade(mensalidade_id: int, db: Session = Depends(get_db)):
 @router.post("/processar_pagamento/{mensalidade_id}", response_model=MensalidadeRead)
 def processar_pagamento(mensalidade_id: int, db: Session = Depends(get_db)):
     """
-    Processa o pagamento de uma mensalidade, atualizando o status e a data de pagamento.
+    Processa o pagamento de uma mensalidade, atualizando o status, a data de pagamento
+    e registrando a transação no financeiro.
     """
     db_mensalidade = db.query(Mensalidade).filter(Mensalidade.id == mensalidade_id).first()
     if db_mensalidade is None:
@@ -129,12 +131,60 @@ def processar_pagamento(mensalidade_id: int, db: Session = Depends(get_db)):
     if db_mensalidade.status == "pago":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Mensalidade já está paga.")
 
+    # Atualiza a mensalidade
     db_mensalidade.status = "pago"
     db_mensalidade.data_pagamento = date.today()
+
+    # Cria a transação financeira correspondente
+    transacao_financeira = Financeiro(
+        tipo="receita",
+        categoria="Mensalidade",
+        descricao=f"Mensalidade de {db_mensalidade.aluno.nome} - Venc: {db_mensalidade.data_vencimento.strftime('%d/%m/%Y')}",
+        valor=db_mensalidade.valor,
+        status="confirmado",
+        data=datetime.now()
+    )
+    db.add(transacao_financeira)
+    
     db.commit()
     db.refresh(db_mensalidade)
 
-    # TODO: Integrar com o módulo financeiro para registrar a receita.
-    # Exemplo: criar_transacao(FinanceiroCreate(...))
-
     return db_mensalidade
+
+@router.post("/gerar-mensalidades", status_code=status.HTTP_201_CREATED)
+def gerar_mensalidades_do_mes(db: Session = Depends(get_db)):
+    """
+    Gera as mensalidades para todas as matrículas ativas que ainda não
+    possuem mensalidade para o mês corrente.
+    """
+    hoje = date.today()
+    primeiro_dia_mes = hoje.replace(day=1)
+    
+    # Busca todas as matrículas ativas
+    matriculas_ativas = db.query(Matricula).filter(Matricula.ativa == True).all()
+    
+    mensalidades_criadas = 0
+    for matricula in matriculas_ativas:
+        # Verifica se já existe mensalidade para o mês atual
+        mensalidade_existente = db.query(Mensalidade).filter(
+            Mensalidade.aluno_id == matricula.aluno_id,
+            Mensalidade.data_vencimento >= primeiro_dia_mes
+        ).first()
+
+        if not mensalidade_existente:
+            # Busca o plano associado à matrícula para obter o valor
+            plano = db.query(Plano).filter(Plano.id == matricula.plano_id).first()
+            if plano:
+                nova_mensalidade = Mensalidade(
+                    aluno_id=matricula.aluno_id,
+                    plano_id=matricula.plano_id,
+                    valor=plano.valor,
+                    data_vencimento=primeiro_dia_mes.replace(day=10), # Vencimento no dia 10
+                    status="pendente"
+                )
+                db.add(nova_mensalidade)
+                mensalidades_criadas += 1
+
+    db.commit()
+    
+    return {"mensagem": f"{mensalidades_criadas} mensalidades geradas com sucesso."}
