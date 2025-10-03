@@ -402,9 +402,20 @@ def matriculas_novo():
 @app.route("/matriculas/salvar", methods=["POST"])
 def matriculas_salvar():
     try:
+        # Pega os IDs do formulário
+        aluno_id = request.form.get("aluno_id")
+        turma_id = request.form.get("turma_id")
+        plano_id = request.form.get("plano_id")
+
+        # Validação para garantir que todos os campos foram selecionados
+        if not all([aluno_id, turma_id, plano_id]):
+            flash("Erro: Todos os campos (Aluno, Turma e Plano) são obrigatórios.", "error")
+            return redirect(url_for("matriculas_novo"))
+
         matricula_data = {
-            "aluno_id": int(request.form.get("aluno_id")),
-            "turma_id": int(request.form.get("turma_id"))
+            "aluno_id": int(aluno_id),
+            "turma_id": int(turma_id),
+            "plano_id": int(plano_id)
         }
         
         response = api_request("/matriculas", method="POST", json=matricula_data)
@@ -416,14 +427,23 @@ def matriculas_salvar():
             if response:
                 try:
                     error_detail = response.json().get("detail", "")
-                    if error_detail:
+                    if isinstance(error_detail, list):
+                         # Lida com erros de validação do Pydantic
+                        error_msg += " Verifique os dados: " + ", ".join([e.get('msg', '') for e in error_detail])
+                    elif error_detail:
                         error_msg += f" Detalhe: {error_detail}"
                 except:
-                    pass
+                    error_msg += f" (Status: {response.status_code})"
             flash(error_msg, "error")
+            # Em caso de erro na API, redireciona de volta para o formulário
+            return redirect(url_for("matriculas_novo"))
             
+    except ValueError:
+        flash("Erro: Valores inválidos fornecidos para aluno, turma ou plano.", "error")
+        return redirect(url_for("matriculas_novo"))
     except Exception as e:
-        flash(f"Erro interno ao salvar a matrícula. {e}", "error")
+        flash(f"Erro interno ao salvar a matrícula: {e}", "error")
+        return redirect(url_for("matriculas_novo"))
         
     return redirect(url_for("matriculas_list"))
 
@@ -899,73 +919,3 @@ def mensalidades_pagar_online(id):
     
     # Em frontend/app.py
 
-# === ROTAS PARA PLANOS ===
-@app.route("/planos")
-def planos_list():
-    response = api_request("/planos")
-    planos = []
-    if response and response.status_code == 200:
-        planos = response.json()
-    return render_template("planos/list.html", planos=planos)
-
-@app.route("/planos/novo")
-def planos_novo():
-    return render_template("planos/form.html", plano=None)
-
-@app.route("/planos/<int:id>/editar")
-def planos_editar(id):
-    response = api_request(f"/planos/{id}")
-    plano = None
-    if response and response.status_code == 200:
-        plano = response.json()
-    else:
-        flash("Plano não encontrado.", "error")
-        return redirect(url_for("planos_list"))
-    return render_template("planos/form.html", plano=plano)
-
-@app.route("/planos/salvar", methods=["POST"])
-def planos_salvar():
-    try:
-        plano_data = {
-            "nome": request.form.get("nome"),
-            "descricao": request.form.get("descricao"),
-            "valor": float(request.form.get("valor").replace(',', '.')),
-            "periodo_meses": int(request.form.get("periodo_meses"))
-        }
-
-        plano_data = {k: v for k, v in plano_data.items() if v}
-        
-        plano_id = request.form.get("id")
-        if plano_id:
-            response = api_request(f"/planos/{plano_id}", method="PUT", json=plano_data)
-            success_message = "Plano atualizado com sucesso!"
-        else:
-            response = api_request("/planos", method="POST", json=plano_data)
-            success_message = "Plano cadastrado com sucesso!"
-
-        if response and response.status_code in [200, 201]:
-            flash(success_message, "success")
-        else:
-            error_msg = "Erro ao salvar plano."
-            if response:
-                try:
-                    error_detail = response.json().get("detail", "")
-                    if error_detail:
-                        error_msg += f" Detalhe: {error_detail}"
-                except:
-                    pass
-            flash(error_msg, "error")
-
-    except Exception as e:
-        flash(f"Erro interno ao salvar plano: {e}", "error")
-    
-    return redirect(url_for("planos_list"))
-
-@app.route("/planos/deletar/<int:id>", methods=["POST"])
-def planos_deletar(id):
-    response = api_request(f"/planos/{id}", method="DELETE")
-    if response and response.status_code == 204:
-        flash("Plano excluído com sucesso!", "success")
-    else:
-        flash("Erro ao excluir plano.", "error")
-    return redirect(url_for("planos_list"))

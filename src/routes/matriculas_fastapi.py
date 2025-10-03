@@ -15,6 +15,9 @@ from src.models.aluno import Aluno
 from src.models.turma import Turma
 from src.schemas.matricula import MatriculaCreate, MatriculaRead, MatriculaUpdate
 from src.models.plano import Plano
+from datetime import date, timedelta
+from src.models.mensalidade import Mensalidade
+
 
 
 router = APIRouter(
@@ -27,13 +30,8 @@ router = APIRouter(
 @router.post("", response_model=MatriculaRead, status_code=status.HTTP_201_CREATED)
 def create_matricula(matricula: MatriculaCreate, db: Session = Depends(get_db)):
     """
-    Cria uma nova matrícula de um aluno em uma turma.
+    Cria uma nova matrícula de um aluno em uma turma e GERA A PRIMEIRA MENSALIDADE.
     """
-    
-    db_plano = db.query(Plano).filter(Plano.id == matricula.plano_id).first() # ADICIONAR ESTA VALIDAÇÃO
-    if not db_plano:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Plano não encontrado")
-    
     db_aluno = db.query(Aluno).filter(Aluno.id == matricula.aluno_id).first()
     if not db_aluno:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Aluno não encontrado")
@@ -42,45 +40,41 @@ def create_matricula(matricula: MatriculaCreate, db: Session = Depends(get_db)):
     if not db_turma:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Turma não encontrada")
 
-    # Verifica se a matrícula já existe
-    db_matricula = db.query(Matricula).filter(
+    db_plano = db.query(Plano).filter(Plano.id == matricula.plano_id).first()
+    if not db_plano:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Plano não encontrado")
+
+    db_matricula_existente = db.query(Matricula).filter(
         Matricula.aluno_id == matricula.aluno_id,
         Matricula.turma_id == matricula.turma_id
     ).first()
-    if db_matricula:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Aluno já matriculado nesta turma")
+    if db_matricula_existente and db_matricula_existente.ativa:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Aluno já está matriculado e ativo nesta turma")
 
     db_matricula = Matricula(**matricula.dict())
     
     try:
         db.add(db_matricula)
+        
+        # --- LÓGICA PARA CRIAR A PRIMEIRA MENSALIDADE ---
+        primeira_mensalidade = Mensalidade(
+            aluno_id=db_matricula.aluno_id,
+            plano_id=db_matricula.plano_id,
+            valor=db_plano.valor,
+            # Define o vencimento para 7 dias a partir da data da matrícula
+            data_vencimento=date.today() + timedelta(days=7),
+            status="pendente"
+        )
+        db.add(primeira_mensalidade)
+        # --- FIM DA LÓGICA ---
+        
         db.commit()
         db.refresh(db_matricula)
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Erro de integridade ao criar a matrícula. Verifique os IDs de aluno e turma.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Erro de integridade ao criar a matrícula.")
 
     return db_matricula
-
-@router.get("", response_model=List[MatriculaRead])
-def read_matriculas(
-    skip: int = 0,
-    limit: int = 100,
-    aluno_id: Optional[int] = None,
-    turma_id: Optional[int] = None,
-    db: Session = Depends(get_db)
-):
-    """
-    Lista matrículas com filtros opcionais por aluno e turma.
-    """
-    query = db.query(Matricula)
-    if aluno_id:
-        query = query.filter(Matricula.aluno_id == aluno_id)
-    if turma_id:
-        query = query.filter(Matricula.turma_id == turma_id)
-        
-    matriculas = query.order_by(Matricula.data_matricula.desc()).offset(skip).limit(limit).all()
-    return matriculas
 
 @router.get("/{matricula_id}", response_model=MatriculaRead)
 def read_matricula(matricula_id: int, db: Session = Depends(get_db)):
