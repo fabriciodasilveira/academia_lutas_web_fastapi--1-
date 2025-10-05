@@ -35,6 +35,8 @@ def api_request(endpoint, method='GET', data=None, files=None, json=None):
         return None
 
 
+# Em frontend/app.py
+
 @app.route('/')
 def index():
     stats = {
@@ -44,7 +46,17 @@ def index():
         'total_eventos': 0
     }
     
+    # Inicializa os dados do gráfico como vazios para evitar erros
+    chart_data = {
+        "labels": [],
+        "datasets": {
+            "alunos": [],
+            "eventos": []
+        }
+    }
+    
     try:
+        # Busca estatísticas dos cards
         endpoints = [
             ('total_alunos', '/alunos'),
             ('total_professores', '/professores'), 
@@ -56,11 +68,17 @@ def index():
             response = api_request(f"{endpoint}?limit=10000")
             if response and response.status_code == 200:
                 stats[stat_name] = len(response.json())
+        
+        # Busca os dados para o gráfico de atividades
+        chart_response = api_request("/dashboard/atividades-recentes")
+        if chart_response and chart_response.status_code == 200:
+            chart_data = chart_response.json()
                 
     except Exception as e:
-        app.logger.error(f"Erro ao buscar estatísticas: {e}")
+        app.logger.error(f"Erro ao buscar estatísticas do dashboard: {e}")
     
-    return render_template('index.html', stats=stats)
+    # Passa os dados do gráfico para o template
+    return render_template('index.html', stats=stats, chart_data=chart_data)
 
 @app.route('/alunos')
 def alunos_list():

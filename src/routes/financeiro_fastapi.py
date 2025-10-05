@@ -14,6 +14,8 @@ from src.database import get_db
 from src.models.financeiro import Financeiro
 from src.schemas.financeiro import FinanceiroCreate, FinanceiroRead, FinanceiroUpdate
 from src.models.categoria import Categoria 
+from sqlalchemy import func
+from src.models.mensalidade import Mensalidade
 
 router = APIRouter(
     tags=["Financeiro"],
@@ -143,68 +145,66 @@ def get_balanco(
     db: Session = Depends(get_db)
 ):
     """
-    Obtém o balanço financeiro (receitas - despesas) em um período.
+    Obtém o balanço financeiro (receitas - despesas) em um período de forma otimizada,
+    incluindo dados para gráficos.
     """
     hoje = datetime.utcnow().date()
     primeiro_dia_mes = hoje.replace(day=1)
 
-    if data_inicio:
-        try:
-            data_inicio_obj = datetime.strptime(data_inicio, "%Y-%m-%d")
-        except ValueError:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Formato de data inválido. Use YYYY-MM-DD")
-    else:
-        data_inicio_obj = primeiro_dia_mes
+    try:
+        data_inicio_obj = datetime.strptime(data_inicio, "%Y-%m-%d").date() if data_inicio else primeiro_dia_mes
+        data_fim_obj = datetime.strptime(data_fim, "%Y-%m-%d").date() if data_fim else hoje
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Formato de data inválido. Use YYYY-MM-DD")
 
-    if data_fim:
-        try:
-            data_fim_obj = datetime.strptime(data_fim, "%Y-%m-%d")
-        except ValueError:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Formato de data inválido. Use YYYY-MM-DD")
-    else:
-        data_fim_obj = hoje
-
-    # Calcula totais e obtém dados para gráficos
-    receitas_query = db.query(Financeiro.valor).filter(
+    # Cálculos otimizados para os totais
+    query_receitas = db.query(func.sum(Financeiro.valor)).filter(
         Financeiro.tipo == 'receita',
-        Financeiro.data >= data_inicio_obj,
-        Financeiro.data <= data_fim_obj
+        func.date(Financeiro.data) >= data_inicio_obj,
+        func.date(Financeiro.data) <= data_fim_obj
     )
-    receitas = sum(r[0] for r in receitas_query.all())
+    total_receitas = query_receitas.scalar() or 0.0
 
-    despesas_query = db.query(Financeiro.valor).filter(
+    query_despesas = db.query(func.sum(Financeiro.valor)).filter(
         Financeiro.tipo == 'despesa',
-        Financeiro.data >= data_inicio_obj,
-        Financeiro.data <= data_fim_obj
+        func.date(Financeiro.data) >= data_inicio_obj,
+        func.date(Financeiro.data) <= data_fim_obj
     )
-    despesas = sum(d[0] for d in despesas_query.all())
+    total_despesas = query_despesas.scalar() or 0.0
+    
+    query_total_transacoes = db.query(func.count(Financeiro.id)).filter(
+        func.date(Financeiro.data) >= data_inicio_obj,
+        func.date(Financeiro.data) <= data_fim_obj
+    )
+    total_transacoes = query_total_transacoes.scalar() or 0
 
-    total_transacoes = db.query(Financeiro).filter(
-        Financeiro.data >= data_inicio_obj,
-        Financeiro.data <= data_fim_obj
-    ).count()
-
-    categorias_query = db.query(Financeiro.categoria, func.sum(Financeiro.valor)).filter(
-        Financeiro.data >= data_inicio_obj,
-        Financeiro.data <= data_fim_obj
-    ).group_by(Financeiro.categoria).all()
-
-    categorias_data = {}
-    for cat, valor in categorias_query:
-        categorias_data[cat] = valor
-
-    # Busca por mensalidades pendentes
     mensalidades_pendentes = db.query(Mensalidade).filter(
         Mensalidade.status == 'pendente',
         Mensalidade.data_vencimento <= hoje
-    ).all()
+    ).count()
+
+    # --- LÓGICA DO GRÁFICO REINSERIDA AQUI ---
+    # Agrupa as despesas por categoria
+    categorias_despesa_query = db.query(
+        Financeiro.categoria, 
+        func.sum(Financeiro.valor)
+    ).filter(
+        Financeiro.tipo == 'despesa',
+        func.date(Financeiro.data) >= data_inicio_obj,
+        func.date(Financeiro.data) <= data_fim_obj
+    ).group_by(Financeiro.categoria).all()
+
+    # Formata os dados para o gráfico
+    categorias_data = {categoria: valor for categoria, valor in categorias_despesa_query}
+    # --- FIM DA LÓGICA DO GRÁFICO ---
 
     return {
-        "receitas": receitas,
-        "despesas": despesas,
-        "saldo": receitas - despesas,
+        "receitas": total_receitas,
+        "despesas": total_despesas,
+        "saldo": total_receitas - total_despesas,
         "total_transacoes": total_transacoes,
-        "mensalidades_pendentes": len(mensalidades_pendentes),
+        "mensalidades_pendentes": mensalidades_pendentes,
+        # Adiciona a chave 'graficos' de volta na resposta
         "graficos": {
             "categorias": categorias_data
         }

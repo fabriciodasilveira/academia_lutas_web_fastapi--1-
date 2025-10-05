@@ -241,24 +241,31 @@ function updateTime() {
 updateTime();
 setInterval(updateTime, 1000);
 
-// Gráfico de atividades
+// Gráfico de atividades com dados dinâmicos
 const ctx = document.getElementById('activityChart').getContext('2d');
+
+// Pega os dados enviados pelo Flask e converte para JSON de forma segura
+// A variável 'chart_data' é criada na sua rota app.py e injetada aqui
+const chartData = JSON.parse('{{ chart_data | tojson | safe }}');
+
 const activityChart = new Chart(ctx, {
     type: 'line',
     data: {
-        labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'],
+        labels: chartData.labels, // Usa os meses vindos da API
         datasets: [{
             label: 'Novos Alunos',
-            data: [12, 19, 3, 5, 2, 3],
+            data: chartData.datasets.alunos, // Usa os dados de alunos vindos da API
             borderColor: '#2563eb',
             backgroundColor: 'rgba(37, 99, 235, 0.1)',
-            tension: 0.4
+            tension: 0.4,
+            fill: true
         }, {
             label: 'Eventos',
-            data: [2, 3, 20, 5, 1, 4],
+            data: chartData.datasets.eventos, // Usa os dados de eventos vindos da API
             borderColor: '#10b981',
             backgroundColor: 'rgba(16, 185, 129, 0.1)',
-            tension: 0.4
+            tension: 0.4,
+            fill: true
         }]
     },
     options: {

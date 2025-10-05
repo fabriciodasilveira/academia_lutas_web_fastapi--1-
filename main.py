@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from typing import Any, Dict, List
 from src.routes import pagamentos_fastapi
+from src.routes import dashboard_fastapi # Adicione dashboard_fastapi
 
 # Importação dos modelos para que o SQLAlchemy os reconheça
 from src.models import aluno, professor, turma, evento, financeiro, matricula, plano, mensalidade, produto, categoria
@@ -73,6 +74,8 @@ app.include_router(mensalidades_fastapi.router, prefix="/api/v1/mensalidades")
 app.include_router(produtos_fastapi.router, prefix="/api/v1/produtos")
 app.include_router(categorias_fastapi.router, prefix="/api/v1/categorias")
 app.include_router(pagamentos_fastapi.router, prefix="/api/v1")
+app.include_router(dashboard_fastapi.router, prefix="/api/v1/dashboard")
+
 
 
 

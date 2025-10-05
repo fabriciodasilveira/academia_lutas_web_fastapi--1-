@@ -21,11 +21,18 @@ if not MERCADO_PAGO_ACCESS_TOKEN:
 
 sdk = mercadopago.SDK(MERCADO_PAGO_ACCESS_TOKEN)
 
+# Em src/routes/pagamentos_fastapi.py
+
+# ... (outros imports) ...
+
 @router.post("/gerar/{mensalidade_id}")
 def gerar_link_pagamento(mensalidade_id: int, db: Session = Depends(get_db)):
     """
     Gera um link de pagamento do Mercado Pago para uma mensalidade específica.
     """
+    if not MERCADO_PAGO_ACCESS_TOKEN:
+        raise HTTPException(status_code=500, detail="Access Token do Mercado Pago não configurado no servidor.")
+
     db_mensalidade = db.query(Mensalidade).filter(Mensalidade.id == mensalidade_id).first()
     if not db_mensalidade:
         raise HTTPException(status_code=404, detail="Mensalidade não encontrada")
@@ -33,7 +40,6 @@ def gerar_link_pagamento(mensalidade_id: int, db: Session = Depends(get_db)):
     if db_mensalidade.status == 'pago':
         raise HTTPException(status_code=400, detail="Esta mensalidade já foi paga.")
 
-    # URL base do seu frontend
     base_url = "http://localhost:5000" 
 
     preference_data = {
@@ -41,7 +47,8 @@ def gerar_link_pagamento(mensalidade_id: int, db: Session = Depends(get_db)):
             {
                 "title": f"Mensalidade {db_mensalidade.plano.nome} - {db_mensalidade.aluno.nome}",
                 "quantity": 1,
-                "unit_price": db_mensalidade.valor,
+                "currency_id": "BRL",
+                "unit_price": float(db_mensalidade.valor),
             }
         ],
         "back_urls": {
@@ -49,14 +56,24 @@ def gerar_link_pagamento(mensalidade_id: int, db: Session = Depends(get_db)):
             "failure": f"{base_url}/mensalidades",
             "pending": f"{base_url}/mensalidades"
         },
-        "auto_return": "approved",
-        "external_reference": str(db_mensalidade.id), # Referência para o webhook
-        "notification_url": "https://6fc99adbd607.ngrok-free.app" # Substituir pela URL real
+        # "auto_return": "approved", # LINHA REMOVIDA
+        "external_reference": str(db_mensalidade.id),
+        "notification_url": "https://a928-177-94-11-207.ngrok-free.app/api/v1/pagamentos/webhook/mercadopago" # Substitua pela sua URL de webhook
     }
 
-    preference_response = sdk.preference().create(preference_data)
-    preference = preference_response["response"]
-    return {"init_point": preference["init_point"]}
+    try:
+        preference_response = sdk.preference().create(preference_data)
+        preference = preference_response.get("response")
+
+        if not preference or "init_point" not in preference:
+            print("Erro ao criar preferência do Mercado Pago:", preference_response)
+            raise HTTPException(status_code=500, detail="Falha ao comunicar com o Mercado Pago.")
+
+        return {"init_point": preference["init_point"]}
+    
+    except Exception as e:
+        print(f"Erro inesperado na API do Mercado Pago: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro interno ao gerar link de pagamento: {e}")
 
 
 @router.post("/webhook/mercadopago")

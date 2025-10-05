@@ -10,6 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from datetime import date
 from src.models.financeiro import Financeiro
 import logging
+import datetime
 
 from src.database import get_db
 from src.models.mensalidade import Mensalidade
@@ -142,7 +143,7 @@ def processar_pagamento(mensalidade_id: int, db: Session = Depends(get_db)):
         descricao=f"Mensalidade de {db_mensalidade.aluno.nome} - Venc: {db_mensalidade.data_vencimento.strftime('%d/%m/%Y')}",
         valor=db_mensalidade.valor,
         status="confirmado",
-        data=datetime.now()
+        data=datetime.datetime.now()
     )
     db.add(transacao_financeira)
     

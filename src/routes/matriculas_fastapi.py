@@ -17,6 +17,7 @@ from src.schemas.matricula import MatriculaCreate, MatriculaRead, MatriculaUpdat
 from src.models.plano import Plano
 from datetime import date, timedelta
 from src.models.mensalidade import Mensalidade
+from sqlalchemy.orm import Session, joinedload
 
 
 
@@ -76,15 +77,31 @@ def create_matricula(matricula: MatriculaCreate, db: Session = Depends(get_db)):
 
     return db_matricula
 
-@router.get("/{matricula_id}", response_model=MatriculaRead)
-def read_matricula(matricula_id: int, db: Session = Depends(get_db)):
+@router.get("", response_model=List[MatriculaRead])
+def read_matriculas(
+    skip: int = 0,
+    limit: int = 100,
+    aluno_id: Optional[int] = None,
+    turma_id: Optional[int] = None,
+    db: Session = Depends(get_db)
+):
     """
-    Obtém os detalhes de uma matrícula específica pelo ID.
+    Lista matrículas com filtros opcionais por aluno e turma.
     """
-    db_matricula = db.query(Matricula).filter(Matricula.id == matricula_id).first()
-    if db_matricula is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Matrícula não encontrada")
-    return db_matricula
+    # A consulta agora carrega os dados relacionados (aluno, turma, plano) de forma otimizada
+    query = db.query(Matricula).options(
+        joinedload(Matricula.aluno),
+        joinedload(Matricula.turma),
+        joinedload(Matricula.plano)
+    )
+
+    if aluno_id:
+        query = query.filter(Matricula.aluno_id == aluno_id)
+    if turma_id:
+        query = query.filter(Matricula.turma_id == turma_id)
+        
+    matriculas = query.order_by(Matricula.data_matricula.desc()).offset(skip).limit(limit).all()
+    return matriculas
 
 @router.put("/{matricula_id}", response_model=MatriculaRead)
 def update_matricula(
