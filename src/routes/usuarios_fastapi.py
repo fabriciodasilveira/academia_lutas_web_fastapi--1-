@@ -42,6 +42,16 @@ def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(database.g
     users = db.query(models.usuario.Usuario).offset(skip).limit(limit).all()
     return users
 
+@router.get("/{user_id}", response_model=schemas.usuario.UsuarioRead)
+def read_user(user_id: int, db: Session = Depends(database.get_db)):
+    """
+    Obtém os detalhes de um usuário específico pelo ID (acesso restrito a administradores).
+    """
+    db_user = db.query(models.usuario.Usuario).filter(models.usuario.Usuario.id == user_id).first()
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    return db_user
+
 @router.put("/{user_id}", response_model=schemas.usuario.UsuarioRead)
 def update_user(user_id: int, user: schemas.usuario.UsuarioUpdate, db: Session = Depends(database.get_db)):
     """

@@ -80,6 +80,17 @@
                     </li>
                     {% endif %}
                 </ul>
+                
+                <ul class="navbar-nav me-auto">
+                {% if session.user_info and session.user_info.role == 'administrador' %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('usuarios_list') }}">
+                            <i class="fas fa-users-cog me-1"></i>Usuários
+                        </a>
+                    </li>
+                {% endif %}
+                </ul>
+                
 
                 <ul class="navbar-nav ms-auto">
                     {% if session.user_info %}
@@ -92,6 +103,9 @@
                         </ul>
                     </li>
                     {% endif %}
+
+                    
+                    </ul>
                 </ul>
         </div>
     </nav>

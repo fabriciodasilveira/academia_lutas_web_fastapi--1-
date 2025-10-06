@@ -6,6 +6,8 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 import os
+from authlib.integrations.starlette_client import OAuth
+from starlette.config import Config
 
 from src import database, models
 
@@ -16,6 +18,17 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 8 # Token expira em 8 horas
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token")
+
+config = Config('.env') # Lê as variáveis do arquivo .env
+oauth = OAuth(config)
+
+oauth.register(
+    name='google',
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    client_kwargs={
+        'scope': 'openid email profile'
+    }
+)
 
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)

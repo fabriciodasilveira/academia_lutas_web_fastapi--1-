@@ -26,7 +26,15 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# Em frontend/app.py
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        user_info = session.get('user_info')
+        if not user_info or user_info.get('role') != 'administrador':
+            flash("Acesso restrito a administradores.", "error")
+            return redirect(url_for('index'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -69,30 +77,46 @@ def format_datetime_filter(s):
 
 
 
-def api_request(endpoint, method='GET', data=None, files=None, json=None, params=None):
+# Em frontend/app.py
+
+# Em frontend/app.py
+
+# Em frontend/app.py
+
+# Em frontend/app.py
+
+def api_request(endpoint, method='GET', data=None, files=None, json=None, params=None, headers=None):
+    """
+    Função auxiliar para fazer requisições à API FastAPI, incluindo o token de autenticação.
+    """
     url = f"{API_BASE_URL}/api/v1{endpoint}"
-    headers = {}
-    # Adiciona o token de autorização se ele existir na sessão
-    if 'access_token' in session:
-        headers['Authorization'] = f"Bearer {session['access_token']}"
+    
+    # Prepara os cabeçalhos da requisição
+    request_headers = headers if headers is not None else {}
+    if 'access_token' in session and 'Authorization' not in request_headers:
+        request_headers['Authorization'] = f"Bearer {session['access_token']}"
     
     try:
         if method == 'GET':
-            response = requests.get(url, timeout=10, params=params, headers=headers)
+            response = requests.get(url, timeout=10, params=params, headers=request_headers)
         elif method == 'POST':
-            response = requests.post(url, data=data, files=files, json=json, timeout=10, headers=headers)
+            response = requests.post(url, data=data, files=files, json=json, timeout=10, headers=request_headers)
         elif method == 'PUT':
-            response = requests.put(url, data=data, json=json, timeout=10, headers=headers)
+            # A sua lógica original para PUT já lida com 'files'
+            if files:
+                response = requests.put(url, data=data, files=files, timeout=10, headers=request_headers)
+            else:
+                response = requests.put(url, data=data, json=json, timeout=10, headers=request_headers)
         elif method == 'DELETE':
-            response = requests.delete(url, timeout=10, headers=headers)
+            response = requests.delete(url, timeout=10, headers=request_headers)
         
-        # Se o token expirar (401 Unauthorized), desloga o usuário
+        # Se a API retornar "Não Autorizado", limpa a sessão para forçar um novo login
         if response.status_code == 401:
             session.clear()
-            # O redirect não funciona aqui, mas a próxima ação do usuário o levará ao login
         
         app.logger.info(f"API Request: {method} {url} - Status: {response.status_code}")
         return response
+        
     except requests.exceptions.RequestException as e:
         app.logger.error(f"Erro na requisição {method} {url}: {e}")
         return None
@@ -1295,6 +1319,104 @@ def inscricao_cancelar(id):
     return redirect(url_for("eventos_view", id=evento_id))
 
 
+# Em frontend/app.py (adicione no final do arquivo)
+
+# === ROTAS PARA USUÁRIOS (Acesso Restrito a Admins) ===
+
+@app.route("/usuarios")
+@login_required
+@admin_required
+def usuarios_list():
+    response = api_request("/usuarios")
+    usuarios = response.json() if response and response.status_code == 200 else []
+    return render_template("usuarios/list.html", usuarios=usuarios)
+
+@app.route("/usuarios/novo")
+@login_required
+@admin_required
+def usuarios_novo():
+    return render_template("usuarios/form.html", usuario=None)
+
+@app.route("/usuarios/editar/<int:id>")
+@login_required
+@admin_required
+def usuarios_editar(id):
+    # A API já protege contra acesso indevido, mas validamos aqui também.
+    response = api_request(f"/usuarios/{id}")
+    usuario = response.json() if response and response.status_code == 200 else None
+    if not usuario:
+        flash("Usuário não encontrado.", "error")
+        return redirect(url_for("usuarios_list"))
+    return render_template("usuarios/form.html", usuario=usuario)
+
+@app.route("/usuarios/salvar", methods=["POST"])
+@login_required
+@admin_required
+def usuarios_salvar():
+    user_id = request.form.get("id")
+    password = request.form.get("password")
+    
+    data = {
+        "email": request.form.get("email"),
+        "nome": request.form.get("nome"),
+        "role": request.form.get("role"),
+    }
+    # Só adiciona a senha se ela foi preenchida (para não apagar a senha ao editar)
+    if password:
+        data['password'] = password
+
+    if user_id:
+        response = api_request(f"/usuarios/{user_id}", method="PUT", json=data)
+        msg = "Usuário atualizado com sucesso!"
+    else:
+        response = api_request("/usuarios", method="POST", json=data)
+        msg = "Usuário criado com sucesso!"
+
+    if response and response.status_code in [200, 201]:
+        flash(msg, "success")
+    else:
+        error = response.json().get('detail') if response else 'desconhecido'
+        flash(f"Erro ao salvar usuário: {error}", "error")
+
+    return redirect(url_for("usuarios_list"))
+
+@app.route("/usuarios/deletar/<int:id>", methods=["POST"])
+@login_required
+@admin_required
+def usuarios_deletar(id):
+    # Evita que o admin se auto-delete
+    if id == session.get('user_info', {}).get('id'):
+        flash("Você não pode excluir seu próprio usuário.", "error")
+        return redirect(url_for("usuarios_list"))
+
+    response = api_request(f"/usuarios/{id}", method="DELETE")
+    if response and response.status_code == 204:
+        flash("Usuário excluído com sucesso!", "success")
+    else:
+        flash("Erro ao excluir usuário.", "error")
+    return redirect(url_for("usuarios_list"))
+
+
+# Em frontend/app.py
+
+@app.route("/login/callback")
+def login_callback():
+    token = request.args.get('token')
+    if not token:
+        flash("Falha na autenticação.", "error")
+        return redirect(url_for('login'))
+        
+    # Precisamos obter os dados do usuário a partir do token
+    # Vamos criar um novo endpoint na API para isso
+    user_info_resp = api_request("/auth/me", headers={"Authorization": f"Bearer {token}"})
+    
+    if user_info_resp and user_info_resp.status_code == 200:
+        session['access_token'] = token
+        session['user_info'] = user_info_resp.json()
+        return redirect(url_for('index'))
+    else:
+        flash("Não foi possível obter os dados do usuário.", "error")
+        return redirect(url_for('login'))
 
 
 if __name__ == '__main__':

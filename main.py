@@ -16,7 +16,8 @@ from src.routes import pagamentos_fastapi
 from src.routes import dashboard_fastapi # Adicione dashboard_fastapi
 from src.models import usuario
 from src.routes import auth_fastapi,usuarios_fastapi
-
+from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware # <-- ADICIONE ESTA LINHA
 
 
 # Importação dos modelos para que o SQLAlchemy os reconheça
@@ -57,6 +58,14 @@ origins = [
     "http://127.0.0.1",
     "http://127.0.0.1:8080",
 ]
+
+app.add_middleware(SessionMiddleware, secret_key="SUA_SECRET_KEY_AQUI_DEVE_SER_A_MESMA_DO_AUTH.PY")
+
+# Configuração de CORS (já existente)
+app.add_middleware(
+    CORSMiddleware,
+    # ... (configurações do CORS)
+)
 
 app.add_middleware(
     CORSMiddleware,
