@@ -3,11 +3,18 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="h3 mb-0">{{ evento.nome }}</h1>
-    <a href="{{ url_for('eventos_list') }}" class="btn btn-outline-secondary">Voltar</a>
+    <div class="btn-group">
+        <a href="{{ url_for('eventos_list') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Voltar
+        </a>
+        <a href="{{ url_for('eventos_editar', id=evento.id) }}" class="btn btn-warning">
+            <i class="fas fa-edit me-1"></i>Editar Evento
+        </a>
+    </div>
 </div>
 
 <div class="card shadow-sm mb-4">
-    <div class="card-header">
+    <div class="card-header bg-transparent border-0">
         <h5 class="mb-0">Inscrever Aluno</h5>
     </div>
     <div class="card-body">
@@ -20,20 +27,22 @@
                         <option value="{{ aluno.id }}">{{ aluno.nome }}</option>
                     {% endfor %}
                 </select>
-                <button class="btn btn-primary" type="submit">Inscrever</button>
+                <button class="btn btn-primary" type="submit">
+                    <i class="fas fa-user-plus me-1"></i>Inscrever
+                </button>
             </div>
         </form>
     </div>
 </div>
 
 <div class="card shadow-sm">
-    <div class="card-header">
+    <div class="card-header bg-transparent border-0">
         <h5 class="mb-0">Inscritos ({{ inscricoes|length }} / {{ evento.capacidade if evento.capacidade > 0 else '∞' }})</h5>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover mb-0">
-                <thead>
+                <thead class="table-light">
                     <tr>
                         <th>Aluno</th>
                         <th>Data Inscrição</th>
@@ -49,6 +58,8 @@
                         <td>
                             {% if inscricao.status == 'pago' %}
                                 <span class="badge bg-success">Pago</span>
+                            {% elif inscricao.status == 'cancelado' %}
+                                <span class="badge bg-secondary">Cancelado</span>
                             {% else %}
                                 <span class="badge bg-warning">Pendente</span>
                             {% endif %}
@@ -58,17 +69,20 @@
                                 {% if inscricao.status == 'pendente' and evento.valor_inscricao > 0 %}
                                     <form action="{{ url_for('inscricao_pagar_manual', id=inscricao.id) }}" method="POST" class="d-inline">
                                         <input type="hidden" name="evento_id" value="{{ evento.id }}">
-                                        <button type="submit" class="btn btn-success" title="Baixa Manual">
+                                        <button type="submit" class="btn btn-success" title="Confirmar Pagamento Manual">
                                             <i class="fas fa-cash-register"></i>
                                         </button>
                                     </form>
-                                    <button class="btn btn-primary" onclick="pagarEventoOnline(event, {{ inscricao.id }})" title="Pagar Online">
+                                    <button class="btn btn-primary" onclick="pagarEventoOnline(event, {{ inscricao.id }})" title="Gerar Link de Pagamento Online">
                                         <i class="fas fa-credit-card"></i>
                                     </button>
                                 {% endif %}
-                                <button class="btn btn-danger" onclick="confirmDeleteInscricao({{ inscricao.id }}, '{{ inscricao.aluno.nome }}')" title="Excluir Inscrição">
-                                    <i class="fas fa-trash"></i>
+                                
+                                {% if inscricao.status != 'cancelado' %}
+                                <button class="btn btn-danger" onclick="confirmarCancelamento({{ inscricao.id }}, '{{ inscricao.aluno.nome }}', '{{ inscricao.status }}')" title="Cancelar Inscrição">
+                                    <i class="fas fa-times"></i>
                                 </button>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>
@@ -79,19 +93,22 @@
     </div>
 </div>
 
-<div class="modal fade" id="deleteInscricaoModal" tabindex="-1">
+<div class="modal fade" id="cancelModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" style="color:#000000">Confirmar Exclusão</h5>
+                <h5 class="modal-title" style="color:#000000">Confirmar Cancelamento</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p style="color:#000000">Tem certeza que deseja remover a inscrição do aluno <strong id="alunoNameToDelete"></strong>?</p>
+                <p style="color:#000000">Tem certeza que deseja cancelar a inscrição do aluno <strong id="alunoNameToCancel"></strong>?</p>
+                <div id="refundWarning" class="alert alert-warning" style="display: none;">
+                    <strong>Atenção:</strong> Esta inscrição já foi paga. Ao cancelar, uma transação de estorno (despesa) será criada no seu relatório financeiro para representar a devolução do dinheiro.
+                </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-danger" onclick="deleteInscricao()">Excluir</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Voltar</button>
+                <button type="button" class="btn btn-danger" onclick="cancelarInscricao()">Confirmar Cancelamento</button>
             </div>
         </div>
     </div>
@@ -100,20 +117,29 @@
 
 {% block extra_js %}
 <script>
-let inscricaoToDeleteId = null;
+let inscricaoToCancelId = null;
 
-function confirmDeleteInscricao(id, nome) {
-    inscricaoToDeleteId = id;
-    document.getElementById('alunoNameToDelete').textContent = nome;
-    const modal = new bootstrap.Modal(document.getElementById('deleteInscricaoModal'));
+function confirmarCancelamento(id, nome, status) {
+    inscricaoToCancelId = id;
+    document.getElementById('alunoNameToCancel').textContent = nome;
+    
+    // Mostra o aviso de reembolso se a inscrição já estiver paga
+    const refundWarning = document.getElementById('refundWarning');
+    if (status === 'pago') {
+        refundWarning.style.display = 'block';
+    } else {
+        refundWarning.style.display = 'none';
+    }
+
+    const modal = new bootstrap.Modal(document.getElementById('cancelModal'));
     modal.show();
 }
 
-function deleteInscricao() {
-    if (inscricaoToDeleteId) {
+function cancelarInscricao() {
+    if (inscricaoToCancelId) {
         const form = document.createElement('form');
         form.method = 'POST';
-        form.action = `/inscricoes/${inscricaoToDeleteId}/deletar`;
+        form.action = `/inscricoes/${inscricaoToCancelId}/cancelar`;
         
         const eventoIdInput = document.createElement('input');
         eventoIdInput.type = 'hidden';
@@ -136,7 +162,13 @@ function pagarEventoOnline(event, inscricaoId) {
     fetch(`/inscricoes/${inscricaoId}/pagar-online`, {
         method: 'POST',
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            // Tenta ler o erro do corpo da resposta
+            return response.json().then(err => { throw err; });
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.init_point) {
             window.location.href = data.init_point;
@@ -148,7 +180,7 @@ function pagarEventoOnline(event, inscricaoId) {
     })
     .catch(error => {
         console.error('Erro:', error);
-        alert('Ocorreu um erro inesperado.');
+        alert(error.error || 'Ocorreu um erro inesperado. Verifique o console.');
         button.innerHTML = originalHtml;
         button.disabled = false;
     });

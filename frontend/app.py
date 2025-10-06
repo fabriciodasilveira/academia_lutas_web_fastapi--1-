@@ -1105,6 +1105,19 @@ def inscricao_pagar_online(id):
         return jsonify({"error": "Falha ao gerar link de pagamento para o evento"}), 500
 
 
+@app.route("/inscricoes/<int:id>/cancelar", methods=["POST"])
+def inscricao_cancelar(id):
+    evento_id = request.form.get("evento_id")
+    response = api_request(f"/inscricoes/{id}/cancelar", method="POST")
+    if response and response.status_code == 200:
+        flash("Inscrição cancelada com sucesso!", "success")
+    else:
+        error = response.json().get('detail') if response else 'desconhecido'
+        flash(f"Erro ao cancelar inscrição: {error}", "error")
+    return redirect(url_for("eventos_view", id=evento_id))
+
+
+
 
 if __name__ == '__main__':
     print("Iniciando aplicação Flask de depuração...")

@@ -87,3 +87,38 @@ def delete_inscricao(inscricao_id: int, db: Session = Depends(get_db)):
     db.delete(db_inscricao)
     db.commit()
     return None
+
+# Em src/routes/inscricoes_fastapi.py
+
+# ... (outros imports) ...
+
+@router.post("/{inscricao_id}/cancelar", response_model=InscricaoRead)
+def cancelar_inscricao(inscricao_id: int, db: Session = Depends(get_db)):
+    """
+    Cancela uma inscrição. Se já estiver paga, reverte a transação financeira.
+    """
+    db_inscricao = db.query(Inscricao).options(joinedload(Inscricao.evento), joinedload(Inscricao.aluno)).filter(Inscricao.id == inscricao_id).first()
+    if not db_inscricao:
+        raise HTTPException(status_code=404, detail="Inscrição não encontrada")
+
+    if db_inscricao.status == 'cancelado':
+        raise HTTPException(status_code=400, detail="Esta inscrição já está cancelada.")
+
+    # Se a inscrição estava paga, cria uma transação de estorno (despesa)
+    if db_inscricao.status == 'pago' and db_inscricao.valor_pago > 0:
+        transacao_estorno = Financeiro(
+            tipo="despesa",
+            categoria="Estorno Evento",
+            descricao=f"Devolução: Inscrição de {db_inscricao.aluno.nome} no evento '{db_inscricao.evento.nome}'",
+            valor=db_inscricao.valor_pago,
+            data=datetime.utcnow(),
+            status="confirmado"
+        )
+        db.add(transacao_estorno)
+
+    # Atualiza o status da inscrição
+    db_inscricao.status = "cancelado"
+    
+    db.commit()
+    db.refresh(db_inscricao)
+    return db_inscricao
