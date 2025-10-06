@@ -15,7 +15,9 @@ from typing import Any, Dict, List
 from src.routes import pagamentos_fastapi
 from src.routes import dashboard_fastapi # Adicione dashboard_fastapi
 from src.models import usuario
-from src.routes import auth_fastapi
+from src.routes import auth_fastapi,usuarios_fastapi
+
+
 
 # Importação dos modelos para que o SQLAlchemy os reconheça
 # Linhas CORRIGIDAS
@@ -80,6 +82,8 @@ app.include_router(dashboard_fastapi.router, prefix="/api/v1/dashboard")
 app.include_router(dashboard_fastapi.router, prefix="/api/v1/dashboard")
 app.include_router(inscricoes_fastapi.router, prefix="/api/v1/inscricoes")
 app.include_router(auth_fastapi.router)
+app.include_router(usuarios_fastapi.router)
+
 
 
 

@@ -59,3 +59,16 @@ async def get_admin_or_gerente(current_user: models.usuario.Usuario = Depends(ge
     if current_user.role not in ["administrador", "gerente"]:
         raise HTTPException(status_code=403, detail="Acesso restrito a Administradores ou Gerentes.")
     return current_user
+
+
+async def get_admin_user(current_user: models.usuario.Usuario = Depends(get_current_active_user)):
+    """
+    Verifica se o usuário atual tem o papel de 'administrador'.
+    Se não tiver, bloqueia a requisição.
+    """
+    if current_user.role != "administrador":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Acesso restrito a administradores."
+        )
+    return current_user

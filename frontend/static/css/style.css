@@ -290,46 +290,5 @@ footer {
 
 /* Em frontend/static/css/style.css */
 
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-    body {
-        background-color: #111827;
-        color: #f9fafb;
-    }
-    
-    .card {
-        background-color: #1f2937;
-        color: #f9fafb;
-    }
 
-    /* --- ADIÇÕES PARA CORRIGIR AS FONTES --- */
-    .text-muted {
-        color: #adb5bd !important; /* Torna o texto "muted" um cinza claro */
-    }
-
-    .table {
-        color: inherit; /* Garante que o texto da tabela herde a cor clara do body */
-    }
-
-    .card-body, .card-footer {
-        background-color: #1f2937; /* Garante fundo escuro no corpo do card */
-    }
-
-    .list-group-item {
-        background-color: transparent; /* Remove fundo branco de itens de lista */
-        border-color: #374151;
-    }
-    /* --- FIM DAS ADIÇÕES --- */
-    
-    .table thead th {
-        background-color: #374151;
-        color: #f9fafb;
-    }
-    
-    .form-control, .form-select {
-        background-color: #374151;
-        border-color: #4b5563;
-        color: #f9fafb;
-    }
-}
 
