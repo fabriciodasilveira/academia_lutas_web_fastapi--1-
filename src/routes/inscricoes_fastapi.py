@@ -73,3 +73,17 @@ def confirmar_pagamento_manual(inscricao_id: int, db: Session = Depends(get_db))
     db.commit()
     db.refresh(db_inscricao)
     return db_inscricao
+
+# Em src/routes/inscricoes_fastapi.py
+
+# ... (outros imports e rotas) ...
+
+@router.delete("/{inscricao_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_inscricao(inscricao_id: int, db: Session = Depends(get_db)):
+    db_inscricao = db.query(Inscricao).filter(Inscricao.id == inscricao_id).first()
+    if db_inscricao is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Inscrição não encontrada")
+    
+    db.delete(db_inscricao)
+    db.commit()
+    return None

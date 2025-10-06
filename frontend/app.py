@@ -14,6 +14,17 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 
+@app.template_filter('format_datetime')
+def format_datetime_filter(s):
+    if not s:
+        return ""
+    try:
+        # Tenta converter de string ISO para objeto datetime
+        dt_obj = datetime.fromisoformat(s)
+        return dt_obj.strftime('%d/%m/%Y %H:%M')
+    except (ValueError, TypeError):
+        return s
+
 def api_request(endpoint, method='GET', data=None, files=None, json=None):
     url = f"{API_BASE_URL}/api/v1{endpoint}"
     try:
@@ -1031,6 +1042,7 @@ def eventos_view(id):
 
     return render_template("eventos/view.html", evento=evento, inscricoes=inscricoes, alunos=alunos)
 
+
 @app.route("/eventos/inscrever", methods=["POST"])
 def eventos_inscrever():
     evento_id = request.form.get("evento_id")
@@ -1043,7 +1055,8 @@ def eventos_inscrever():
     data = {"evento_id": int(evento_id), "aluno_id": int(aluno_id)}
     response = api_request("/inscricoes", method="POST", json=data)
 
-    if response and response.status_code == 201:
+    # CORREÇÃO: Aceita 200 ou 201 como sucesso
+    if response and response.status_code in [200, 201]:
         flash("Aluno inscrito com sucesso!", "success")
     else:
         error = response.json().get('detail') if response else 'desconhecido'
@@ -1060,6 +1073,37 @@ def inscricao_pagar_manual(id):
     else:
         flash("Erro ao confirmar pagamento.", "error")
     return redirect(url_for("eventos_view", id=evento_id))
+
+
+@app.route("/eventos/<int:id>/deletar", methods=["POST"])
+def eventos_deletar(id):
+    response = api_request(f"/eventos/{id}", method="DELETE")
+    if response and response.status_code == 204:
+        flash("Evento excluído com sucesso!", "success")
+    else:
+        flash("Erro ao excluir o evento.", "error")
+    return redirect(url_for("eventos_list"))
+
+
+@app.route("/inscricoes/<int:id>/deletar", methods=["POST"])
+def inscricao_deletar(id):
+    evento_id = request.form.get("evento_id")
+    response = api_request(f"/inscricoes/{id}", method="DELETE")
+    if response and response.status_code == 204:
+        flash("Inscrição removida com sucesso!", "success")
+    else:
+        flash("Erro ao remover inscrição.", "error")
+    return redirect(url_for("eventos_view", id=evento_id))
+
+@app.route("/inscricoes/<int:id>/pagar-online", methods=["POST"])
+def inscricao_pagar_online(id):
+    """Gera o link de pagamento do Mercado Pago para uma inscrição de evento."""
+    response = api_request(f"/pagamentos/gerar/evento/{id}", method="POST")
+    if response and response.status_code == 200:
+        return jsonify(response.json())
+    else:
+        return jsonify({"error": "Falha ao gerar link de pagamento para o evento"}), 500
+
 
 
 if __name__ == '__main__':

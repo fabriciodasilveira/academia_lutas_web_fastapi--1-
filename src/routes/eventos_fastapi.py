@@ -8,9 +8,9 @@ from src.database import get_db
 from src.models.evento import Evento
 from src.schemas.evento import EventoCreate, EventoRead, EventoUpdate
 
+# CORREÇÃO: Removido o prefix="/eventos" daqui
 router = APIRouter(
     tags=["Eventos"],
-    prefix="/eventos"
 )
 
 @router.post("", response_model=EventoRead, status_code=status.HTTP_201_CREATED)
