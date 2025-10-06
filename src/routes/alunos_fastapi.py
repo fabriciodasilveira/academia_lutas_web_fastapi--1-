@@ -15,12 +15,13 @@ import logging
 
 from src.database import get_db
 from src.models.aluno import Aluno
-from src.schemas.aluno import AlunoCreate, AlunoRead, AlunoUpdate
+from src.schemas.aluno import AlunoCreate, AlunoRead, AlunoUpdate, AlunoPaginated
 from sqlalchemy.orm import Session, joinedload
 from src.models.matricula import Matricula
 from src.models.historico_matricula import HistoricoMatricula
 from sqlalchemy import func
 from src.models.mensalidade import Mensalidade
+
 
 
 # Configuração de diretórios - CORRIGIDO
@@ -135,17 +136,17 @@ from sqlalchemy.orm import Session, joinedload
 # ... (outros imports) ...
 from src.models.matricula import Matricula # Importe o modelo Matricula
 
-# Substitua a função read_alunos inteira por esta:
-@router.get("", response_model=List[AlunoRead])
+# Substitua a assinatura da função e o retorno
+@router.get("", response_model=AlunoPaginated)
 def read_alunos(
     skip: int = 0,
-    limit: int = 100,
+    limit: int = 20, # O padrão agora será 20
     nome: Optional[str] = None,
     cpf: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
     """
-    Lista alunos com filtros e calcula o status geral (Ativo/Inativo).
+    Lista alunos com filtros e paginação, e calcula o status geral (Ativo/Inativo).
     """
     query = db.query(Aluno).options(joinedload(Aluno.matriculas))
     
@@ -154,20 +155,21 @@ def read_alunos(
     if cpf:
         query = query.filter(Aluno.cpf == cpf)
     
+    # Conta o total de itens ANTES de aplicar o limite e o skip
+    total = query.count()
+
     alunos = query.order_by(Aluno.nome).offset(skip).limit(limit).all()
 
-    # Itera sobre os alunos para calcular o status
     response_alunos = []
     for aluno in alunos:
         aluno_read = AlunoRead.from_orm(aluno)
-        # Verifica se existe alguma matrícula ativa para o aluno
         if any(matricula.ativa for matricula in aluno.matriculas):
             aluno_read.status_geral = "Ativo"
         else:
             aluno_read.status_geral = "Inativo"
         response_alunos.append(aluno_read)
         
-    return response_alunos
+    return {"total": total, "alunos": response_alunos}
 
 @router.get("/{aluno_id}", response_model=AlunoRead)
 def read_aluno(aluno_id: int, db: Session = Depends(get_db)):

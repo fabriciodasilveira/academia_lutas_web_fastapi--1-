@@ -43,3 +43,7 @@ class AlunoUpdate(BaseModel):
     endereco: Optional[str] = Field(None, example="Rua Principal, 123, Rio de Janeiro")
     observacoes: Optional[str] = Field(None, example="Aluno iniciante com experiência em boxe.")
 
+
+class AlunoPaginated(BaseModel):
+    total: int
+    alunos: List[AlunoRead]

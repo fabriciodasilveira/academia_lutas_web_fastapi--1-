@@ -3,6 +3,7 @@ import requests
 import os
 import logging
 from datetime import datetime, date, timedelta
+import math
 
 app = Flask(__name__)
 app.secret_key = 'dev-secret-key-change-in-production'
@@ -25,11 +26,13 @@ def format_datetime_filter(s):
     except (ValueError, TypeError):
         return s
 
-def api_request(endpoint, method='GET', data=None, files=None, json=None):
+# Em frontend/app.py
+
+def api_request(endpoint, method='GET', data=None, files=None, json=None, params=None): # Adicionado 'params'
     url = f"{API_BASE_URL}/api/v1{endpoint}"
     try:
         if method == 'GET':
-            response = requests.get(url, timeout=10)
+            response = requests.get(url, timeout=10, params=params) # Usar 'params' aqui
         elif method == 'POST':
             response = requests.post(url, data=data, files=files, json=json, timeout=10)
         elif method == 'PUT':
@@ -91,18 +94,47 @@ def index():
     # Passa os dados do gráfico para o template
     return render_template('index.html', stats=stats, chart_data=chart_data)
 
+# Em frontend/app.py
+
 @app.route('/alunos')
 def alunos_list():
-    response = api_request('/alunos')
+    page = request.args.get('page', 1, type=int)
+    limit = request.args.get('limit', 20, type=int)
+    busca = request.args.get('busca', '')
+    skip = (page - 1) * limit
+
+    # Cria um dicionário com os parâmetros para a API
+    params = {
+        "skip": skip,
+        "limit": limit,
+        "nome": busca  # A API espera o parâmetro 'nome' para a busca
+    }
+    
+    # Remove parâmetros vazios para não poluir a URL
+    params = {k: v for k, v in params.items() if v}
+
+    response = api_request("/alunos", params=params)
+    
     alunos = []
+    total_alunos = 0
+    total_pages = 0
+
     if response and response.status_code == 200:
-        alunos = response.json()
-    return render_template('alunos/list.html', alunos=alunos)
+        data = response.json()
+        alunos = data.get("alunos", [])
+        total_alunos = data.get("total", 0)
+        if total_alunos > 0 and limit > 0:
+            total_pages = math.ceil(total_alunos / limit)
 
-# === ROTAS PARA ALUNOS ===
-# Em frontend/app.py
-
-# Em frontend/app.py
+    return render_template(
+        'alunos/list.html', 
+        alunos=alunos,
+        page=page,
+        limit=limit,
+        total_pages=total_pages,
+        total_alunos=total_alunos,
+        busca=busca # Passa o termo de busca de volta para o template
+    )
 
 @app.route('/alunos/<int:id>')
 def alunos_view(id):

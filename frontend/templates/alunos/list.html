@@ -8,7 +8,7 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1 class="h3 mb-0">
                 <i class="fas fa-users me-2"></i>
-                Alunos
+                Alunos <span class="badge bg-secondary">{{ total_alunos }}</span>
             </h1>
             <a href="{{ url_for('alunos_novo') }}" class="btn btn-primary">
                 <i class="fas fa-plus me-1"></i>
@@ -18,49 +18,38 @@
     </div>
 </div>
 
-<!-- Filtros e Busca -->
 <div class="row mb-4">
     <div class="col-12">
         <div class="card border-0 shadow-sm">
             <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <div class="input-group">
-                            <span class="input-group-text">
-                                <i class="fas fa-search"></i>
-                            </span>
-                            <input type="text" class="form-control" placeholder="Buscar por nome ou email..." id="searchInput">
+                <form method="GET" action="{{ url_for('alunos_list') }}">
+                    <div class="row g-3 align-items-center">
+                        <div class="col-md-auto">
+                            <label for="limit" class="form-label me-2 mb-0 d-inline-block">Mostrar:</label>
+                            <select class="form-select form-select-sm d-inline-block" name="limit" id="limit" onchange="this.form.submit()" style="width: auto;">
+                                <option value="20" {% if limit == 20 %}selected{% endif %}>20</option>
+                                <option value="30" {% if limit == 30 %}selected{% endif %}>30</option>
+                                <option value="50" {% if limit == 50 %}selected{% endif %}>50</option>
+                                <option value="100" {% if limit == 100 %}selected{% endif %}>100</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md">
+                            <div class="input-group">
+                                <input type="text" class="form-control" placeholder="Buscar por nome do aluno..." name="busca" value="{{ busca }}">
+                                <button class="btn btn-primary" type="submit"><i class="fas fa-search"></i></button>
+                            </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <select class="form-select" id="statusFilter">
-                            <option value="">Todos os status</option>
-                            <option value="ativo">Ativo</option>
-                            <option value="inativo">Inativo</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <button class="btn btn-outline-secondary w-100" onclick="clearFilters()">
-                            <i class="fas fa-times me-1"></i>
-                            Limpar Filtros
-                        </button>
-                    </div>
-                </div>
+                </form>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Lista de Alunos -->
 <div class="row">
     <div class="col-12">
         <div class="card border-0 shadow-sm">
-            <div class="card-header bg-transparent border-0">
-                <h5 class="card-title mb-0">
-                    <i class="fas fa-list me-2"></i>
-                    Lista de Alunos ({{ alunos|length }})
-                </h5>
-            </div>
             <div class="card-body p-0">
                 {% if alunos %}
                 <div class="table-responsive">
@@ -90,7 +79,6 @@
                                         </div>
                                     </div>
                                 </td>
-                            
                                 <td>
                                     {% if aluno.status_geral == 'Ativo' %}
                                         <span class="badge bg-success">Ativo</span>
@@ -116,104 +104,41 @@
                         </tbody>
                     </table>
                 </div>
+                {% elif busca %}
+                <div class="text-center py-5">
+                    <h5 class="text-muted">Nenhum aluno encontrado para a busca "{{ busca }}".</h5>
+                </div>
                 {% else %}
                 <div class="text-center py-5">
-                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
-                    <h5 class="text-muted">Nenhum aluno cadastrado</h5>
-                    <p class="text-muted">Comece adicionando o primeiro aluno ao sistema.</p>
-                    <a href="{{ url_for('alunos_novo') }}" class="btn btn-primary">
-                        <i class="fas fa-plus me-1"></i>
-                        Adicionar Primeiro Aluno
-                    </a>
+                    <h5 class="text-muted">Nenhum aluno cadastrado.</h5>
                 </div>
                 {% endif %}
             </div>
+            
+            {% if total_pages > 1 %}
+            <div class="card-footer bg-transparent">
+                <nav>
+                    <ul class="pagination justify-content-center mb-0">
+                        <li class="page-item {% if page == 1 %}disabled{% endif %}">
+                            <a class="page-link" href="{{ url_for('alunos_list', page=page-1, limit=limit, busca=busca) }}">Anterior</a>
+                        </li>
+                        {% for p in range(1, total_pages + 1) %}
+                        <li class="page-item {% if p == page %}active{% endif %}">
+                            <a class="page-link" href="{{ url_for('alunos_list', page=p, limit=limit, busca=busca) }}">{{ p }}</a>
+                        </li>
+                        {% endfor %}
+                        <li class="page-item {% if page == total_pages %}disabled{% endif %}">
+                            <a class="page-link" href="{{ url_for('alunos_list', page=page+1, limit=limit, busca=busca) }}">Próximo</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>
 
-<!-- Modal de Confirmação de Exclusão -->
-<div class="modal fade" id="deleteModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Confirmar Exclusão</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>Tem certeza que deseja excluir este aluno? Esta ação não pode ser desfeita.</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-danger" onclick="deleteAluno()">Excluir</button>
-            </div>
-        </div>
-    </div>
-</div>
 {% endblock %}
 
 {% block extra_js %}
-<script>
-let alunoToDelete = null;
-
-function confirmDelete(id) {
-    alunoToDelete = id;
-    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
-    modal.show();
-}
-
-function deleteAluno() {
-    if (alunoToDelete) {
-        // Faz a requisição DELETE para a API
-        fetch(`/alunos/${alunoToDelete}/deletar`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        })
-        .then(response => {
-            if (response.ok) {
-                // Mostra mensagem de sucesso e recarrega a página
-                alert('Aluno excluído com sucesso!');
-                location.reload();
-            } else {
-                alert('Erro ao excluir aluno.');
-            }
-        })
-        .catch(error => {
-            console.error('Erro:', error);
-            alert('Erro ao excluir aluno.');
-        });
-        
-        // Fecha o modal
-        const modal = bootstrap.Modal.getInstance(document.getElementById('deleteModal'));
-        modal.hide();
-    }
-}
-
-
-function clearFilters() {
-    document.getElementById('searchInput').value = '';
-    document.getElementById('statusFilter').value = '';
-    // Aqui você implementaria a lógica para limpar os filtros
-}
-
-// Implementar busca em tempo real
-document.getElementById('searchInput').addEventListener('input', function() {
-    const searchTerm = this.value.toLowerCase();
-    const rows = document.querySelectorAll('tbody tr');
-    
-    rows.forEach(row => {
-        const name = row.cells[0].textContent.toLowerCase();
-        const email = row.cells[1].textContent.toLowerCase();
-        
-        if (name.includes(searchTerm) || email.includes(searchTerm)) {
-            row.style.display = '';
-        } else {
-            row.style.display = 'none';
-        }
-    });
-});
-</script>
 {% endblock %}
-
