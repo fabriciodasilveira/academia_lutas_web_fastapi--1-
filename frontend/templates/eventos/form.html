@@ -1,399 +1,69 @@
 {% extends "base.html" %}
-
-{% block title %}
-{% if evento %}Editar Evento{% else %}Novo Evento{% endif %} - Academia de Lutas
-{% endblock %}
-
+{% block title %}{% if evento %}Editar Evento{% else %}Novo Evento{% endif %}{% endblock %}
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1 class="h3 mb-0">
-                <i class="fas fa-calendar-alt me-2"></i>
-                {% if evento %}Editar Evento{% else %}Novo Evento{% endif %}
-            </h1>
-            <a href="{{ url_for('eventos_list') }}" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left me-1"></i>
-                Voltar
-            </a>
-        </div>
-    </div>
-</div>
-
 <div class="row justify-content-center">
     <div class="col-lg-8">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-transparent border-0">
-                <h5 class="card-title mb-0">
-                    <i class="fas fa-info-circle me-2"></i>
-                    Informações do Evento
-                </h5>
-            </div>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h3 mb-0">{% if evento %}Editar Evento{% else %}Novo Evento{% endif %}</h1>
+            <a href="{{ url_for('eventos_list') }}" class="btn btn-outline-secondary">Voltar</a>
+        </div>
+
+        <div class="card shadow-sm">
             <div class="card-body">
-                <form action="{{ url_for('eventos_salvar') }}" method="POST" enctype="multipart/form-data">
+                <form action="{{ url_for('eventos_salvar') }}" method="POST">
                     {% if evento %}
                     <input type="hidden" name="id" value="{{ evento.id }}">
                     {% endif %}
-                    
                     <div class="row g-3">
-                        <!-- Nome do Evento -->
                         <div class="col-md-8">
-                            <label for="nome" class="form-label">
-                                <i class="fas fa-calendar-alt me-1"></i>
-                                Nome do Evento *
-                            </label>
-                            <input type="text" class="form-control" id="nome" name="nome" 
-                                   value="{{ evento.nome if evento else '' }}" required
-                                   placeholder="Ex: Campeonato Interno de Jiu-Jitsu">
+                            <label for="nome" class="form-label">Nome do Evento *</label>
+                            <input type="text" class="form-control" id="nome" name="nome" value="{{ evento.nome if evento else '' }}" required>
                         </div>
-
-                        <!-- Tipo do Evento -->
                         <div class="col-md-4">
-                            <label for="tipo" class="form-label">
-                                <i class="fas fa-tag me-1"></i>
-                                Tipo *
-                            </label>
+                            <label for="tipo" class="form-label">Tipo *</label>
                             <select class="form-select" id="tipo" name="tipo" required>
-                                <option value="">Selecione o tipo</option>
-                                <option value="competicao" {% if evento and evento.tipo == 'competicao' %}selected{% endif %}>Competição</option>
-                                <option value="seminario" {% if evento and evento.tipo == 'seminario' %}selected{% endif %}>Seminário</option>
-                                <option value="workshop" {% if evento and evento.tipo == 'workshop' %}selected{% endif %}>Workshop</option>
-                                <option value="graduacao" {% if evento and evento.tipo == 'graduacao' %}selected{% endif %}>Graduação</option>
-                                <option value="confraternizacao" {% if evento and evento.tipo == 'confraternizacao' %}selected{% endif %}>Confraternização</option>
-                                <option value="outro" {% if evento and evento.tipo == 'outro' %}selected{% endif %}>Outro</option>
+                                <option value="Campeonato" {% if evento and evento.tipo == 'Campeonato' %}selected{% endif %}>Campeonato</option>
+                                <option value="Seminário" {% if evento and evento.tipo == 'Seminário' %}selected{% endif %}>Seminário</option>
+                                <option value="Confraternização" {% if evento and evento.tipo == 'Confraternização' %}selected{% endif %}>Confraternização</option>
+                                <option value="Outro" {% if evento and evento.tipo == 'Outro' %}selected{% endif %}>Outro</option>
                             </select>
                         </div>
-
-                        <!-- Data do Evento -->
-                        <div class="col-md-4">
-                            <label for="data_evento" class="form-label">
-                                <i class="fas fa-calendar me-1"></i>
-                                Data do Evento *
-                            </label>
-                            <input type="date" class="form-control" id="data_evento" name="data_evento" 
-                                   value="{{ evento.data_evento.strftime('%Y-%m-%d') if evento and evento.data_evento else '' }}" required>
+                        <div class="col-12">
+                            <label for="descricao" class="form-label">Descrição</label>
+                            <textarea class="form-control" id="descricao" name="descricao" rows="3">{{ evento.descricao if evento else '' }}</textarea>
                         </div>
-
-                        <!-- Horário -->
-                        <div class="col-md-4">
-                            <label for="horario" class="form-label">
-                                <i class="fas fa-clock me-1"></i>
-                                Horário
-                            </label>
-                            <input type="text" class="form-control" id="horario" name="horario" 
-                                   value="{{ evento.horario if evento else '' }}"
-                                   placeholder="Ex: 09:00 às 17:00">
+                        <div class="col-md-6">
+                            <label for="data_evento" class="form-label">Data e Hora *</label>
+                            <input type="datetime-local" class="form-control" id="data_evento" name="data_evento" value="{{ evento.data_evento[:16] if evento else '' }}" required>
                         </div>
-
-                        <!-- Status -->
+                        <div class="col-md-6">
+                            <label for="local" class="form-label">Local</label>
+                            <input type="text" class="form-control" id="local" name="local" value="{{ evento.local if evento else '' }}">
+                        </div>
                         <div class="col-md-4">
-                            <label for="status" class="form-label">
-                                <i class="fas fa-flag me-1"></i>
-                                Status
-                            </label>
+                            <label for="valor_inscricao" class="form-label">Valor Inscrição (R$) *</label>
+                            <input type="number" class="form-control" id="valor_inscricao" name="valor_inscricao" value="{{ evento.valor_inscricao if evento else '0.00' }}" step="0.01" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="capacidade" class="form-label">Capacidade Máxima *</label>
+                            <input type="number" class="form-control" id="capacidade" name="capacidade" value="{{ evento.capacidade if evento else '0' }}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="status" class="form-label">Status</label>
                             <select class="form-select" id="status" name="status">
-                                <option value="agendado" {% if not evento or evento.status == 'agendado' %}selected{% endif %}>Agendado</option>
-                                <option value="em-andamento" {% if evento and evento.status == 'em-andamento' %}selected{% endif %}>Em Andamento</option>
-                                <option value="finalizado" {% if evento and evento.status == 'finalizado' %}selected{% endif %}>Finalizado</option>
-                                <option value="cancelado" {% if evento and evento.status == 'cancelado' %}selected{% endif %}>Cancelado</option>
+                                <option value="Planejado" {% if evento and evento.status == 'Planejado' %}selected{% endif %}>Planejado</option>
+                                <option value="Ativo" {% if evento and evento.status == 'Ativo' %}selected{% endif %}>Ativo</option>
+                                <option value="Encerrado" {% if evento and evento.status == 'Encerrado' %}selected{% endif %}>Encerrado</option>
+                                <option value="Cancelado" {% if evento and evento.status == 'Cancelado' %}selected{% endif %}>Cancelado</option>
                             </select>
-                        </div>
-
-                        <!-- Local -->
-                        <div class="col-md-6">
-                            <label for="local" class="form-label">
-                                <i class="fas fa-map-marker-alt me-1"></i>
-                                Local
-                            </label>
-                            <input type="text" class="form-control" id="local" name="local" 
-                                   value="{{ evento.local if evento else '' }}"
-                                   placeholder="Ex: Academia Principal - Tatame 1">
-                        </div>
-
-                        <!-- Capacidade Máxima -->
-                        <div class="col-md-6">
-                            <label for="capacidade_maxima" class="form-label">
-                                <i class="fas fa-users me-1"></i>
-                                Capacidade Máxima
-                            </label>
-                            <input type="number" class="form-control" id="capacidade_maxima" name="capacidade_maxima" 
-                                   value="{{ evento.capacidade_maxima if evento else '' }}" 
-                                   min="1" max="500" placeholder="50">
-                        </div>
-
-                        <!-- Valor da Inscrição -->
-                        <div class="col-md-6">
-                            <label for="valor_inscricao" class="form-label">
-                                <i class="fas fa-dollar-sign me-1"></i>
-                                Valor da Inscrição (R$)
-                            </label>
-                            <input type="number" class="form-control" id="valor_inscricao" name="valor_inscricao" 
-                                   value="{{ evento.valor_inscricao if evento else '' }}" 
-                                   step="0.01" min="0" placeholder="0.00">
-                            <div class="form-text">Deixe em branco ou 0 para eventos gratuitos</div>
-                        </div>
-
-                        <!-- Idade Mínima -->
-                        <div class="col-md-6">
-                            <label for="idade_minima" class="form-label">
-                                <i class="fas fa-child me-1"></i>
-                                Idade Mínima
-                            </label>
-                            <input type="number" class="form-control" id="idade_minima" name="idade_minima" 
-                                   value="{{ evento.idade_minima if evento else '' }}" 
-                                   min="3" max="100" placeholder="16">
-                        </div>
-
-                        <!-- Descrição -->
-                        <div class="col-12">
-                            <label for="descricao" class="form-label">
-                                <i class="fas fa-align-left me-1"></i>
-                                Descrição
-                            </label>
-                            <textarea class="form-control" id="descricao" name="descricao" rows="4" 
-                                      placeholder="Descreva o evento, objetivos, programação, etc...">{{ evento.descricao if evento else '' }}</textarea>
-                        </div>
-
-                        <!-- Requisitos -->
-                        <div class="col-12">
-                            <label for="requisitos" class="form-label">
-                                <i class="fas fa-list-check me-1"></i>
-                                Requisitos
-                            </label>
-                            <textarea class="form-control" id="requisitos" name="requisitos" rows="3" 
-                                      placeholder="Liste os requisitos para participação (graduação, equipamentos, etc.)">{{ evento.requisitos if evento else '' }}</textarea>
-                        </div>
-
-                        <!-- Observações -->
-                        <div class="col-12">
-                            <label for="observacoes" class="form-label">
-                                <i class="fas fa-sticky-note me-1"></i>
-                                Observações
-                            </label>
-                            <textarea class="form-control" id="observacoes" name="observacoes" rows="2" 
-                                      placeholder="Informações adicionais sobre o evento...">{{ evento.observacoes if evento else '' }}</textarea>
-                        </div>
-
-                        <!-- Banner do Evento -->
-                        <div class="col-12">
-                            <label for="banner" class="form-label">
-                                <i class="fas fa-image me-1"></i>
-                                Banner do Evento
-                            </label>
-                            <input type="file" class="form-control" id="banner" name="banner" 
-                                   accept="image/*">
-                            <div class="form-text">
-                                Formatos aceitos: JPG, PNG, GIF. Tamanho máximo: 5MB. Dimensões recomendadas: 1200x600px.
-                            </div>
-                            {% if evento and evento.banner %}
-                            <div class="mt-2">
-                                <img src="{{ evento.banner }}" alt="Banner atual" class="img-thumbnail" style="max-width: 300px;">
-                                <div class="form-text">Banner atual</div>
-                            </div>
-                            {% endif %}
                         </div>
                     </div>
-
-                    <!-- Botões -->
-                    <div class="row mt-4">
-                        <div class="col-12">
-                            <div class="d-flex gap-2 justify-content-end">
-                                <a href="{{ url_for('eventos_list') }}" class="btn btn-outline-secondary">
-                                    <i class="fas fa-times me-1"></i>
-                                    Cancelar
-                                </a>
-                                <button type="submit" class="btn btn-warning">
-                                    <i class="fas fa-save me-1"></i>
-                                    {% if evento %}Atualizar{% else %}Cadastrar{% endif %}
-                                </button>
-                            </div>
-                        </div>
+                    <div class="d-flex justify-content-end mt-4">
+                        <button type="submit" class="btn btn-primary">Salvar Evento</button>
                     </div>
                 </form>
             </div>
         </div>
-
-        <!-- Card de Dicas -->
-        <div class="card border-0 shadow-sm mt-4">
-            <div class="card-header bg-transparent border-0">
-                <h5 class="card-title mb-0">
-                    <i class="fas fa-lightbulb me-2"></i>
-                    Dicas para Organização de Eventos
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <div class="d-flex">
-                            <div class="flex-shrink-0">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                            </div>
-                            <div class="flex-grow-1">
-                                <h6 class="mb-1">Planejamento</h6>
-                                <small class="text-muted">Defina data, horário e local com antecedência. Considere feriados e outros eventos da região.</small>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <div class="d-flex">
-                            <div class="flex-shrink-0">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                            </div>
-                            <div class="flex-grow-1">
-                                <h6 class="mb-1">Divulgação</h6>
-                                <small class="text-muted">Use banners atrativos e descrições claras. Divulgue com pelo menos 2 semanas de antecedência.</small>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <div class="d-flex">
-                            <div class="flex-shrink-0">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                            </div>
-                            <div class="flex-grow-1">
-                                <h6 class="mb-1">Capacidade</h6>
-                                <small class="text-muted">Considere o espaço físico, segurança e conforto dos participantes ao definir a capacidade.</small>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <div class="d-flex">
-                            <div class="flex-shrink-0">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                            </div>
-                            <div class="flex-grow-1">
-                                <h6 class="mb-1">Requisitos</h6>
-                                <small class="text-muted">Seja claro sobre graduação mínima, equipamentos necessários e outras exigências.</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 </div>
 {% endblock %}
-
-{% block extra_js %}
-<script>
-// Validação do formulário
-document.querySelector('form').addEventListener('submit', function(e) {
-    const nome = document.getElementById('nome').value.trim();
-    const tipo = document.getElementById('tipo').value;
-    const dataEvento = document.getElementById('data_evento').value;
-    
-    if (!nome) {
-        e.preventDefault();
-        alert('O nome do evento é obrigatório!');
-        document.getElementById('nome').focus();
-        return false;
-    }
-    
-    if (!tipo) {
-        e.preventDefault();
-        alert('O tipo do evento é obrigatório!');
-        document.getElementById('tipo').focus();
-        return false;
-    }
-    
-    if (!dataEvento) {
-        e.preventDefault();
-        alert('A data do evento é obrigatória!');
-        document.getElementById('data_evento').focus();
-        return false;
-    }
-    
-    // Validar se a data não é no passado
-    const hoje = new Date();
-    const dataEventoObj = new Date(dataEvento);
-    
-    if (dataEventoObj < hoje.setHours(0,0,0,0)) {
-        e.preventDefault();
-        alert('A data do evento não pode ser no passado!');
-        document.getElementById('data_evento').focus();
-        return false;
-    }
-});
-
-// Formatação do valor da inscrição
-document.getElementById('valor_inscricao').addEventListener('blur', function(e) {
-    const value = parseFloat(e.target.value);
-    if (!isNaN(value)) {
-        e.target.value = value.toFixed(2);
-    }
-});
-
-// Preview do banner
-document.getElementById('banner').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            // Remover preview anterior se existir
-            const existingPreview = document.getElementById('banner-preview');
-            if (existingPreview) {
-                existingPreview.remove();
-            }
-            
-            // Criar novo preview
-            const preview = document.createElement('div');
-            preview.id = 'banner-preview';
-            preview.className = 'mt-2';
-            preview.innerHTML = `
-                <img src="${e.target.result}" alt="Preview" class="img-thumbnail" style="max-width: 300px;">
-                <div class="form-text">Preview do novo banner</div>
-            `;
-            
-            document.getElementById('banner').parentNode.appendChild(preview);
-        };
-        reader.readAsDataURL(file);
-    }
-});
-
-// Auto-sugerir nome do evento baseado no tipo
-document.getElementById('tipo').addEventListener('change', function() {
-    const tipo = this.value;
-    const nomeInput = document.getElementById('nome');
-    
-    if (tipo && !nomeInput.value.trim()) {
-        let sugestao = '';
-        switch(tipo) {
-            case 'competicao':
-                sugestao = 'Campeonato Interno';
-                break;
-            case 'seminario':
-                sugestao = 'Seminário de';
-                break;
-            case 'workshop':
-                sugestao = 'Workshop de';
-                break;
-            case 'graduacao':
-                sugestao = 'Cerimônia de Graduação';
-                break;
-            case 'confraternizacao':
-                sugestao = 'Confraternização';
-                break;
-        }
-        nomeInput.value = sugestao;
-    }
-});
-
-// Validação de data em tempo real
-document.getElementById('data_evento').addEventListener('change', function() {
-    const hoje = new Date();
-    const dataEvento = new Date(this.value);
-    
-    if (dataEvento < hoje.setHours(0,0,0,0)) {
-        this.setCustomValidity('A data do evento não pode ser no passado');
-        this.classList.add('is-invalid');
-    } else {
-        this.setCustomValidity('');
-        this.classList.remove('is-invalid');
-    }
-});
-</script>
-{% endblock %}
-

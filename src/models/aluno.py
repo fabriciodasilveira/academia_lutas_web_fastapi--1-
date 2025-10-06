@@ -27,3 +27,4 @@ class Aluno(Base):
 
     # Relacionamento com mensalidades
     mensalidades = relationship("Mensalidade", back_populates="aluno")
+    inscricoes = relationship("Inscricao", back_populates="aluno")

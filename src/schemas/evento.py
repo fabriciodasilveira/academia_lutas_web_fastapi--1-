@@ -1,35 +1,37 @@
-# -*- coding: utf-8 -*-
-"""
-Schemas Pydantic para a entidade Evento.
-"""
-
+# src/schemas/evento.py
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
+from .inscricao import InscricaoRead # Import para aninhar inscrições
 
-# Schema base para Evento
 class EventoBase(BaseModel):
     nome: str = Field(..., max_length=100)
+    tipo: Optional[str] = Field(None, max_length=50)
     descricao: Optional[str] = Field(None, max_length=255)
+    local: Optional[str] = Field(None, max_length=150)
     data_evento: datetime
+    data_fim: Optional[datetime] = None
     valor_inscricao: float = Field(0.0, ge=0)
-    capacidade: int = Field(..., ge=0)
-
-# Schema para criação de Evento
+    capacidade: int = Field(0, ge=0)
+    status: Optional[str] = Field("Planejado", max_length=50)
+    
 class EventoCreate(EventoBase):
     pass
 
-# Schema para atualização de Evento
 class EventoUpdate(BaseModel):
     nome: Optional[str] = Field(None, max_length=100)
+    tipo: Optional[str] = Field(None, max_length=50)
     descricao: Optional[str] = Field(None, max_length=255)
+    local: Optional[str] = Field(None, max_length=150)
     data_evento: Optional[datetime] = None
+    data_fim: Optional[datetime] = None
     valor_inscricao: Optional[float] = Field(None, ge=0)
     capacidade: Optional[int] = Field(None, ge=0)
+    status: Optional[str] = Field(None, max_length=50)
 
-# Schema para leitura/retorno de Evento
 class EventoRead(EventoBase):
     id: int
+    inscricoes: List[InscricaoRead] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True

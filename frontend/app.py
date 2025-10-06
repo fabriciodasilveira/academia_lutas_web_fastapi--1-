@@ -213,22 +213,6 @@ def alunos_deletar(id):
 # ... (código existente das rotas de alunos) ...
     return redirect(url_for("alunos_view", id=aluno_id))
 
-# === ROTAS PARA EVENTOS ===
-# ... (resto do arquivo) ...
-
-# === ROTAS PARA EVENTOS ===
-@app.route('/eventos/novo')
-def eventos_novo():
-    return render_template('eventos/form.html', evento=None)
-
-@app.route("/eventos")
-def eventos_list():
-    response = api_request("/eventos")
-    eventos = []
-    if response and response.status_code == 200:
-        eventos = response.json()
-    return render_template("eventos/list.html", eventos=eventos)
-
 
 # === ROTAS PARA PROFESSORES ===
 @app.route('/professores')
@@ -967,11 +951,119 @@ def mensalidades_pagar_online(id):
         return jsonify({"error": error_message}), 500
     
     
-    # Em frontend/app.py
+# Em frontend/app.py
+# Adicione este bloco de rotas
 
+# Em frontend/app.py
 
+# === ROTAS PARA EVENTOS ===
+@app.route("/eventos")
+def eventos_list():
+    response = api_request("/eventos")
+    eventos = response.json() if response and response.status_code == 200 else []
+    
+    # KPIs para o dashboard de eventos
+    kpis = {
+        "total_eventos": len(eventos),
+        "total_arrecadado": sum(inscricao['valor_pago'] for evento in eventos for inscricao in evento.get('inscricoes', []) if inscricao.get('valor_pago')),
+        "total_inscritos": sum(len(evento.get('inscricoes', [])) for evento in eventos)
+    }
+
+    return render_template("eventos/list.html", eventos=eventos, kpis=kpis)
+
+@app.route("/eventos/novo")
+def eventos_novo():
+    return render_template("eventos/form.html", evento=None)
+
+@app.route("/eventos/<int:id>/editar")
+def eventos_editar(id):
+    response = api_request(f"/eventos/{id}")
+    evento = response.json() if response and response.status_code == 200 else None
+    if not evento:
+        flash("Evento não encontrado.", "error")
+        return redirect(url_for("eventos_list"))
+    return render_template("eventos/form.html", evento=evento)
+
+@app.route("/eventos/salvar", methods=["POST"])
+def eventos_salvar():
+    try:
+        data = {
+            "nome": request.form.get("nome"),
+            "tipo": request.form.get("tipo"),
+            "descricao": request.form.get("descricao"),
+            "local": request.form.get("local"),
+            "data_evento": request.form.get("data_evento"),
+            "valor_inscricao": float(request.form.get("valor_inscricao", 0)),
+            "capacidade": int(request.form.get("capacidade", 0)),
+            "status": request.form.get("status"),
+        }
+        
+        evento_id = request.form.get("id")
+        if evento_id:
+            response = api_request(f"/eventos/{evento_id}", method="PUT", json=data)
+            msg = "Evento atualizado com sucesso!"
+        else:
+            response = api_request("/eventos", method="POST", json=data)
+            msg = "Evento criado com sucesso!"
+
+        if response and response.status_code in [200, 201]:
+            flash(msg, "success")
+        else:
+            flash("Erro ao salvar evento.", "error")
+    except Exception as e:
+        flash(f"Erro interno: {e}", "error")
+
+    return redirect(url_for("eventos_list"))
+
+@app.route("/eventos/<int:id>")
+def eventos_view(id):
+    evento_resp = api_request(f"/eventos/{id}")
+    inscricoes_resp = api_request(f"/inscricoes/evento/{id}")
+    alunos_resp = api_request("/alunos")
+
+    evento = evento_resp.json() if evento_resp and evento_resp.status_code == 200 else None
+    inscricoes = inscricoes_resp.json() if inscricoes_resp and inscricoes_resp.status_code == 200 else []
+    alunos = alunos_resp.json() if alunos_resp and alunos_resp.status_code == 200 else []
+
+    if not evento:
+        flash("Evento não encontrado.", "error")
+        return redirect(url_for("eventos_list"))
+
+    return render_template("eventos/view.html", evento=evento, inscricoes=inscricoes, alunos=alunos)
+
+@app.route("/eventos/inscrever", methods=["POST"])
+def eventos_inscrever():
+    evento_id = request.form.get("evento_id")
+    aluno_id = request.form.get("aluno_id")
+    
+    if not aluno_id:
+        flash("Selecione um aluno para inscrever.", "error")
+        return redirect(url_for("eventos_view", id=evento_id))
+        
+    data = {"evento_id": int(evento_id), "aluno_id": int(aluno_id)}
+    response = api_request("/inscricoes", method="POST", json=data)
+
+    if response and response.status_code == 201:
+        flash("Aluno inscrito com sucesso!", "success")
+    else:
+        error = response.json().get('detail') if response else 'desconhecido'
+        flash(f"Erro ao inscrever aluno: {error}", "error")
+
+    return redirect(url_for("eventos_view", id=evento_id))
+
+@app.route("/inscricoes/<int:id>/pagar-manual", methods=["POST"])
+def inscricao_pagar_manual(id):
+    evento_id = request.form.get("evento_id")
+    response = api_request(f"/inscricoes/{id}/confirmar-pagamento-manual", method="POST")
+    if response and response.status_code == 200:
+        flash("Pagamento da inscrição confirmado!", "success")
+    else:
+        flash("Erro ao confirmar pagamento.", "error")
+    return redirect(url_for("eventos_view", id=evento_id))
 
 
 if __name__ == '__main__':
     print("Iniciando aplicação Flask de depuração...")
     app.run(debug=False, host='0.0.0.0', port=5700)
+    
+    

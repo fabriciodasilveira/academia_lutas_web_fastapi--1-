@@ -2,12 +2,14 @@
 
 import mercadopago
 from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 import os
 
 from src.database import get_db
 from src.models.mensalidade import Mensalidade
 from . import mensalidades_fastapi # Importar para usar a função de processar pagamento
+from src.models.inscricao import Inscricao
+
 
 router = APIRouter(
     tags=["Pagamentos"],
@@ -95,3 +97,24 @@ async def webhook_mercadopago(request: Request, db: Session = Depends(get_db)):
             mensalidades_fastapi.processar_pagamento(mensalidade_id, db)
 
     return {"status": "ok"}
+
+@router.post("/gerar/evento/{inscricao_id}")
+def gerar_link_pagamento_evento(inscricao_id: int, db: Session = Depends(get_db)):
+    db_inscricao = db.query(Inscricao).options(joinedload(Inscricao.aluno), joinedload(Inscricao.evento)).filter(Inscricao.id == inscricao_id).first()
+    if not db_inscricao:
+        raise HTTPException(status_code=404, detail="Inscrição não encontrada")
+
+    # ... (código de criação da preference_data, similar à outra função, mas usando os dados da inscrição)
+    preference_data = {
+        "items": [
+            {
+                "title": f"Inscrição: {db_inscricao.evento.nome} - {db_inscricao.aluno.nome}",
+                "quantity": 1,
+                "currency_id": "BRL",
+                "unit_price": float(db_inscricao.evento.valor_inscricao),
+            }
+        ],
+        "back_urls": { ... },
+        "external_reference": f"evento_{db_inscricao.id}", # Prefixo para diferenciar no webhook
+        "notification_url": "SUA_URL_WEBHOOK"
+    }

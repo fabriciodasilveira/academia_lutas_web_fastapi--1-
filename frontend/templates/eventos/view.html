@@ -1,554 +1,71 @@
 {% extends "base.html" %}
-
-{% block title %}{{ evento.nome if evento else 'Evento' }} - Academia de Lutas{% endblock %}
-
+{% block title %}Detalhes do Evento{% endblock %}
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1 class="h3 mb-0">
-                <i class="fas fa-calendar-alt me-2"></i>
-                Detalhes do Evento
-            </h1>
-            <div class="btn-group">
-                <a href="{{ url_for('eventos_list') }}" class="btn btn-outline-secondary">
-                    <i class="fas fa-arrow-left me-1"></i>
-                    Voltar
-                </a>
-                {% if evento %}
-                <a href="{{ url_for('eventos_editar', id=evento.id) }}" class="btn btn-warning">
-                    <i class="fas fa-edit me-1"></i>
-                    Editar
-                </a>
-                {% endif %}
-            </div>
-        </div>
-    </div>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">{{ evento.nome }}</h1>
+    <a href="{{ url_for('eventos_list') }}" class="btn btn-outline-secondary">Voltar</a>
 </div>
 
-{% if evento %}
-<div class="row">
-    <!-- Banner do Evento -->
-    {% if evento.banner %}
-    <div class="col-12 mb-4">
-        <div class="card border-0 shadow-sm">
-            <img src="{{ evento.banner }}" alt="Banner do {{ evento.nome }}" class="card-img-top" style="height: 300px; object-fit: cover;">
-        </div>
+<div class="card shadow-sm mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Inscrever Aluno</h5>
     </div>
-    {% endif %}
-    
-    <!-- Informações Principais -->
-    <div class="col-lg-8">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-transparent border-0">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-info-circle me-2"></i>
-                        Informações do Evento
-                    </h5>
-                    {% if evento.status == 'agendado' %}
-                        <span class="badge bg-primary">Agendado</span>
-                    {% elif evento.status == 'em-andamento' %}
-                        <span class="badge bg-success">Em Andamento</span>
-                    {% elif evento.status == 'finalizado' %}
-                        <span class="badge bg-secondary">Finalizado</span>
-                    {% elif evento.status == 'cancelado' %}
-                        <span class="badge bg-danger">Cancelado</span>
-                    {% endif %}
-                </div>
-            </div>
-            <div class="card-body">
-                <div class="row g-4">
-                    <div class="col-12">
-                        <h2 class="h4 mb-3">{{ evento.nome }}</h2>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <div class="d-flex align-items-center">
-                            <div class="flex-shrink-0">
-                                <div class="bg-warning bg-opacity-10 rounded-circle p-2">
-                                    <i class="fas fa-tag text-warning"></i>
-                                </div>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h6 class="mb-0">Tipo</h6>
-                                <p class="mb-0 text-muted">
-                                    {% if evento.tipo %}
-                                        <span class="badge bg-warning text-dark">{{ evento.tipo|title }}</span>
-                                    {% else %}
-                                        Não informado
-                                    {% endif %}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <div class="d-flex align-items-center">
-                            <div class="flex-shrink-0">
-                                <div class="bg-primary bg-opacity-10 rounded-circle p-2">
-                                    <i class="fas fa-calendar text-primary"></i>
-                                </div>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h6 class="mb-0">Data</h6>
-                                <p class="mb-0 text-muted">
-                                    {% if evento.data_evento %}
-                                        {{ evento.data_evento.strftime('%d/%m/%Y') }}
-                                        {% if evento.horario %}
-                                        <br><small>{{ evento.horario }}</small>
-                                        {% endif %}
-                                    {% else %}
-                                        Não informada
-                                    {% endif %}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    {% if evento.local %}
-                    <div class="col-md-6">
-                        <div class="d-flex align-items-center">
-                            <div class="flex-shrink-0">
-                                <div class="bg-danger bg-opacity-10 rounded-circle p-2">
-                                    <i class="fas fa-map-marker-alt text-danger"></i>
-                                </div>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h6 class="mb-0">Local</h6>
-                                <p class="mb-0 text-muted">{{ evento.local }}</p>
-                            </div>
-                        </div>
-                    </div>
-                    {% endif %}
-                    
-                    <div class="col-md-6">
-                        <div class="d-flex align-items-center">
-                            <div class="flex-shrink-0">
-                                <div class="bg-info bg-opacity-10 rounded-circle p-2">
-                                    <i class="fas fa-users text-info"></i>
-                                </div>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h6 class="mb-0">Participantes</h6>
-                                <p class="mb-0 text-muted">
-                                    {% if evento.capacidade_maxima %}
-                                        {{ evento.total_participantes or 0 }}/{{ evento.capacidade_maxima }}
-                                    {% else %}
-                                        {{ evento.total_participantes or 0 }}
-                                    {% endif %}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    {% if evento.valor_inscricao %}
-                    <div class="col-md-6">
-                        <div class="d-flex align-items-center">
-                            <div class="flex-shrink-0">
-                                <div class="bg-success bg-opacity-10 rounded-circle p-2">
-                                    <i class="fas fa-dollar-sign text-success"></i>
-                                </div>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h6 class="mb-0">Valor da Inscrição</h6>
-                                <p class="mb-0 text-muted">
-                                    {% if evento.valor_inscricao > 0 %}
-                                        R$ {{ "%.2f"|format(evento.valor_inscricao) }}
-                                    {% else %}
-                                        Gratuito
-                                    {% endif %}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                    {% endif %}
-                    
-                    {% if evento.idade_minima %}
-                    <div class="col-md-6">
-                        <div class="d-flex align-items-center">
-                            <div class="flex-shrink-0">
-                                <div class="bg-warning bg-opacity-10 rounded-circle p-2">
-                                    <i class="fas fa-child text-warning"></i>
-                                </div>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h6 class="mb-0">Idade Mínima</h6>
-                                <p class="mb-0 text-muted">{{ evento.idade_minima }} anos</p>
-                            </div>
-                        </div>
-                    </div>
-                    {% endif %}
-                    
-                    {% if evento.descricao %}
-                    <div class="col-12">
-                        <div class="d-flex align-items-start">
-                            <div class="flex-shrink-0">
-                                <div class="bg-secondary bg-opacity-10 rounded-circle p-2">
-                                    <i class="fas fa-align-left text-secondary"></i>
-                                </div>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h6 class="mb-0">Descrição</h6>
-                                <p class="mb-0 text-muted">{{ evento.descricao }}</p>
-                            </div>
-                        </div>
-                    </div>
-                    {% endif %}
-                    
-                    {% if evento.requisitos %}
-                    <div class="col-12">
-                        <div class="d-flex align-items-start">
-                            <div class="flex-shrink-0">
-                                <div class="bg-info bg-opacity-10 rounded-circle p-2">
-                                    <i class="fas fa-list-check text-info"></i>
-                                </div>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h6 class="mb-0">Requisitos</h6>
-                                <p class="mb-0 text-muted">{{ evento.requisitos }}</p>
-                            </div>
-                        </div>
-                    </div>
-                    {% endif %}
-                    
-                    {% if evento.observacoes %}
-                    <div class="col-12">
-                        <div class="d-flex align-items-start">
-                            <div class="flex-shrink-0">
-                                <div class="bg-secondary bg-opacity-10 rounded-circle p-2">
-                                    <i class="fas fa-sticky-note text-secondary"></i>
-                                </div>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h6 class="mb-0">Observações</h6>
-                                <p class="mb-0 text-muted">{{ evento.observacoes }}</p>
-                            </div>
-                        </div>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-        
-        <!-- Lista de Participantes -->
-        <div class="card border-0 shadow-sm mt-4">
-            <div class="card-header bg-transparent border-0">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-users me-2"></i>
-                        Participantes Inscritos ({{ evento.total_participantes or 0 }})
-                    </h5>
-                    {% if evento.status == 'agendado' %}
-                    <button class="btn btn-sm btn-outline-warning">
-                        <i class="fas fa-plus me-1"></i>
-                        Inscrever Participante
-                    </button>
-                    {% endif %}
-                </div>
-            </div>
-            <div class="card-body">
-                {% if evento.participantes %}
-                <div class="row g-3">
-                    {% for participante in evento.participantes %}
-                    <div class="col-md-6">
-                        <div class="d-flex align-items-center p-2 border rounded">
-                            <div class="flex-shrink-0">
-                                <div class="bg-warning bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
-                                    <i class="fas fa-user text-warning"></i>
-                                </div>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h6 class="mb-0">{{ participante.nome }}</h6>
-                                <small class="text-muted">{{ participante.email or 'Sem email' }}</small>
-                            </div>
-                            {% if evento.status == 'agendado' %}
-                            <div class="flex-shrink-0">
-                                <button class="btn btn-sm btn-outline-danger" onclick="removeParticipante({{ participante.id }})">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
+    <div class="card-body">
+        <form action="{{ url_for('eventos_inscrever') }}" method="POST">
+            <input type="hidden" name="evento_id" value="{{ evento.id }}">
+            <div class="input-group">
+                <select class="form-select" name="aluno_id" required>
+                    <option value="">Selecione o aluno...</option>
+                    {% for aluno in alunos %}
+                        <option value="{{ aluno.id }}">{{ aluno.nome }}</option>
                     {% endfor %}
-                </div>
-                {% else %}
-                <div class="text-center py-4">
-                    <i class="fas fa-users fa-2x text-muted mb-2"></i>
-                    <p class="text-muted mb-0">Nenhum participante inscrito neste evento</p>
-                </div>
-                {% endif %}
+                </select>
+                <button class="btn btn-primary" type="submit">Inscrever</button>
             </div>
-        </div>
-        
-        <!-- Histórico de Atividades -->
-        <div class="card border-0 shadow-sm mt-4">
-            <div class="card-header bg-transparent border-0">
-                <h5 class="card-title mb-0">
-                    <i class="fas fa-history me-2"></i>
-                    Histórico
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="timeline">
-                    <div class="timeline-item">
-                        <div class="timeline-marker bg-success"></div>
-                        <div class="timeline-content">
-                            <h6 class="mb-1">Evento criado</h6>
-                            <p class="mb-0 text-muted small">
-                                {% if evento.created_at %}
-                                    {{ evento.created_at.strftime('%d/%m/%Y às %H:%M') }}
-                                {% else %}
-                                    Data não informada
-                                {% endif %}
-                            </p>
-                        </div>
-                    </div>
-                    
-                    {% if evento.updated_at and evento.updated_at != evento.created_at %}
-                    <div class="timeline-item">
-                        <div class="timeline-marker bg-info"></div>
-                        <div class="timeline-content">
-                            <h6 class="mb-1">Dados atualizados</h6>
-                            <p class="mb-0 text-muted small">{{ evento.updated_at.strftime('%d/%m/%Y às %H:%M') }}</p>
-                        </div>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Sidebar -->
-    <div class="col-lg-4">
-        <!-- Card de Ações -->
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-transparent border-0">
-                <h5 class="card-title mb-0">
-                    <i class="fas fa-cogs me-2"></i>
-                    Ações
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="d-grid gap-2">
-                    <a href="{{ url_for('eventos_editar', id=evento.id) }}" class="btn btn-warning">
-                        <i class="fas fa-edit me-1"></i>
-                        Editar Evento
-                    </a>
-                    {% if evento.status == 'agendado' %}
-                    <button class="btn btn-outline-success">
-                        <i class="fas fa-play me-1"></i>
-                        Iniciar Evento
-                    </button>
-                    {% elif evento.status == 'em-andamento' %}
-                    <button class="btn btn-outline-secondary">
-                        <i class="fas fa-stop me-1"></i>
-                        Finalizar Evento
-                    </button>
-                    {% endif %}
-                    <button class="btn btn-outline-primary">
-                        <i class="fas fa-share me-1"></i>
-                        Compartilhar
-                    </button>
-                    <button class="btn btn-outline-info">
-                        <i class="fas fa-print me-1"></i>
-                        Imprimir Lista
-                    </button>
-                    <hr>
-                    <button class="btn btn-outline-danger" onclick="confirmDelete({{ evento.id }})">
-                        <i class="fas fa-trash me-1"></i>
-                        Excluir Evento
-                    </button>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Estatísticas -->
-        <div class="card border-0 shadow-sm mt-4">
-            <div class="card-header bg-transparent border-0">
-                <h5 class="card-title mb-0">
-                    <i class="fas fa-chart-bar me-2"></i>
-                    Estatísticas
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-6">
-                        <div class="text-center">
-                            <div class="h4 mb-0 text-warning">{{ evento.total_participantes or 0 }}</div>
-                            <small class="text-muted">Inscritos</small>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="text-center">
-                            <div class="h4 mb-0 text-success">
-                                {% if evento.capacidade_maxima %}
-                                    {{ ((evento.total_participantes or 0) / evento.capacidade_maxima * 100)|round|int }}%
-                                {% else %}
-                                    -
-                                {% endif %}
-                            </div>
-                            <small class="text-muted">Ocupação</small>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="text-center">
-                            <div class="h4 mb-0 text-info">0</div>
-                            <small class="text-muted">Dias restantes</small>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="text-center">
-                            <div class="h4 mb-0 text-primary">
-                                {% if evento.valor_inscricao and evento.total_participantes %}
-                                    R$ {{ "%.0f"|format(evento.valor_inscricao * evento.total_participantes) }}
-                                {% else %}
-                                    R$ 0
-                                {% endif %}
-                            </div>
-                            <small class="text-muted">Arrecadação</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Informações de Contato -->
-        <div class="card border-0 shadow-sm mt-4">
-            <div class="card-header bg-transparent border-0">
-                <h5 class="card-title mb-0">
-                    <i class="fas fa-info me-2"></i>
-                    Informações de Contato
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="text-center">
-                    <div class="bg-warning bg-opacity-10 rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" 
-                         style="width: 60px; height: 60px;">
-                        <i class="fas fa-calendar-alt fa-lg text-warning"></i>
-                    </div>
-                    <h6 class="mb-2">Dúvidas sobre o evento?</h6>
-                    <p class="text-muted small mb-3">Entre em contato conosco para mais informações</p>
-                    <div class="d-grid gap-2">
-                        <button class="btn btn-sm btn-outline-primary">
-                            <i class="fas fa-phone me-1"></i>
-                            Ligar
-                        </button>
-                        <button class="btn btn-sm btn-outline-success">
-                            <i class="fab fa-whatsapp me-1"></i>
-                            WhatsApp
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
+        </form>
     </div>
 </div>
 
-<!-- Modal de Confirmação de Exclusão -->
-<div class="modal fade" id="deleteModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Confirmar Exclusão</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>Tem certeza que deseja excluir o evento <strong>{{ evento.nome }}</strong>?</p>
-                <p class="text-danger">Esta ação não pode ser desfeita e todos os participantes inscritos serão desvinculados do evento.</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-danger" onclick="deleteEvento()">Excluir</button>
-            </div>
+<div class="card shadow-sm">
+    <div class="card-header">
+        <h5 class="mb-0">Inscritos ({{ inscricoes|length }} / {{ evento.capacidade }})</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Aluno</th>
+                        <th>Data Inscrição</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for inscricao in inscricoes %}
+                    <tr>
+                        <td>{{ inscricao.aluno.nome }}</td>
+                        <td>{{ inscricao.data_inscricao }}</td>
+                        <td>
+                            {% if inscricao.status == 'pago' %}
+                                <span class="badge bg-success">Pago</span>
+                            {% else %}
+                                <span class="badge bg-warning">Pendente</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if inscricao.status == 'pendente' and evento.valor_inscricao > 0 %}
+                                <form action="{{ url_for('inscricao_pagar_manual', id=inscricao.id) }}" method="POST" class="d-inline">
+                                    <input type="hidden" name="evento_id" value="{{ evento.id }}">
+                                    <button type="submit" class="btn btn-sm btn-success">Baixa Manual</button>
+                                </form>
+                                {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
-
-{% else %}
-<div class="row">
-    <div class="col-12">
-        <div class="card border-0 shadow-sm">
-            <div class="card-body text-center py-5">
-                <i class="fas fa-calendar-alt fa-3x text-muted mb-3"></i>
-                <h5 class="text-muted">Evento não encontrado</h5>
-                <p class="text-muted">O evento solicitado não foi encontrado no sistema.</p>
-                <a href="{{ url_for('eventos_list') }}" class="btn btn-warning">
-                    <i class="fas fa-arrow-left me-1"></i>
-                    Voltar para Lista
-                </a>
-            </div>
-        </div>
-    </div>
-</div>
-{% endif %}
 {% endblock %}
-
-{% block extra_css %}
-<style>
-.timeline {
-    position: relative;
-    padding-left: 30px;
-}
-
-.timeline::before {
-    content: '';
-    position: absolute;
-    left: 15px;
-    top: 0;
-    bottom: 0;
-    width: 2px;
-    background: #dee2e6;
-}
-
-.timeline-item {
-    position: relative;
-    margin-bottom: 20px;
-}
-
-.timeline-marker {
-    position: absolute;
-    left: -23px;
-    top: 5px;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    border: 2px solid #fff;
-    box-shadow: 0 0 0 2px #dee2e6;
-}
-
-.timeline-content {
-    background: #f8f9fa;
-    padding: 15px;
-    border-radius: 8px;
-    border-left: 3px solid #ffc107;
-}
-</style>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-function confirmDelete(id) {
-    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
-    modal.show();
-}
-
-function deleteEvento() {
-    // Implementar a exclusão do evento
-    console.log('Deletar evento:', {{ evento.id if evento else 'null' }});
-    // Por enquanto, apenas redireciona para a lista
-    window.location.href = "{{ url_for('eventos_list') }}";
-}
-
-function removeParticipante(participanteId) {
-    if (confirm('Tem certeza que deseja remover este participante do evento?')) {
-        // Implementar a remoção do participante do evento
-        console.log('Remover participante:', participanteId, 'do evento:', {{ evento.id if evento else 'null' }});
-        // Por enquanto, apenas recarrega a página
-        location.reload();
-    }
-}
-</script>
-{% endblock %}
-
