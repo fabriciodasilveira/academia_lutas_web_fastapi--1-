@@ -58,7 +58,7 @@
                                     <div class="btn-group" role="group">
                                         <form action="{{ url_for('mensalidades_pagar', id=mensalidade.id) }}" method="POST" style="display:inline;">
                                             <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Confirmar pagamento no balcão (dinheiro, cartão, etc)?');">
-                                                <i class="fas fa-cash-register me-1"></i> Baixa Manual
+                                                <i class="fas fa-cash-register me-1"></i> Recebimento no Balcão
                                             </button>
                                         </form>
                                         <button class="btn btn-sm btn-primary ms-2" onclick="pagarOnline(event, {{ mensalidade.id }})">
