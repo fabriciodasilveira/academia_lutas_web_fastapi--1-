@@ -30,8 +30,10 @@
                         </div>
                     </div>
                     <div class="flex-grow-1 ms-3">
-                        <h6 class="card-title text-muted mb-1">Total de Alunos</h6>
-                        <h3 class="mb-0">{{ stats.total_alunos }}</h3>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="mb-1">Alunos Ativos</h6>
+                            <p class="mb-0 text-muted small">{{ stats.total_alunos_ativos }} alunos ativos</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -54,7 +56,7 @@
                     </div>
                     <div class="flex-grow-1 ms-3">
                         <h6 class="card-title text-muted mb-1">Professores</h6>
-                        <h3 class="mb-0">{{ stats.total_professores }}</h3>
+                        <p class="mb-0">{{ stats.total_professores }}</p>
                     </div>
                 </div>
             </div>
@@ -155,7 +157,7 @@
     </div>
 </div>
 
-<!-- Gráfico de Atividades -->
+<!-- Gráfico de Atividades
 <div class="row g-4">
     <div class="col-lg-8">
         <div class="card border-0 shadow-sm">
@@ -170,6 +172,7 @@
             </div>
         </div>
     </div>
+-->
     
     <div class="col-lg-4">
         <div class="card border-0 shadow-sm">
@@ -188,9 +191,9 @@
                                     <i class="fas fa-user-plus text-primary"></i>
                                 </div>
                             </div>
+                            <h6 class="mb-1">Situação dos Alunos</h6>
                             <div class="flex-grow-1 ms-3">
-                                <h6 class="mb-1">Novos alunos cadastrados</h6>
-                                <p class="mb-0 text-muted small">{{ stats.total_alunos }} alunos no total</p>
+                                <h3 class="mb-0 text-muted small">{{ stats.total_alunos_ativos }} ativos de {{ stats.total_alunos }} no total</h3>
                             </div>
                         </div>
                     </div>

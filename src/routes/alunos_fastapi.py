@@ -136,17 +136,19 @@ from sqlalchemy.orm import Session, joinedload
 # ... (outros imports) ...
 from src.models.matricula import Matricula # Importe o modelo Matricula
 
-# Substitua a assinatura da função e o retorno
+
+
 @router.get("", response_model=AlunoPaginated)
 def read_alunos(
     skip: int = 0,
-    limit: int = 20, # O padrão agora será 20
+    limit: int = 20,
     nome: Optional[str] = None,
     cpf: Optional[str] = None,
+    status: Optional[str] = None, # NOVO PARÂMETRO DE FILTRO
     db: Session = Depends(get_db)
 ):
     """
-    Lista alunos com filtros e paginação, e calcula o status geral (Ativo/Inativo).
+    Lista alunos com filtros (incluindo status) e paginação.
     """
     query = db.query(Aluno).options(joinedload(Aluno.matriculas))
     
@@ -155,13 +157,22 @@ def read_alunos(
     if cpf:
         query = query.filter(Aluno.cpf == cpf)
     
-    # Conta o total de itens ANTES de aplicar o limite e o skip
-    total = query.count()
+    # --- NOVA LÓGICA DE FILTRO POR STATUS ---
+    if status:
+        # Subconsulta para encontrar todos os IDs de alunos que têm pelo menos uma matrícula ativa.
+        subquery_alunos_ativos = db.query(Matricula.aluno_id).filter(Matricula.ativa == True).distinct()
+        
+        if status == 'ativo':
+            query = query.filter(Aluno.id.in_(subquery_alunos_ativos))
+        elif status == 'inativo':
+            query = query.filter(Aluno.id.notin_(subquery_alunos_ativos))
+    # --- FIM DA LÓGICA ---
 
-    alunos = query.order_by(Aluno.nome).offset(skip).limit(limit).all()
+    total = query.count()
+    alunos_paginados = query.order_by(Aluno.nome).offset(skip).limit(limit).all()
 
     response_alunos = []
-    for aluno in alunos:
+    for aluno in alunos_paginados:
         aluno_read = AlunoRead.from_orm(aluno)
         if any(matricula.ativa for matricula in aluno.matriculas):
             aluno_read.status_geral = "Ativo"

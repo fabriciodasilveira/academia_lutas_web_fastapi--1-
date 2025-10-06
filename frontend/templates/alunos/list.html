@@ -37,8 +37,16 @@
                         <div class="col-md">
                             <div class="input-group">
                                 <input type="text" class="form-control" placeholder="Buscar por nome do aluno..." name="busca" value="{{ busca }}">
-                                <button class="btn btn-primary" type="submit"><i class="fas fa-search"></i></button>
+                                <button class="btn btn-outline-secondary" type="submit"><i class="fas fa-search"></i></button>
                             </div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <select class="form-select" name="status" onchange="this.form.submit()">
+                                <option value="">Todos os status</option>
+                                <option value="ativo" {% if status == 'ativo' %}selected{% endif %}>Somente Ativos</option>
+                                <option value="inativo" {% if status == 'inativo' %}selected{% endif %}>Somente Inativos</option>
+                            </select>
                         </div>
                     </div>
                 </form>
@@ -104,9 +112,10 @@
                         </tbody>
                     </table>
                 </div>
-                {% elif busca %}
+                {% elif busca or status %}
                 <div class="text-center py-5">
-                    <h5 class="text-muted">Nenhum aluno encontrado para a busca "{{ busca }}".</h5>
+                    <h5 class="text-muted">Nenhum aluno encontrado para os filtros aplicados.</h5>
+                    <a href="{{ url_for('alunos_list') }}">Limpar filtros</a>
                 </div>
                 {% else %}
                 <div class="text-center py-5">
@@ -120,15 +129,15 @@
                 <nav>
                     <ul class="pagination justify-content-center mb-0">
                         <li class="page-item {% if page == 1 %}disabled{% endif %}">
-                            <a class="page-link" href="{{ url_for('alunos_list', page=page-1, limit=limit, busca=busca) }}">Anterior</a>
+                            <a class="page-link" href="{{ url_for('alunos_list', page=page-1, limit=limit, busca=busca, status=status) }}">Anterior</a>
                         </li>
                         {% for p in range(1, total_pages + 1) %}
                         <li class="page-item {% if p == page %}active{% endif %}">
-                            <a class="page-link" href="{{ url_for('alunos_list', page=p, limit=limit, busca=busca) }}">{{ p }}</a>
+                            <a class="page-link" href="{{ url_for('alunos_list', page=p, limit=limit, busca=busca, status=status) }}">{{ p }}</a>
                         </li>
                         {% endfor %}
                         <li class="page-item {% if page == total_pages %}disabled{% endif %}">
-                            <a class="page-link" href="{{ url_for('alunos_list', page=page+1, limit=limit, busca=busca) }}">Próximo</a>
+                            <a class="page-link" href="{{ url_for('alunos_list', page=page+1, limit=limit, busca=busca, status=status) }}">Próximo</a>
                         </li>
                     </ul>
                 </nav>

@@ -48,42 +48,47 @@ def api_request(endpoint, method='GET', data=None, files=None, json=None, params
         app.logger.error(f"Erro na requisição {method} {url}: {e}")
         return None
 
-
-# Em frontend/app.py
-
 @app.route('/')
 def index():
+    """Página inicial com estatísticas dinâmicas."""
     stats = {
         'total_alunos': 0,
+        'total_alunos_ativos': 0, # Novo campo para alunos ativos
         'total_professores': 0,
         'total_turmas': 0,
         'total_eventos': 0
     }
     
-    # Inicializa os dados do gráfico como vazios para evitar erros
     chart_data = {
         "labels": [],
-        "datasets": {
-            "alunos": [],
-            "eventos": []
-        }
+        "datasets": {"alunos": [], "eventos": []}
     }
     
     try:
-        # Busca estatísticas dos cards
-        endpoints = [
-            ('total_alunos', '/alunos'),
-            ('total_professores', '/professores'), 
-            ('total_turmas', '/turmas'),
-            ('total_eventos', '/eventos')
-        ]
+        # Busca o total de ALUNOS ATIVOS
+        alunos_ativos_resp = api_request("/alunos?status=ativo&limit=1")
+        if alunos_ativos_resp and alunos_ativos_resp.status_code == 200:
+            stats['total_alunos_ativos'] = alunos_ativos_resp.json().get('total', 0)
         
-        for stat_name, endpoint in endpoints:
-            response = api_request(f"{endpoint}?limit=10000")
-            if response and response.status_code == 200:
-                stats[stat_name] = len(response.json())
+        # Busca o total geral de alunos
+        alunos_total_resp = api_request("/alunos?limit=1")
+        if alunos_total_resp and alunos_total_resp.status_code == 200:
+            stats['total_alunos'] = alunos_total_resp.json().get('total', 0)
+
+        # Busca as outras estatísticas
+        professores_response = api_request('/professores')
+        if professores_response and professores_response.status_code == 200:
+            stats['total_professores'] = len(professores_response.json())
         
-        # Busca os dados para o gráfico de atividades
+        turmas_response = api_request('/turmas')
+        if turmas_response and turmas_response.status_code == 200:
+            stats['total_turmas'] = len(turmas_response.json())
+        
+        eventos_response = api_request('/eventos')
+        if eventos_response and eventos_response.status_code == 200:
+            stats['total_eventos'] = len(eventos_response.json())
+            
+        # Busca os dados para o gráfico
         chart_response = api_request("/dashboard/atividades-recentes")
         if chart_response and chart_response.status_code == 200:
             chart_data = chart_response.json()
@@ -91,28 +96,24 @@ def index():
     except Exception as e:
         app.logger.error(f"Erro ao buscar estatísticas do dashboard: {e}")
     
-    # Passa os dados do gráfico para o template
     return render_template('index.html', stats=stats, chart_data=chart_data)
-
-# Em frontend/app.py
 
 @app.route('/alunos')
 def alunos_list():
     page = request.args.get('page', 1, type=int)
     limit = request.args.get('limit', 20, type=int)
     busca = request.args.get('busca', '')
+    status = request.args.get('status', '') # ADICIONE ESTA LINHA
     skip = (page - 1) * limit
 
-    # Cria um dicionário com os parâmetros para a API
     params = {
         "skip": skip,
         "limit": limit,
-        "nome": busca  # A API espera o parâmetro 'nome' para a busca
+        "nome": busca,
+        "status": status # ADICIONE ESTA LINHA
     }
     
-    # Remove parâmetros vazios para não poluir a URL
     params = {k: v for k, v in params.items() if v}
-
     response = api_request("/alunos", params=params)
     
     alunos = []
@@ -133,7 +134,8 @@ def alunos_list():
         limit=limit,
         total_pages=total_pages,
         total_alunos=total_alunos,
-        busca=busca # Passa o termo de busca de volta para o template
+        busca=busca,
+        status=status # ADICIONE ESTA LINHA
     )
 
 @app.route('/alunos/<int:id>')
@@ -1058,15 +1060,24 @@ def eventos_salvar():
 
     return redirect(url_for("eventos_list"))
 
+# Em frontend/app.py
+
 @app.route("/eventos/<int:id>")
 def eventos_view(id):
     evento_resp = api_request(f"/eventos/{id}")
     inscricoes_resp = api_request(f"/inscricoes/evento/{id}")
-    alunos_resp = api_request("/alunos")
+    
+    # CORREÇÃO 1: Pede um limite alto para garantir que todos os alunos apareçam no dropdown
+    alunos_resp = api_request("/alunos?limit=2000") 
 
     evento = evento_resp.json() if evento_resp and evento_resp.status_code == 200 else None
     inscricoes = inscricoes_resp.json() if inscricoes_resp and inscricoes_resp.status_code == 200 else []
-    alunos = alunos_resp.json() if alunos_resp and alunos_resp.status_code == 200 else []
+    
+    alunos = []
+    if alunos_resp and alunos_resp.status_code == 200:
+        # CORREÇÃO 2: Extrai a lista 'alunos' de dentro da resposta da API
+        data = alunos_resp.json()
+        alunos = data.get("alunos", [])
 
     if not evento:
         flash("Evento não encontrado.", "error")
