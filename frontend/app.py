@@ -4,6 +4,9 @@ import os
 import logging
 from datetime import datetime, date, timedelta
 import math
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session # Adicione 'session'
+from functools import wraps # Adicione 'wraps'
+import requests
 
 app = Flask(__name__)
 app.secret_key = 'dev-secret-key-change-in-production'
@@ -15,6 +18,43 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'access_token' not in session:
+            return redirect(url_for('login', next=request.url))
+        return f(*args, **kwargs)
+    return decorated_function
+
+# Em frontend/app.py
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+        
+        # O frontend envia os dados no formato que o OAuth2PasswordRequestForm espera
+        api_data = {"username": username, "password": password}
+        response = requests.post(f"{API_BASE_URL}/api/v1/auth/token", data=api_data)
+        
+        if response.status_code == 200:
+            data = response.json()
+            session['access_token'] = data['access_token']
+            session['user_info'] = data['user_info'] # Armazena os dados do usuário
+            return redirect(url_for('index'))
+        else:
+            flash("Usuário ou senha inválidos.", "error")
+
+    return render_template("login.html")
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    flash("Você saiu do sistema.", "success")
+    return redirect(url_for('login'))
+
+@login_required
 @app.template_filter('format_datetime')
 def format_datetime_filter(s):
     if not s:
@@ -28,26 +68,39 @@ def format_datetime_filter(s):
 
 # Em frontend/app.py
 
-def api_request(endpoint, method='GET', data=None, files=None, json=None, params=None): # Adicionado 'params'
+# Em frontend/app.py
+
+
+@login_required
+def api_request(endpoint, method='GET', data=None, files=None, json=None, params=None):
     url = f"{API_BASE_URL}/api/v1{endpoint}"
+    headers = {}
+    # Adiciona o token de autorização se ele existir na sessão
+    if 'access_token' in session:
+        headers['Authorization'] = f"Bearer {session['access_token']}"
+    
     try:
         if method == 'GET':
-            response = requests.get(url, timeout=10, params=params) # Usar 'params' aqui
+            response = requests.get(url, timeout=10, params=params, headers=headers)
         elif method == 'POST':
-            response = requests.post(url, data=data, files=files, json=json, timeout=10)
+            response = requests.post(url, data=data, files=files, json=json, timeout=10, headers=headers)
         elif method == 'PUT':
-            if files:
-                response = requests.put(url, data=data, files=files, json=json, timeout=10)
-            else:
-                response = requests.put(url, data=data, json=json, timeout=10)
+            response = requests.put(url, data=data, json=json, timeout=10, headers=headers)
         elif method == 'DELETE':
-            response = requests.delete(url, timeout=10)
+            response = requests.delete(url, timeout=10, headers=headers)
+        
+        # Se o token expirar (401 Unauthorized), desloga o usuário
+        if response.status_code == 401:
+            session.clear()
+            # O redirect não funciona aqui, mas a próxima ação do usuário o levará ao login
+        
         app.logger.info(f"API Request: {method} {url} - Status: {response.status_code}")
         return response
     except requests.exceptions.RequestException as e:
         app.logger.error(f"Erro na requisição {method} {url}: {e}")
         return None
 
+@login_required
 @app.route('/')
 def index():
     """Página inicial com estatísticas dinâmicas."""
@@ -98,6 +151,7 @@ def index():
     
     return render_template('index.html', stats=stats, chart_data=chart_data)
 
+@login_required
 @app.route('/alunos')
 def alunos_list():
     page = request.args.get('page', 1, type=int)
@@ -138,6 +192,7 @@ def alunos_list():
         status=status # ADICIONE ESTA LINHA
     )
 
+@login_required
 @app.route('/alunos/<int:id>')
 def alunos_view(id):
     """Visualizar detalhes de um aluno, incluindo idade, histórico e status."""
@@ -180,10 +235,13 @@ def alunos_view(id):
     # Passa as novas informações para o template
     return render_template('alunos/view.html', aluno=aluno, historico=historico, status_info=status_info)
 
+@login_required
 @app.route('/alunos/novo')
 def alunos_novo():
     return render_template('alunos/form.html', aluno=None)
 
+
+@login_required
 @app.route('/alunos/<int:id>/editar')
 def alunos_editar(id):
     response = api_request(f'/alunos/{id}')
@@ -195,9 +253,10 @@ def alunos_editar(id):
         return redirect(url_for("alunos_list"))
     return render_template('alunos/form.html', aluno=aluno)
 
+@login_required
 @app.route("/alunos/salvar", methods=["POST"])
 def alunos_salvar():
-    try:
+    try: 
         data = {
             "nome": request.form.get("nome"),
             "email": request.form.get("email"),
@@ -243,6 +302,8 @@ def alunos_salvar():
         
     return redirect(url_for("alunos_list"))
 
+
+@login_required
 @app.route("/alunos/<int:id>/deletar", methods=["POST"])
 def alunos_deletar(id):
     response = api_request(f"/alunos/{id}", method="DELETE")
@@ -260,6 +321,7 @@ def alunos_deletar(id):
 
 
 # === ROTAS PARA PROFESSORES ===
+@login_required
 @app.route('/professores')
 def professores_list():
     response = api_request('/professores')
@@ -268,10 +330,14 @@ def professores_list():
         professores = response.json()
     return render_template('professores/list.html', professores=professores)
 
+
+@login_required
 @app.route("/professores/novo")
 def professores_novo():
     return render_template("professores/form.html", professor=None)
 
+
+@login_required
 @app.route("/professores/<int:id>")
 def professores_view(id):
     response = api_request(f"/professores/{id}")
@@ -280,6 +346,8 @@ def professores_view(id):
         professor = response.json()
     return render_template("professores/view.html", professor=professor)
 
+
+@login_required
 @app.route("/professores/<int:id>/editar")
 def professores_editar(id):
     response = api_request(f"/professores/{id}")
@@ -291,6 +359,8 @@ def professores_editar(id):
         return redirect(url_for("professores_list"))
     return render_template("professores/form.html", professor=professor)
 
+
+@login_required
 @app.route("/professores/salvar", methods=["POST"])
 def professores_salvar():
     try:
@@ -340,6 +410,7 @@ def professores_salvar():
         
     return redirect(url_for("professores_list"))
 
+@login_required
 @app.route("/professores/<int:id>/deletar", methods=["POST"])
 def professores_deletar(id):
     response = api_request(f"/professores/{id}", method="DELETE")
@@ -351,6 +422,7 @@ def professores_deletar(id):
 
 
 # === ROTAS PARA TURMAS ===
+@login_required
 @app.route("/turmas")
 def turmas_list():
     response = api_request("/turmas")
@@ -359,12 +431,15 @@ def turmas_list():
         turmas = response.json()
     return render_template("turmas/list.html", turmas=turmas)
 
+@login_required
 @app.route("/turmas/novo")
 def turmas_novo():
     professores_response = api_request("/professores")
     professores = professores_response.json() if professores_response and professores_response.status_code == 200 else []
     return render_template("turmas/form.html", turma=None, professores=professores)
 
+
+@login_required
 @app.route("/turmas/<int:id>")
 def turmas_view(id):
     turma_response = api_request(f"/turmas/{id}")
@@ -374,6 +449,8 @@ def turmas_view(id):
     
     return render_template("turmas/view.html", turma=turma)
 
+
+@login_required
 @app.route("/turmas/<int:id>/editar")
 def turmas_editar(id):
     turma_response = api_request(f"/turmas/{id}")
@@ -389,6 +466,8 @@ def turmas_editar(id):
 
     return render_template("turmas/form.html", turma=turma, professores=professores)
 
+
+@login_required
 @app.route("/turmas/salvar", methods=["POST"])
 def turmas_salvar():
     try:
@@ -442,6 +521,7 @@ def turmas_salvar():
         
     return redirect(url_for("turmas_list"))
 
+@login_required
 @app.route("/turmas/<int:id>/deletar", methods=["POST"])
 def turmas_deletar(id):
     response = api_request(f"/turmas/{id}", method="DELETE")
@@ -461,9 +541,9 @@ def turmas_deletar(id):
     return redirect(url_for("turmas_list"))
 
 
-# === ROTAS PARA MATRICULAS ===
-# Em frontend/app.py
 
+
+@login_required
 @app.route("/matriculas")
 def matriculas_list():
     # Pega os parâmetros da URL (ex: ?busca=Joao&status=ativa)
@@ -487,6 +567,8 @@ def matriculas_list():
         
     return render_template("matriculas/list.html", matriculas=matriculas, busca=busca, status=status)
 
+
+@login_required
 @app.route("/matriculas/novo")
 def matriculas_novo():
     alunos_response = api_request("/alunos")
@@ -501,6 +583,8 @@ def matriculas_novo():
     
     return render_template("matriculas/form.html", alunos=alunos, turmas=turmas, planos=planos, matricula=None)
 
+
+@login_required
 @app.route("/matriculas/salvar", methods=["POST"])
 def matriculas_salvar():
     try:
@@ -549,6 +633,8 @@ def matriculas_salvar():
         
     return redirect(url_for("matriculas_list"))
 
+
+@login_required
 @app.route("/matriculas/editar/<int:id>", methods=["GET"])
 def matriculas_editar(id):
     matricula_response = api_request(f"/matriculas/{id}")
@@ -569,6 +655,8 @@ def matriculas_editar(id):
     
     return render_template("matriculas/form.html", matricula=matricula, alunos=alunos, turmas=turmas, planos=planos)
 
+
+@login_required
 @app.route("/matriculas/salvar_edicao", methods=["POST"])
 def matriculas_salvar_edicao():
     try:
@@ -590,9 +678,8 @@ def matriculas_salvar_edicao():
         
     return redirect(url_for("matriculas_list"))
 
-# Em frontend/app.py
 
-# Substitua a função antiga por esta
+@login_required
 @app.route("/matriculas/status/<int:id>", methods=["POST"])
 def matriculas_status(id):
     try:
@@ -611,6 +698,8 @@ def matriculas_status(id):
     return redirect(url_for("matriculas_list"))
 
 
+
+@login_required
 @app.route("/matriculas/deletar/<int:id>", methods=["POST"])
 def matriculas_deletar(id):
     response = api_request(f"/matriculas/{id}", method="DELETE")
@@ -621,9 +710,8 @@ def matriculas_deletar(id):
     return redirect(url_for("matriculas_list"))
 
 
-# === ROTAS PARA FINANCEIRO ===
-# ... (outros imports)
 
+@login_required
 @app.route("/financeiro/dashboard")
 def financeiro_dashboard():
     hoje = date.today()
@@ -661,6 +749,8 @@ def financeiro_dashboard():
         mensalidades_pendentes=mensalidades_pendentes
     )
 
+
+@login_required
 @app.route("/financeiro/transacoes")
 def financeiro_transacoes():
     tipo_filtro = request.args.get('tipo')
@@ -709,6 +799,7 @@ def financeiro_transacoes():
     return render_template("financeiro/transacoes.html", transacoes=transacoes, stats=stats, categorias=categorias)
 
 
+@login_required
 @app.route("/financeiro/salvar_transacao", methods=["POST"])
 def financeiro_salvar_transacao():
     try:
@@ -752,6 +843,7 @@ def financeiro_salvar_transacao():
     return redirect(url_for("financeiro_transacoes"))
 
 
+@login_required
 @app.route("/financeiro/deletar_transacao/<int:id>", methods=["POST"])
 def financeiro_deletar_transacao(id):
     response = api_request(f"/financeiro/transacoes/{id}", method="DELETE")
@@ -761,7 +853,8 @@ def financeiro_deletar_transacao(id):
         flash("Erro ao excluir transação.", "error")
     return redirect(url_for("financeiro_transacoes"))
     
-# === ROTAS PARA PRODUTOS ===
+    
+@login_required
 @app.route("/produtos")
 def produtos_list():
     response = api_request("/produtos")
@@ -770,10 +863,14 @@ def produtos_list():
         produtos = response.json()
     return render_template("produtos/list.html", produtos=produtos)
 
+
+@login_required
 @app.route("/produtos/novo")
 def produtos_novo():
     return render_template("produtos/form.html", produto=None)
 
+
+@login_required
 @app.route("/produtos/<int:id>/editar")
 def produtos_editar(id):
     response = api_request(f"/produtos/{id}")
@@ -784,7 +881,9 @@ def produtos_editar(id):
         flash("Produto não encontrado.", "error")
         return redirect(url_for("produtos_list"))
     return render_template("produtos/form.html", produto=produto)
-    
+  
+  
+@login_required  
 @app.route("/produtos/salvar", methods=["POST"])
 def produtos_salvar():
     try:
@@ -825,6 +924,8 @@ def produtos_salvar():
     
     return redirect(url_for("produtos_list"))
 
+
+@login_required
 @app.route("/produtos/deletar/<int:id>", methods=["POST"])
 def produtos_deletar(id):
     response = api_request(f"/produtos/{id}", method="DELETE")
@@ -834,7 +935,8 @@ def produtos_deletar(id):
         flash("Erro ao excluir produto.", "error")
     return redirect(url_for("produtos_list"))
     
-# === ROTAS PARA PLANOS ===
+    
+@login_required
 @app.route("/planos")
 def planos_list():
     response = api_request("/planos")
@@ -843,10 +945,14 @@ def planos_list():
         planos = response.json()
     return render_template("planos/list.html", planos=planos)
 
+
+@login_required
 @app.route("/planos/novo")
 def planos_novo():
     return render_template("planos/form.html", plano=None)
 
+
+@login_required
 @app.route("/planos/<int:id>/editar")
 def planos_editar(id):
     response = api_request(f"/planos/{id}")
@@ -858,6 +964,8 @@ def planos_editar(id):
         return redirect(url_for("planos_list"))
     return render_template("planos/form.html", plano=plano)
 
+
+@login_required
 @app.route("/planos/salvar", methods=["POST"])
 def planos_salvar():
     try:
@@ -896,6 +1004,8 @@ def planos_salvar():
     
     return redirect(url_for("planos_list"))
 
+
+@login_required
 @app.route("/planos/deletar/<int:id>", methods=["POST"])
 def planos_deletar(id):
     response = api_request(f"/planos/{id}", method="DELETE")
@@ -905,7 +1015,9 @@ def planos_deletar(id):
         flash("Erro ao excluir plano.", "error")
     return redirect(url_for("planos_list"))
     
-# === ROTAS PARA MENSALIDADES ===
+    
+    
+@login_required
 @app.route("/mensalidades")
 def mensalidades_list():
     response = api_request("/mensalidades")
@@ -914,6 +1026,8 @@ def mensalidades_list():
         mensalidades = response.json()
     return render_template("mensalidades/list.html", mensalidades=mensalidades)
 
+
+@login_required
 @app.route("/mensalidades/novo")
 def mensalidades_novo():
     alunos_response = api_request("/alunos")
@@ -923,6 +1037,8 @@ def mensalidades_novo():
     
     return render_template("mensalidades/form.html", alunos=alunos, planos=planos)
 
+
+@login_required
 @app.route("/mensalidades/salvar", methods=["POST"])
 def mensalidades_salvar():
     try:
@@ -953,6 +1069,8 @@ def mensalidades_salvar():
     
     return redirect(url_for("mensalidades_list"))
 
+
+@login_required
 @app.route("/mensalidades/pagar/<int:id>", methods=["POST"])
 def mensalidades_pagar(id):
     response = api_request(f"/mensalidades/processar_pagamento/{id}", method="POST")
@@ -962,6 +1080,8 @@ def mensalidades_pagar(id):
         flash("Erro ao processar pagamento.", "error")
     return redirect(url_for("mensalidades_list"))
 
+
+@login_required
 @app.route("/mensalidades/deletar/<int:id>", methods=["POST"])
 def mensalidades_deletar(id):
     response = api_request(f"/mensalidades/{id}", method="DELETE")
@@ -972,12 +1092,7 @@ def mensalidades_deletar(id):
     return redirect(url_for("mensalidades_list"))
 
 
-
-# Em frontend/app.py
-
-# ... (resto do seu código) ...
-
-# === ROTA PARA GERAR LINK DE PAGAMENTO ===
+@login_required
 @app.route("/mensalidades/pagar-online/<int:id>", methods=["POST"])
 def mensalidades_pagar_online(id):
     """Gera o link de pagamento do Mercado Pago e retorna como JSON."""
@@ -996,12 +1111,7 @@ def mensalidades_pagar_online(id):
         return jsonify({"error": error_message}), 500
     
     
-# Em frontend/app.py
-# Adicione este bloco de rotas
-
-# Em frontend/app.py
-
-# === ROTAS PARA EVENTOS ===
+@login_required
 @app.route("/eventos")
 def eventos_list():
     response = api_request("/eventos")
@@ -1016,10 +1126,13 @@ def eventos_list():
 
     return render_template("eventos/list.html", eventos=eventos, kpis=kpis)
 
+
+@login_required
 @app.route("/eventos/novo")
 def eventos_novo():
     return render_template("eventos/form.html", evento=None)
 
+@login_required
 @app.route("/eventos/<int:id>/editar")
 def eventos_editar(id):
     response = api_request(f"/eventos/{id}")
@@ -1029,6 +1142,8 @@ def eventos_editar(id):
         return redirect(url_for("eventos_list"))
     return render_template("eventos/form.html", evento=evento)
 
+
+@login_required
 @app.route("/eventos/salvar", methods=["POST"])
 def eventos_salvar():
     try:
@@ -1060,8 +1175,8 @@ def eventos_salvar():
 
     return redirect(url_for("eventos_list"))
 
-# Em frontend/app.py
 
+@login_required
 @app.route("/eventos/<int:id>")
 def eventos_view(id):
     evento_resp = api_request(f"/eventos/{id}")
@@ -1086,6 +1201,7 @@ def eventos_view(id):
     return render_template("eventos/view.html", evento=evento, inscricoes=inscricoes, alunos=alunos)
 
 
+@login_required
 @app.route("/eventos/inscrever", methods=["POST"])
 def eventos_inscrever():
     evento_id = request.form.get("evento_id")
@@ -1107,6 +1223,8 @@ def eventos_inscrever():
 
     return redirect(url_for("eventos_view", id=evento_id))
 
+
+@login_required
 @app.route("/inscricoes/<int:id>/pagar-manual", methods=["POST"])
 def inscricao_pagar_manual(id):
     evento_id = request.form.get("evento_id")
@@ -1118,6 +1236,7 @@ def inscricao_pagar_manual(id):
     return redirect(url_for("eventos_view", id=evento_id))
 
 
+@login_required
 @app.route("/eventos/<int:id>/deletar", methods=["POST"])
 def eventos_deletar(id):
     response = api_request(f"/eventos/{id}", method="DELETE")
@@ -1128,6 +1247,7 @@ def eventos_deletar(id):
     return redirect(url_for("eventos_list"))
 
 
+@login_required
 @app.route("/inscricoes/<int:id>/deletar", methods=["POST"])
 def inscricao_deletar(id):
     evento_id = request.form.get("evento_id")
@@ -1138,6 +1258,8 @@ def inscricao_deletar(id):
         flash("Erro ao remover inscrição.", "error")
     return redirect(url_for("eventos_view", id=evento_id))
 
+
+@login_required
 @app.route("/inscricoes/<int:id>/pagar-online", methods=["POST"])
 def inscricao_pagar_online(id):
     """Gera o link de pagamento do Mercado Pago para uma inscrição de evento."""
@@ -1148,6 +1270,7 @@ def inscricao_pagar_online(id):
         return jsonify({"error": "Falha ao gerar link de pagamento para o evento"}), 500
 
 
+@login_required
 @app.route("/inscricoes/<int:id>/cancelar", methods=["POST"])
 def inscricao_cancelar(id):
     evento_id = request.form.get("evento_id")

@@ -16,6 +16,8 @@ import logging
 from src.database import get_db
 from src.models.professor import Professor
 from src.schemas.professor import ProfessorCreate, ProfessorRead, ProfessorUpdate
+from src.auth import get_admin_or_gerente
+from src.models.usuario import Usuario as models_usuario
 
 # Configuração de diretórios - CORRIGIDO
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -328,10 +330,11 @@ def upload_professor_foto(
     return db_professor
 
 @router.delete("/{professor_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_professor(professor_id: int, db: Session = Depends(get_db)):
+def delete_professor(professor_id: int, db: Session = Depends(get_db), current_user: models_usuario = Depends(get_admin_or_gerente) ):
     """
     Exclui um professor.
     """
+    
     db_professor = db.query(Professor).filter(Professor.id == professor_id).first()
     if db_professor is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Professor não encontrado")
