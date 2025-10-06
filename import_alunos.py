@@ -10,7 +10,8 @@ from src.models.mensalidade import Mensalidade
 from src.models.inscricao import Inscricao
 from src.models.historico_matricula import HistoricoMatricula
 from src.models.matricula import Matricula
-from src.models.professor import Professor # <- ADICIONE ESTA LINHA
+from src.models.professor import Professor
+from src.models.evento import Evento # <- ADICIONE ESTA LINHA
 # -------------------------------------------------------------
 
 # --- CONFIGURAÇÕES ---
