@@ -10,11 +10,13 @@ class Matricula(Base):
     id = Column(Integer, primary_key=True, index=True)
     aluno_id = Column(Integer, ForeignKey('alunos.id'), nullable=False)
     turma_id = Column(Integer, ForeignKey('turmas.id'), nullable=False)
-    plano_id = Column(Integer, ForeignKey('planos.id'), nullable=False) # ADICIONAR ESTA LINHA
+    plano_id = Column(Integer, ForeignKey('planos.id'), nullable=False)
     data_matricula = Column(Date, default=date.today)
     ativa = Column(Boolean, default=True)
 
     # Relacionamentos
     aluno = relationship("Aluno", back_populates="matriculas")
     turma = relationship("Turma", back_populates="matriculas")
-    plano = relationship("Plano") # ADICIONAR ESTA LINHA
+    plano = relationship("Plano") 
+    
+    historico = relationship("HistoricoMatricula", back_populates="matricula", cascade="all, delete-orphan")

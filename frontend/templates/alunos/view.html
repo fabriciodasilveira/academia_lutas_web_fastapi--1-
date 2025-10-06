@@ -28,9 +28,8 @@
 
 {% if aluno %}
 <div class="row">
-    <!-- Informações Principais -->
     <div class="col-lg-8">
-        <div class="card border-0 shadow-sm">
+        <div class="card border-0 shadow-sm mb-4">
             <div class="card-header bg-transparent border-0">
                 <h5 class="card-title mb-0">
                     <i class="fas fa-info-circle me-2"></i>
@@ -105,11 +104,12 @@
                                 <p class="mb-0 text-muted">
                                     {% if aluno.data_nascimento %}
                                         {{ aluno.data_nascimento }}
-                                        <!-- Idade removida temporariamente -->
+                                        {% if aluno.idade is not none %}
+                                            <small class="text-muted">({{ aluno.idade }} anos)</small>
+                                        {% endif %}
                                     {% else %}
                                         Não informada
                                     {% endif %}
-                                    
                                 </p>
                             </div>
                         </div>
@@ -150,7 +150,6 @@
             </div>
         </div>
         
-        <!-- Histórico de Atividades -->
         <div class="card border-0 shadow-sm mt-4">
             <div class="card-header bg-transparent border-0">
                 <h5 class="card-title mb-0">
@@ -159,39 +158,36 @@
                 </h5>
             </div>
             <div class="card-body">
+                {% if historico %}
                 <div class="timeline">
-                    <div class="timeline-item">
-                        <div class="timeline-marker bg-success"></div>
-                        <div class="timeline-content">
-                            <h6 class="mb-1">Aluno cadastrado</h6>
-                            <p class="mb-0 text-muted small">
-                                {% if aluno.created_at %}
-                                    {{ aluno.created_at.strftime('%d/%m/%Y às %H:%M') }}
-                                {% else %}
-                                    Data não informada
-                                {% endif %}
-                            </p>
+                    {% for evento in historico %}
+                        <div class="timeline-item">
+                            {# Define a cor e o ícone com base no tipo do evento #}
+                            {% set cor = 'success' if evento.tipo == 'cadastro' else ('primary' if evento.tipo == 'matricula' else 'warning') %}
+                            {% set icone = 'fa-user-plus' if evento.tipo == 'cadastro' else ('fa-graduation-cap' if evento.tipo == 'matricula' else 'fa-info-circle') %}
+
+                            <div class="timeline-marker bg-{{ cor }}"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-1"><i class="fas {{ icone }} me-2"></i>{{ evento.descricao }}</h6>
+                                <p class="mb-0 text-muted small">
+                                    {{ evento.data_formatada }}
+                                </p>
+                            </div>
                         </div>
-                    </div>
-                    
-                    {% if aluno.updated_at and aluno.updated_at != aluno.created_at %}
-                    <div class="timeline-item">
-                        <div class="timeline-marker bg-info"></div>
-                        <div class="timeline-content">
-                            <h6 class="mb-1">Dados atualizados</h6>
-                            <p class="mb-0 text-muted small">{{ aluno.updated_at.strftime('%d/%m/%Y às %H:%M') }}</p>
-                        </div>
-                    </div>
-                    {% endif %}
+                    {% endfor %}
                 </div>
+                {% else %}
+                <div class="text-center py-3">
+                    <i class="fas fa-history fa-2x text-muted mb-2"></i>
+                    <p class="text-muted mb-0">Nenhuma atividade registrada para este aluno.</p>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
-    
-    <!-- Sidebar -->
+
     <div class="col-lg-4">
-        <!-- Foto do Aluno -->
-        <div class="card border-0 shadow-sm">
+        <div class="card border-0 shadow-sm mb-4">
             <div class="card-body text-center">
                 {% if aluno.foto %}
                     <img src="http://localhost:8000{{ aluno.foto }}" alt="Foto de {{ aluno.nome }}" 
@@ -218,8 +214,44 @@
             </div>
         </div>
         
-        <!-- Estatísticas -->
-        <div class="card border-0 shadow-sm mt-4">
+       <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-transparent border-0">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-check-circle me-2"></i>
+                Status
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if status_info %}
+                <div class="d-flex align-items-center justify-content-between">
+                    <span>Situação:</span>
+                    {% if status_info.situacao_geral == 'Ativo' %}
+                        <span class="badge bg-success">Ativo</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Inativo</span>
+                    {% endif %}
+                </div>
+                <hr>
+                <div class="d-flex align-items-center justify-content-between">
+                    <span>Mensalidade:</span>
+                    {% if status_info.status_mensalidade == 'Em dia' %}
+                        <span class="badge bg-success">Em dia</span>
+                    {% else %}
+                        <span class="badge bg-danger">Pendente</span>
+                    {% endif %}
+                </div>
+                {% if status_info.valor_pendente > 0 %}
+                    <div class="text-end text-danger mt-2">
+                        <small>Valor pendente: R$ {{ "%.2f"|format(status_info.valor_pendente) }}</small>
+                    </div>
+                {% endif %}
+            {% else %}
+                <p class="text-muted">Não foi possível carregar o status.</p>
+            {% endif %}
+        </div>
+        
+    </div>
+     <div class="card border-0 shadow-sm mb-4">
             <div class="card-header bg-transparent border-0">
                 <h5 class="card-title mb-0">
                     <i class="fas fa-chart-bar me-2"></i>
@@ -255,124 +287,17 @@
                 </div>
             </div>
         </div>
-        
-        <!-- Status -->
-        <div class="card border-0 shadow-sm mt-4">
-            <div class="card-header bg-transparent border-0">
-                <h5 class="card-title mb-0">
-                    <i class="fas fa-check-circle me-2"></i>
-                    Status
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="d-flex align-items-center justify-content-between">
-                    <span>Situação:</span>
-                    <span class="badge bg-success">Ativo</span>
-                </div>
-                <hr>
-                <div class="d-flex align-items-center justify-content-between">
-                    <span>Mensalidade:</span>
-                    <span class="badge bg-success">Em dia</span>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 
-<!-- Modal de Confirmação de Exclusão -->
 <div class="modal fade" id="deleteModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Confirmar Exclusão</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>Tem certeza que deseja excluir o aluno <strong>{{ aluno.nome }}</strong>?</p>
-                <p class="text-danger">Esta ação não pode ser desfeita e removerá todos os dados relacionados.</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-danger" onclick="deleteAluno()">Excluir</button>
-            </div>
-        </div>
     </div>
-</div>
 
 {% else %}
-<div class="row">
-    <div class="col-12">
-        <div class="card border-0 shadow-sm">
-            <div class="card-body text-center py-5">
-                <i class="fas fa-user-times fa-3x text-muted mb-3"></i>
-                <h5 class="text-muted">Aluno não encontrado</h5>
-                <p class="text-muted">O aluno solicitado não foi encontrado no sistema.</p>
-                <a href="{{ url_for('alunos_list') }}" class="btn btn-primary">
-                    <i class="fas fa-arrow-left me-1"></i>
-                    Voltar para Lista
-                </a>
-            </div>
-        </div>
-    </div>
-</div>
 {% endif %}
 {% endblock %}
 
 {% block extra_css %}
-<style>
-.timeline {
-    position: relative;
-    padding-left: 30px;
-}
-
-.timeline::before {
-    content: '';
-    position: absolute;
-    left: 15px;
-    top: 0;
-    bottom: 0;
-    width: 2px;
-    background: #dee2e6;
-}
-
-.timeline-item {
-    position: relative;
-    margin-bottom: 20px;
-}
-
-.timeline-marker {
-    position: absolute;
-    left: -23px;
-    top: 5px;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    border: 2px solid #fff;
-    box-shadow: 0 0 0 2px #dee2e6;
-}
-
-.timeline-content {
-    background: #f8f9fa;
-    padding: 15px;
-    border-radius: 8px;
-    border-left: 3px solid #007bff;
-}
-</style>
 {% endblock %}
 
 {% block extra_js %}
-<script>
-function confirmDelete(id) {
-    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
-    modal.show();
-}
-
-function deleteAluno() {
-    // Implementar a exclusão do aluno
-    console.log('Deletar aluno:', {{ aluno.id if aluno else 'null' }});
-    // Por enquanto, apenas redireciona para a lista
-    window.location.href = "{{ url_for('alunos_list') }}";
-}
-</script>
 {% endblock %}
-

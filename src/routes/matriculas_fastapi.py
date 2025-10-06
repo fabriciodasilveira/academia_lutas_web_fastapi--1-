@@ -18,6 +18,9 @@ from src.models.plano import Plano
 from datetime import date, timedelta
 from src.models.mensalidade import Mensalidade
 from sqlalchemy.orm import Session, joinedload
+from src.models.historico_matricula import HistoricoMatricula
+from datetime import datetime
+
 
 
 
@@ -77,31 +80,43 @@ def create_matricula(matricula: MatriculaCreate, db: Session = Depends(get_db)):
 
     return db_matricula
 
+# Em src/routes/matriculas_fastapi.py
+
+# ... (outros imports) ...
+
 @router.get("", response_model=List[MatriculaRead])
 def read_matriculas(
     skip: int = 0,
     limit: int = 100,
-    aluno_id: Optional[int] = None,
-    turma_id: Optional[int] = None,
+    busca: Optional[str] = None, # Parâmetro de busca
+    status: Optional[str] = None, # Parâmetro para filtrar por status (ativa/inativa)
     db: Session = Depends(get_db)
 ):
     """
-    Lista matrículas com filtros opcionais por aluno e turma.
+    Lista matrículas com filtros por termo de busca e status.
     """
-    # A consulta agora carrega os dados relacionados (aluno, turma, plano) de forma otimizada
     query = db.query(Matricula).options(
         joinedload(Matricula.aluno),
         joinedload(Matricula.turma),
         joinedload(Matricula.plano)
     )
 
-    if aluno_id:
-        query = query.filter(Matricula.aluno_id == aluno_id)
-    if turma_id:
-        query = query.filter(Matricula.turma_id == turma_id)
+    if busca:
+        # Filtra pelo nome do aluno OU nome da turma
+        query = query.join(Aluno).join(Turma).filter(
+            (Aluno.nome.ilike(f"%{busca}%")) |
+            (Turma.nome.ilike(f"%{busca}%"))
+        )
+    
+    if status:
+        if status == 'ativa':
+            query = query.filter(Matricula.ativa == True)
+        elif status == 'inativa':
+            query = query.filter(Matricula.ativa == False)
         
     matriculas = query.order_by(Matricula.data_matricula.desc()).offset(skip).limit(limit).all()
     return matriculas
+
 
 @router.put("/{matricula_id}", response_model=MatriculaRead)
 def update_matricula(
@@ -136,3 +151,34 @@ def delete_matricula(matricula_id: int, db: Session = Depends(get_db)):
     db.delete(db_matricula)
     db.commit()
     return None
+
+# Substitua a função toggle_matricula_status inteira por esta:
+@router.post("/{matricula_id}/toggle-status", response_model=MatriculaRead)
+def toggle_matricula_status(matricula_id: int, db: Session = Depends(get_db)):
+    """
+    Alterna o status de uma matrícula (ativa/inativa) e registra no histórico.
+    """
+    # CORREÇÃO: Usar joinedload para carregar a turma junto com a matrícula
+    db_matricula = db.query(Matricula).options(
+        joinedload(Matricula.turma)
+    ).filter(Matricula.id == matricula_id).first()
+    
+    if db_matricula is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Matrícula não encontrada")
+
+    # Inverte o status atual
+    db_matricula.ativa = not db_matricula.ativa
+    
+    # Cria a descrição para o histórico
+    descricao = "Matrícula reativada" if db_matricula.ativa else "Matrícula trancada"
+    
+    # Cria o registro no histórico
+    novo_historico = HistoricoMatricula(
+        matricula_id=matricula_id,
+        descricao=f"{descricao} na turma '{db_matricula.turma.nome}'"
+    )
+    db.add(novo_historico)
+    
+    db.commit()
+    db.refresh(db_matricula)
+    return db_matricula

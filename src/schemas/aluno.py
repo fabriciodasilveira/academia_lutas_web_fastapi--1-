@@ -22,14 +22,16 @@ class AlunoBase(BaseModel):
 class AlunoCreate(AlunoBase):
     pass
 
-# Schema para leitura de Aluno
+# Em src/schemas/aluno.py
+
 class AlunoRead(AlunoBase):
     id: int
     foto: Optional[str] = None
-    data_cadastro: datetime.datetime  # Campo 'data_cadastro' adicionado aqui
+    data_cadastro: datetime.datetime
+    status_geral: str = "Inativo"
 
     class Config:
-        orm_mode = True
+        from_attributes = True 
 
 # Schema para atualização de Aluno
 class AlunoUpdate(BaseModel):

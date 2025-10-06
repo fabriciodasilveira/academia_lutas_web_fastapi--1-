@@ -202,6 +202,10 @@
 // Máscara para telefone
 document.getElementById('telefone').addEventListener('input', function(e) {
     let value = e.target.value.replace(/\D/g, '');
+    if (value.length > 11) {
+        value = value.substring(0, 11); // Limita a 11 dígitos
+    }
+
     if (value.length >= 11) {
         value = value.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
     } else if (value.length >= 7) {
@@ -212,10 +216,18 @@ document.getElementById('telefone').addEventListener('input', function(e) {
     e.target.value = value;
 });
 
+// Função para validar email
+function isValidEmail(email) {
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return regex.test(email);
+}
+
 // Validação do formulário
 document.querySelector('form').addEventListener('submit', function(e) {
     const nome = document.getElementById('nome').value.trim();
     const especialidade = document.getElementById('especialidade').value;
+    const emailInput = document.getElementById('email');
+    const email = emailInput.value.trim();
     
     if (!nome) {
         e.preventDefault();
@@ -228,6 +240,14 @@ document.querySelector('form').addEventListener('submit', function(e) {
         e.preventDefault();
         alert('A especialidade é obrigatória!');
         document.getElementById('especialidade').focus();
+        return false;
+    }
+
+    // Validação de email antes do envio
+    if (email && !isValidEmail(email)) {
+        e.preventDefault();
+        alert('Por favor, insira um endereço de e-mail válido.');
+        emailInput.focus();
         return false;
     }
 });

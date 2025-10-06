@@ -89,13 +89,51 @@ def alunos_list():
     return render_template('alunos/list.html', alunos=alunos)
 
 # === ROTAS PARA ALUNOS ===
+# Em frontend/app.py
+
+# Em frontend/app.py
+
 @app.route('/alunos/<int:id>')
 def alunos_view(id):
+    """Visualizar detalhes de um aluno, incluindo idade, histórico e status."""
     response = api_request(f'/alunos/{id}')
     aluno = None
+    historico = []
+    status_info = {} # Prepara um dicionário para as informações de status
+
     if response and response.status_code == 200:
         aluno = response.json()
-    return render_template('alunos/view.html', aluno=aluno)
+        
+        # Lógica da idade (já existente)
+        if aluno.get('data_nascimento'):
+            try:
+                data_nasc = datetime.strptime(aluno['data_nascimento'], '%Y-%m-%d').date()
+                hoje = date.today()
+                idade = hoje.year - data_nasc.year - ((hoje.month, hoje.day) < (data_nasc.month, data_nasc.day))
+                aluno['idade'] = idade
+            except ValueError:
+                aluno['idade'] = None
+
+        # Busca o histórico de atividades
+        historico_response = api_request(f"/alunos/{id}/historico")
+        if historico_response and historico_response.status_code == 200:
+            historico_bruto = historico_response.json()
+            for evento in historico_bruto:
+                data_obj = datetime.fromisoformat(evento['data'])
+                evento['data_formatada'] = data_obj.strftime('%d/%m/%Y às %H:%M')
+            historico = historico_bruto
+            
+        # --- NOVA LÓGICA PARA BUSCAR O STATUS ---
+        status_response = api_request(f"/alunos/{id}/status-detalhado")
+        if status_response and status_response.status_code == 200:
+            status_info = status_response.json()
+        # --- FIM DA NOVA LÓGICA ---
+
+    else:
+        flash('Aluno não encontrado.', 'error')
+    
+    # Passa as novas informações para o template
+    return render_template('alunos/view.html', aluno=aluno, historico=historico, status_info=status_info)
 
 @app.route('/alunos/novo')
 def alunos_novo():
@@ -395,13 +433,30 @@ def turmas_deletar(id):
 
 
 # === ROTAS PARA MATRICULAS ===
+# Em frontend/app.py
+
 @app.route("/matriculas")
 def matriculas_list():
-    response = api_request("/matriculas")
+    # Pega os parâmetros da URL (ex: ?busca=Joao&status=ativa)
+    busca = request.args.get('busca', '')
+    status = request.args.get('status', '')
+
+    # Monta a URL da API com os parâmetros
+    endpoint = "/matriculas?"
+    params = []
+    if busca:
+        params.append(f"busca={busca}")
+    if status:
+        params.append(f"status={status}")
+    
+    endpoint += "&".join(params)
+    
+    response = api_request(endpoint)
     matriculas = []
     if response and response.status_code == 200:
         matriculas = response.json()
-    return render_template("matriculas/list.html", matriculas=matriculas)
+        
+    return render_template("matriculas/list.html", matriculas=matriculas, busca=busca, status=status)
 
 @app.route("/matriculas/novo")
 def matriculas_novo():
@@ -506,25 +561,23 @@ def matriculas_salvar_edicao():
         
     return redirect(url_for("matriculas_list"))
 
+# Em frontend/app.py
+
+# Substitua a função antiga por esta
 @app.route("/matriculas/status/<int:id>", methods=["POST"])
 def matriculas_status(id):
     try:
-        matricula_response = api_request(f"/matriculas/{id}")
-        if not matricula_response or matricula_response.status_code != 200:
-            flash("Matrícula não encontrada.", "error")
-            return redirect(url_for("matriculas_list"))
-        
-        matricula = matricula_response.json()
-        new_status = not matricula.get("ativa", True)
-        
-        response = api_request(f"/matriculas/{id}", method="PUT", json={"ativa": new_status})
+        # Chama o novo endpoint da API que faz toda a lógica de alternar
+        response = api_request(f"/matriculas/{id}/toggle-status", method="POST")
         
         if response and response.status_code == 200:
-            flash(f"Matrícula {'destrancada' if new_status else 'trancada'} com sucesso!", "success")
+            # Pega o novo status da resposta da API para a mensagem flash
+            new_status = response.json().get("ativa")
+            flash(f"Matrícula {'ativada' if new_status else 'trancada'} com sucesso!", "success")
         else:
             flash("Erro ao atualizar o status da matrícula.", "error")
     except Exception as e:
-        flash(f"Erro interno ao trancar/destrancar a matrícula. {e}", "error")
+        flash(f"Erro interno ao alterar o status da matrícula: {e}", "error")
         
     return redirect(url_for("matriculas_list"))
 

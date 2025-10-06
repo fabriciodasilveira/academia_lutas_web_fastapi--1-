@@ -16,10 +16,10 @@ from src.routes import pagamentos_fastapi
 from src.routes import dashboard_fastapi # Adicione dashboard_fastapi
 
 # Importação dos modelos para que o SQLAlchemy os reconheça
-from src.models import aluno, professor, turma, evento, financeiro, matricula, plano, mensalidade, produto, categoria
+# Linhas CORRIGIDAS
+from src.models import aluno, professor, turma, evento, financeiro, matricula, plano, mensalidade, produto, categoria, historico_matricula
 
-# Importação dos routers
-from src.routes import alunos_fastapi, professores_fastapi, turmas_fastapi, eventos_fastapi, financeiro_fastapi, matriculas_fastapi, planos_fastapi, mensalidades_fastapi, produtos_fastapi, categorias_fastapi
+from src.routes import alunos_fastapi, professores_fastapi, turmas_fastapi, eventos_fastapi, financeiro_fastapi, matriculas_fastapi, planos_fastapi, mensalidades_fastapi, produtos_fastapi, categorias_fastapi, dashboard_fastapi
 from src.database import engine, Base
 
 
