@@ -1,0 +1,30 @@
+<div class="row justify-content-center">
+    <div class="col-md-10 col-lg-8">
+        <div id="alert-container"></div>
+        <h3 class="mb-4">Crie sua Conta</h3>
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <form id="register-form">
+                    <div class="mb-3">
+                        <label for="nome" class="form-label">Nome Completo</label>
+                        <input type="text" class="form-control" id="nome" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Senha (mínimo 6 caracteres)</label>
+                        <input type="password" class="form-control" id="password" required minlength="6">
+                    </div>
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-primary">Cadastrar</button>
+                    </div>
+                </form>
+                <div class="text-center mt-3">
+                    <a href="#/login">Já tem uma conta? Faça login</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

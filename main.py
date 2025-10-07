@@ -17,7 +17,8 @@ from src.routes import dashboard_fastapi # Adicione dashboard_fastapi
 from src.models import usuario
 from src.routes import auth_fastapi,usuarios_fastapi
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.sessions import SessionMiddleware # <-- ADICIONE ESTA LINHA
+from starlette.middleware.sessions import SessionMiddleware
+from fastapi.responses import FileResponse
 
 
 # Importação dos modelos para que o SQLAlchemy os reconheça
@@ -62,6 +63,22 @@ origins = [
     "http://127.0.0.1",
     "http://127.0.0.1:8080",
 ]
+
+
+pwa_dir = Path(__file__).parent / "portal_aluno_pwa"
+app.mount("/portal", StaticFiles(directory=pwa_dir), name="portal")
+
+
+# Rota principal para servir o index.html do PWA
+@app.get("/portal/{rest_of_path:path}")
+async def serve_pwa(rest_of_path: str):
+    return FileResponse(pwa_dir / "index.html")
+
+# Rota raiz do PWA
+@app.get("/portal")
+async def serve_pwa_root():
+    return FileResponse(pwa_dir / "index.html")
+
 
 app.add_middleware(SessionMiddleware, secret_key="SUA_SECRET_KEY_AQUI_DEVE_SER_A_MESMA_DO_AUTH.PY")
 
