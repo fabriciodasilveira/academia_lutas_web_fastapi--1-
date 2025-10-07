@@ -1,0 +1,12 @@
+{% extends "base_portal.html" %}
+
+{% block title %}Início{% endblock %}
+
+{% block content %}
+<div class="p-5 mb-4 bg-light rounded-3">
+    <div class="container-fluid py-5">
+        <h1 class="display-5 fw-bold">Olá, {{ session.user_info.nome }}!</h1>
+        <p class="col-md-8 fs-4">Bem-vindo(a) ao seu portal na academia. Aqui você pode gerir suas mensalidades, inscrever-se em eventos e atualizar seu perfil.</p>
+    </div>
+</div>
+{% endblock %}

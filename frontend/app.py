@@ -7,9 +7,14 @@ import math
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session # Adicione 'session'
 from functools import wraps # Adicione 'wraps'
 import requests
+from utils import api_request
+from portal_aluno import portal_bp
 
 app = Flask(__name__)
+# Em frontend/app.py, logo após a linha app = Flask(__name__)
+app.config['API_BASE_URL'] = 'http://localhost:8000/api/v1'
 app.secret_key = 'dev-secret-key-change-in-production'
+
 
 API_BASE_URL = 'http://localhost:8000'
 
@@ -17,6 +22,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
+
 
 def login_required(f):
     @wraps(f)
@@ -1425,6 +1431,10 @@ def login_callback():
     else:
         flash("Não foi possível obter os dados do usuário.", "error")
         return redirect(url_for('login'))
+
+app.register_blueprint(portal_bp)
+
+
 
 
 if __name__ == '__main__':
