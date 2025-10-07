@@ -23,10 +23,14 @@ from starlette.middleware.sessions import SessionMiddleware # <-- ADICIONE ESTA 
 # Importação dos modelos para que o SQLAlchemy os reconheça
 # Linhas CORRIGIDAS
 from src.models import aluno, professor, turma, evento, financeiro, matricula, plano, mensalidade, produto, categoria, historico_matricula, inscricao
-
-from src.routes import alunos_fastapi, professores_fastapi, turmas_fastapi, eventos_fastapi, financeiro_fastapi, matriculas_fastapi, planos_fastapi, mensalidades_fastapi, produtos_fastapi, categorias_fastapi, dashboard_fastapi, inscricoes_fastapi
 from src.database import engine, Base
-
+from src.routes import (
+    alunos_fastapi, professores_fastapi, turmas_fastapi, 
+    eventos_fastapi, financeiro_fastapi, matriculas_fastapi, 
+    planos_fastapi, mensalidades_fastapi, produtos_fastapi, 
+    categorias_fastapi, dashboard_fastapi, inscricoes_fastapi,
+    portal_aluno_fastapi
+)
 
 import logging
 logging.basicConfig(
@@ -92,6 +96,7 @@ app.include_router(dashboard_fastapi.router, prefix="/api/v1/dashboard")
 app.include_router(inscricoes_fastapi.router, prefix="/api/v1/inscricoes")
 app.include_router(auth_fastapi.router)
 app.include_router(usuarios_fastapi.router)
+app.include_router(portal_aluno_fastapi.router)
 
 
 

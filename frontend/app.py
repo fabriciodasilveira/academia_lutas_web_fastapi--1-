@@ -1425,6 +1425,106 @@ def login_callback():
     else:
         flash("Não foi possível obter os dados do usuário.", "error")
         return redirect(url_for('login'))
+    
+# Adicione estas novas rotas ao final do seu arquivo frontend/app.py
+
+# === ROTAS DO PORTAL DO ALUNO ===
+
+@app.route("/portal/login", methods=["GET", "POST"])
+def portal_aluno_login():
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+        
+        api_data = {"username": username, "password": password}
+        response = requests.post(f"{API_BASE_URL}/api/v1/auth/token", data=api_data)
+        
+        if response.status_code == 200:
+            data = response.json()
+            user_info = data.get('user_info', {})
+            
+            # Apenas permite o login se a role for 'aluno'
+            if user_info.get('role') == 'aluno':
+                session['access_token'] = data['access_token']
+                session['user_info'] = user_info
+                return redirect(url_for('portal_aluno_dashboard'))
+            else:
+                flash("Acesso negado. Esta área é exclusiva para alunos.", "error")
+        else:
+            flash("Email ou senha inválidos.", "error")
+
+    return render_template("portal_aluno/login.html")
+
+
+@app.route("/portal/register", methods=["GET", "POST"])
+def portal_aluno_register():
+    if request.method == "POST":
+        data = {
+            "nome": request.form.get("nome"),
+            "email": request.form.get("email"),
+            "password": request.form.get("password"),
+            "telefone": request.form.get("telefone"),
+            "data_nascimento": request.form.get("data_nascimento"),
+        }
+        
+        # Filtra valores vazios para não enviar para a API
+        data_to_send = {k: v for k, v in data.items() if v}
+
+        response = api_request("/portal/register", method="POST", json=data_to_send)
+        
+        if response and response.status_code == 201:
+            flash("Cadastro realizado com sucesso! Faça seu login.", "success")
+            return redirect(url_for('portal_aluno_login'))
+        else:
+            error = response.json().get('detail') if response else 'Tente novamente.'
+            flash(f"Erro no cadastro: {error}", "error")
+
+    return render_template("portal_aluno/register.html")
+
+
+@app.route("/portal/dashboard")
+@login_required
+def portal_aluno_dashboard():
+    if session.get('user_info', {}).get('role') != 'aluno':
+        flash("Acesso não autorizado.", "error")
+        return redirect(url_for('portal_aluno_login'))
+
+    response = api_request("/portal/me")
+    if response and response.status_code == 200:
+        aluno = response.json()
+        return render_template("portal_aluno/dashboard.html", aluno=aluno)
+    else:
+        flash("Não foi possível carregar seus dados. Por favor, faça o login novamente.", "error")
+        return redirect(url_for('portal_aluno_login'))
+
+
+@app.route("/portal/editar", methods=["GET", "POST"])
+@login_required
+def portal_aluno_edit():
+    if session.get('user_info', {}).get('role') != 'aluno':
+        return redirect(url_for('portal_aluno_login'))
+
+    if request.method == "POST":
+        data = {
+            "nome": request.form.get("nome"),
+            "telefone": request.form.get("telefone"),
+            "data_nascimento": request.form.get("data_nascimento")
+        }
+        update_data = {k: v for k, v in data.items() if v}
+
+        response = api_request("/portal/me", method="PUT", json=update_data)
+        if response and response.status_code == 200:
+            flash("Perfil atualizado com sucesso!", "success")
+            return redirect(url_for('portal_aluno_dashboard'))
+        else:
+            flash("Erro ao atualizar o perfil.", "error")
+    
+    response = api_request("/portal/me")
+    if response and response.status_code == 200:
+        aluno = response.json()
+        return render_template("portal_aluno/edit_profile.html", aluno=aluno) 
+    
+    return redirect(url_for('portal_aluno_dashboard'))
 
 
 if __name__ == '__main__':

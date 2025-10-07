@@ -1,9 +1,10 @@
 import pandas as pd
 from sqlalchemy.orm import Session
-
-# --- CORREÇÃO: Importar todos os modelos relacionados ---
 from src.database import SessionLocal
+
+# --- CORREÇÃO: Importar todos os modelos para resolver relacionamentos ---
 from src.models.aluno import Aluno
+from src.models.usuario import Usuario
 from src.models.turma import Turma
 from src.models.plano import Plano
 from src.models.mensalidade import Mensalidade
@@ -11,8 +12,11 @@ from src.models.inscricao import Inscricao
 from src.models.historico_matricula import HistoricoMatricula
 from src.models.matricula import Matricula
 from src.models.professor import Professor
-from src.models.evento import Evento # <- ADICIONE ESTA LINHA
-# -------------------------------------------------------------
+from src.models.evento import Evento
+from src.models.produto import Produto
+from src.models.categoria import Categoria
+from src.models.financeiro import Financeiro
+# --------------------------------------------------------------------
 
 # --- CONFIGURAÇÕES ---
 EXCEL_FILE_PATH = "importacao_alunos.xlsx"
@@ -22,11 +26,9 @@ NOME_DA_COLUNA = "NOME"
 def importar_alunos():
     print("Iniciando a importação de alunos do Excel...")
     
-    # Inicia a conexão com o banco de dados
     db: Session = SessionLocal()
     
     try:
-        # Tenta ler o arquivo Excel
         try:
             df = pd.read_excel(EXCEL_FILE_PATH)
             print(f"Arquivo '{EXCEL_FILE_PATH}' lido com sucesso.")
@@ -37,7 +39,6 @@ def importar_alunos():
             print(f"ERRO ao ler o arquivo Excel: {e}")
             return
 
-        # Verifica se a coluna com os nomes existe
         if NOME_DA_COLUNA not in df.columns:
             print(f"ERRO: A coluna '{NOME_DA_COLUNA}' não foi encontrada no arquivo Excel.")
             print(f"Colunas encontradas: {list(df.columns)}")
@@ -50,11 +51,9 @@ def importar_alunos():
         alunos_existentes = 0
         
         for nome_aluno in nomes_para_importar:
-            # Verifica se o aluno já existe no banco de dados
             aluno_existente = db.query(Aluno).filter(Aluno.nome == str(nome_aluno)).first()
             
             if not aluno_existente:
-                # Se não existe, cria um novo aluno
                 novo_aluno = Aluno(nome=str(nome_aluno))
                 db.add(novo_aluno)
                 alunos_novos += 1
@@ -75,7 +74,6 @@ def importar_alunos():
         print("----------------------------")
 
     finally:
-        # Garante que a conexão com o banco de dados seja fechada
         db.close()
         print("\nConexão com o banco de dados fechada. Processo concluído.")
 
