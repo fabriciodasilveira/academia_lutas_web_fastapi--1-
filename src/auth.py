@@ -65,7 +65,14 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
     return user
 
 async def get_current_active_user(current_user: models.usuario.Usuario = Depends(get_current_user)):
-    # Aqui você pode adicionar lógica para verificar se o usuário está ativo, se necessário
+    """
+    Verifica se o usuário está ativo. Bloqueia se o papel for 'pendente'.
+    """
+    if current_user.role == "pendente":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Sua conta está pendente de aprovação por um administrador."
+        )
     return current_user
 
 async def get_admin_or_gerente(current_user: models.usuario.Usuario = Depends(get_current_active_user)):

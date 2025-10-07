@@ -43,8 +43,10 @@
                                         <span class="badge bg-danger">{{ usuario.role|capitalize }}</span>
                                     {% elif usuario.role == 'gerente' %}
                                         <span class="badge bg-warning text-dark">{{ usuario.role|capitalize }}</span>
-                                    {% else %}
+                                    {% elif usuario.role == 'atendente' %}
                                         <span class="badge bg-info">{{ usuario.role|capitalize }}</span>
+                                    {% elif usuario.role == 'pendente' %}
+                                        <span class="badge bg-secondary">{{ usuario.role|capitalize }}</span>
                                     {% endif %}
                                 </td>
                                 <td>

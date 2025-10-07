@@ -9,4 +9,4 @@ class Usuario(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     nome = Column(String)
     hashed_password = Column(String, nullable=True) # Nulo para logins sociais
-    role = Column(String, nullable=False) # "administrador", "gerente", "atendente"
+    role = Column(String, nullable=False, default="pendente") # Define 'pendente' como padrão

@@ -60,7 +60,7 @@ async def auth_google_callback(request: Request, db: Session = Depends(database.
         new_user = models.usuario.Usuario(
             email=email,
             nome=user_info_from_google.get('name', 'Usuário Google'),
-            role='atendente'
+            role='pendente' # <-- MUDANÇA PRINCIPAL AQUI
         )
         db.add(new_user)
         db.commit()

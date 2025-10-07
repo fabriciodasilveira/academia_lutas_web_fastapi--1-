@@ -1399,6 +1399,8 @@ def usuarios_deletar(id):
 
 # Em frontend/app.py
 
+# Em frontend/app.py
+
 @app.route("/login/callback")
 def login_callback():
     token = request.args.get('token')
@@ -1406,13 +1408,19 @@ def login_callback():
         flash("Falha na autenticação.", "error")
         return redirect(url_for('login'))
         
-    # Precisamos obter os dados do usuário a partir do token
-    # Vamos criar um novo endpoint na API para isso
     user_info_resp = api_request("/auth/me", headers={"Authorization": f"Bearer {token}"})
     
     if user_info_resp and user_info_resp.status_code == 200:
+        user_info = user_info_resp.json()
+        
+        # --- LÓGICA DE VERIFICAÇÃO DE STATUS PENDENTE ---
+        if user_info.get('role') == 'pendente':
+            flash("Sua conta foi criada e está aguardando aprovação de um administrador.", "info")
+            return redirect(url_for('login'))
+        # --- FIM DA LÓGICA ---
+
         session['access_token'] = token
-        session['user_info'] = user_info_resp.json()
+        session['user_info'] = user_info
         return redirect(url_for('index'))
     else:
         flash("Não foi possível obter os dados do usuário.", "error")
