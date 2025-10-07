@@ -3,11 +3,15 @@
 import requests
 from flask import session, current_app
 
+# frontend/utils.py
+
+import requests
+from flask import session, current_app
+
 def api_request(endpoint, method='GET', data=None, files=None, json=None, params=None, headers=None):
     """
     Função auxiliar para fazer requisições à API FastAPI, incluindo o token de autenticação.
     """
-    # Acessa a URL base a partir da configuração da aplicação Flask
     api_base_url = current_app.config.get('API_BASE_URL', 'http://localhost:8000')
     url = f"{api_base_url}{endpoint}"
 

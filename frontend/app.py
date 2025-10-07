@@ -1414,7 +1414,8 @@ def login_callback():
         flash("Falha na autenticação.", "error")
         return redirect(url_for('login'))
         
-    user_info_resp = api_request("/auth/me", headers={"Authorization": f"Bearer {token}"})
+    # Linha CORRIGIDA
+    user_info_resp = api_request("/auth/me/staff", headers={"Authorization": f"Bearer {token}"})
     
     if user_info_resp and user_info_resp.status_code == 200:
         user_info = user_info_resp.json()

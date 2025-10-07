@@ -37,6 +37,7 @@ def login_callback():
         return redirect(url_for('portal.login'))
         
     # Usa o token para buscar os dados do aluno na API
+    # Linha CORRIGIDA
     user_info_resp = api_request("/auth/me/aluno", headers={"Authorization": f"Bearer {token}"})
     
     if user_info_resp and user_info_resp.status_code == 200:
