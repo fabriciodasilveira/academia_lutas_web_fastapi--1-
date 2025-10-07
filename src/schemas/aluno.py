@@ -1,10 +1,3 @@
-# REMOVA as linhas de update_forward_refs daqui
-
-# -*- coding: utf-8 -*-
-"""
-Schemas Pydantic para a entidade Aluno.
-"""
-
 import datetime
 from typing import Optional, List
 from pydantic import BaseModel, Field, HttpUrl
@@ -26,7 +19,7 @@ class AlunoCreate(AlunoBase):
 
 class AlunoRead(AlunoBase):
     id: int
-    foto: Optional[str] = None
+    foto: Optional[str] = None # Garante que o campo 'foto' está aqui
     data_cadastro: datetime.datetime
     status_geral: str = "Inativo"
 

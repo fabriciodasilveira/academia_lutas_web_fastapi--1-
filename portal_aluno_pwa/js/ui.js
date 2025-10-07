@@ -23,5 +23,24 @@ const ui = {
     toggleNav: (show) => {
         document.getElementById('main-header').style.display = show ? 'flex' : 'none';
         document.getElementById('main-nav').style.display = show ? 'flex' : 'none';
+    },
+    
+    showFieldError: (inputElement, message) => {
+        inputElement.classList.add('is-invalid');
+        let errorDiv = inputElement.nextElementSibling;
+        if (!errorDiv || !errorDiv.classList.contains('invalid-feedback')) {
+            errorDiv = document.createElement('div');
+            errorDiv.className = 'invalid-feedback';
+            inputElement.parentNode.insertBefore(errorDiv, inputElement.nextSibling);
+        }
+        errorDiv.textContent = message;
+    },
+
+    clearFieldError: (inputElement) => {
+        inputElement.classList.remove('is-invalid');
+        const errorDiv = inputElement.nextElementSibling;
+        if (errorDiv && errorDiv.classList.contains('invalid-feedback')) {
+            errorDiv.remove();
+        }
     }
 };
