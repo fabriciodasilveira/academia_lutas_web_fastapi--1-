@@ -2,18 +2,18 @@
 
 import os
 from pathlib import Path
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from starlette.middleware.sessions import SessionMiddleware # Importa o SessionMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 
-# Importação dos modelos para que o SQLAlchemy os reconheça
+# Importação de TODOS os modelos para que o SQLAlchemy os reconheça
 from src.models import (
     aluno, professor, turma, evento, financeiro, matricula, 
     plano, mensalidade, produto, categoria, usuario, historico_matricula, inscricao
 )
 
-# Importação de TODOS os routers, incluindo os novos
+# Importação de TODOS os routers, incluindo os que faltavam
 from src.routes import (
     alunos_fastapi, professores_fastapi, turmas_fastapi, 
     eventos_fastapi, financeiro_fastapi, matriculas_fastapi, 
@@ -33,7 +33,6 @@ try:
 except Exception as e:
     print(f"Erro ao criar tabelas: {e}")
 
-# Inicializa a aplicação FastAPI
 app = FastAPI(
     title="API Academia de Lutas",
     description="API para gerenciamento de academia de lutas",
@@ -41,10 +40,8 @@ app = FastAPI(
 )
 
 # Adiciona o middleware de sessão (CRUCIAL para o login com Google)
-# Use a mesma chave secreta que está no seu arquivo .env e auth.py
 secret_key = os.environ.get("SECRET_KEY", "uma_chave_secreta_muito_forte_deve_ser_usada_aqui")
 app.add_middleware(SessionMiddleware, secret_key=secret_key)
-
 
 # Configuração de CORS
 origins = ["http://localhost:5700"]
@@ -70,11 +67,10 @@ app.include_router(categorias_fastapi.router, prefix="/api/v1/categorias")
 app.include_router(dashboard_fastapi.router, prefix="/api/v1/dashboard")
 app.include_router(inscricoes_fastapi.router, prefix="/api/v1/inscricoes")
 
-# --- CORREÇÃO PRINCIPAL: REGISTAR AS ROTAS DE AUTENTICAÇÃO E USUÁRIOS ---
-app.include_router(auth_fastapi.router, prefix="/api/v1") # Adiciona todas as rotas de /api/v1/auth/...
-app.include_router(usuarios_fastapi.router, prefix="/api/v1") # Adiciona todas as rotas de /api/v1/usuarios/...
+# --- CORREÇÃO PRINCIPAL: REGISTAR AS ROTAS QUE FALTAVAM ---
+app.include_router(auth_fastapi.router, prefix="/api/v1") 
+app.include_router(usuarios_fastapi.router, prefix="/api/v1/usuarios")
 # --- FIM DA CORREÇÃO ---
-
 
 # Servir arquivos estáticos
 static_dir = Path(__file__).parent / "src" / "static"
