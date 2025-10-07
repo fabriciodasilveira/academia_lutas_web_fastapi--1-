@@ -64,6 +64,8 @@ const api = {
 
     // Funções do aluno
     getProfile: () => api.request('/portal/me'),
+    updateProfile: (data) => api.request('/portal/me', 'PUT', data), 
+    
     getPayments: () => api.request('/mensalidades'), // Assumindo que este endpoint filtra pelo aluno logado
     getEvents: () => api.request('/eventos')
 };
