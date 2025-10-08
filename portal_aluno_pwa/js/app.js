@@ -43,10 +43,14 @@ const router = async () => {
 
 function handleLoginPage() {
     const form = document.getElementById('login-form');
+    const passwordInput = document.getElementById('password');
+    const togglePasswordButton = document.getElementById('togglePassword');
+
+    // Lógica para o envio do formulário de login (original)
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const email = e.target.username.value;
-        const password = e.target.password.value;
+        const password = passwordInput.value; // Usando a variável já declarada
         try {
             const data = await api.login(email, password);
             if (data.user_info.role !== 'aluno') {
@@ -58,6 +62,21 @@ function handleLoginPage() {
             ui.showAlert(error.message || 'Email ou senha inválidos.');
         }
     });
+
+    // Lógica para o botão de mostrar/ocultar senha (nova)
+    if (togglePasswordButton) {
+        const icon = togglePasswordButton.querySelector('i');
+
+        togglePasswordButton.addEventListener('click', function () {
+            // Alterna o tipo do input de 'password' para 'text' e vice-versa
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+
+            // Alterna o ícone do botão
+            icon.classList.toggle('fa-eye');
+            icon.classList.toggle('fa-eye-slash');
+        });
+    }
 }
 
 function handleRegisterPage() {
