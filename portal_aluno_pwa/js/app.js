@@ -201,22 +201,61 @@ async function handleEditProfilePage() {
 async function handlePaymentsPage() {
     const list = document.getElementById('payments-list');
     try {
-        const payments = await api.getPayments(); // Você precisa criar este endpoint na API
+        const payments = await api.getPayments(); // Agora busca do endpoint correto
         if (payments.length === 0) {
-            list.innerHTML = '<p class="text-muted">Nenhuma mensalidade encontrada.</p>';
+            list.innerHTML = '<p class="text-muted text-center mt-4">Nenhuma mensalidade encontrada no seu histórico.</p>';
             return;
         }
-        list.innerHTML = payments.map(p => `
-            <div class="list-group-item d-flex justify-content-between align-items-center">
-                <div>
+        
+        // Ordena para que os pendentes apareçam primeiro
+        payments.sort((a, b) => (a.status === 'pendente' ? -1 : 1) - (b.status === 'pendente' ? -1 : 1));
+
+        list.innerHTML = payments.map(p => {
+            const vencimento = new Date(p.data_vencimento + 'T00:00:00').toLocaleDateString('pt-BR');
+            const isPendente = p.status === 'pendente';
+            
+            return `
+            <div class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+                <div class="me-auto">
                     <h6 class="mb-1">${p.plano.nome}</h6>
-                    <small>Vencimento: ${new Date(p.data_vencimento).toLocaleDateString()}</small>
+                    <small class="text-muted">Vencimento: ${vencimento} | Valor: R$ ${p.valor.toFixed(2).replace('.', ',')}</small>
                 </div>
-                <span class="badge bg-${p.status === 'pago' ? 'success' : 'warning'}">${p.status}</span>
+                <div class="mt-2 mt-md-0">
+                    ${isPendente 
+                        ? `<button class="btn btn-sm btn-primary" onclick="pagarMensalidadeOnline(event, ${p.id})">
+                               <i class="fas fa-credit-card me-1"></i>Pagar com Mercado Pago
+                           </button>`
+                        : `<span class="badge bg-success">Pago</span>`
+                    }
+                </div>
             </div>
-        `).join('');
+            `;
+        }).join('');
     } catch (error) {
         ui.showAlert('Não foi possível carregar seus pagamentos.');
+    }
+}
+
+// Adicione esta nova função ao final do arquivo portal_aluno_pwa/js/app.js
+async function pagarMensalidadeOnline(event, mensalidadeId) {
+    const button = event.currentTarget;
+    const originalHtml = button.innerHTML;
+    
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...';
+
+    try {
+        // A API de pagamento já existe no seu backend, vamos apenas chamá-la
+        const data = await api.request(`/pagamentos/gerar/mensalidade/${mensalidadeId}`, 'POST');
+        if (data.init_point) {
+            window.location.href = data.init_point; // Redireciona para o checkout
+        } else {
+            throw new Error(data.error || 'Link de pagamento não recebido.');
+        }
+    } catch (error) {
+        ui.showAlert(error.message || 'Não foi possível gerar o link de pagamento.');
+        button.disabled = false;
+        button.innerHTML = originalHtml;
     }
 }
 
