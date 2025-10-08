@@ -1,31 +1,30 @@
 const API_BASE_URL = 'http://localhost:8000/api/v1';
 
 const api = {
-    async request(endpoint, method = 'GET', body = null, requiresAuth = true) {
+    async request(endpoint, method = 'GET', body = null, isFormData = false, requiresAuth = true) {
         const url = `${API_BASE_URL}${endpoint}`;
-        const headers = new Headers({
-            'Content-Type': 'application/json'
-        });
+        const headers = new Headers();
 
         if (requiresAuth) {
             const token = localStorage.getItem('accessToken');
             if (!token) {
-                // Redireciona para login se o token não existir
                 window.location.hash = '/login';
                 return;
             }
             headers.append('Authorization', `Bearer ${token}`);
         }
 
-        const config = {
-            method: method,
-            headers: headers,
-        };
+        const config = { method, headers };
 
         if (body) {
-            config.body = JSON.stringify(body);
+            if (isFormData) {
+                config.body = body;
+            } else {
+                headers.append('Content-Type', 'application/json');
+                config.body = JSON.stringify(body);
+            }
         }
-
+        
         try {
             const response = await fetch(url, config);
             if (response.status === 401) {
@@ -44,28 +43,41 @@ const api = {
         }
     },
 
-    // Funções de autenticação
-    login: (email, password) => {
-        // O login do FastAPI espera dados de formulário, não JSON
+    // --- FUNÇÃO DE LOGIN CORRIGIDA COM ASYNC/AWAIT ---
+    login: async (email, password) => {
         const formData = new URLSearchParams();
         formData.append('username', email);
         formData.append('password', password);
         
-        return fetch(`${API_BASE_URL}/auth/token`, {
-            method: 'POST',
-            body: formData
-        }).then(response => {
-            if (!response.ok) throw new Error('Falha no login');
-            return response.json();
-        });
+        try {
+            const response = await fetch(`${API_BASE_URL}/auth/token`, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                let detail = 'Falha no login. Verifique seu email e senha.';
+                try {
+                    const errorData = await response.json();
+                    detail = errorData.detail || detail;
+                } catch (e) {
+                    // Ignora o erro se a resposta não for JSON
+                }
+                throw new Error(detail);
+            }
+            return await response.json(); // Garante que a resposta JSON seja retornada
+        } catch (error) {
+            console.error("Erro na API de Login:", error);
+            throw error; // Lança o erro para ser capturado pela interface
+        }
     },
     
-    register: (data) => api.request('/portal/register', 'POST', data, false),
+    register: (data) => api.request('/portal/register', 'POST', data, false, false),
 
-    // Funções do aluno
     getProfile: () => api.request('/portal/me'),
-    updateProfile: (data) => api.request('/portal/me', 'PUT', data),
+    
+    updateProfile: (formData) => api.request('/portal/me', 'PUT', formData, true, true),
 
-    getPayments: () => api.request('/mensalidades'), // Assumindo que este endpoint filtra pelo aluno logado
+    getPayments: () => api.request('/mensalidades'),
     getEvents: () => api.request('/eventos')
 };

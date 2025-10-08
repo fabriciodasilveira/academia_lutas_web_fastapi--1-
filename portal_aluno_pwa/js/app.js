@@ -79,36 +79,71 @@ function handleRegisterPage() {
     });
 }
 
+
 async function handleDashboardPage() {
     try {
         const profile = await api.getProfile();
+        
+        // Atualiza a foto do perfil
+        const profilePic = document.getElementById('profile-picture');
+        if (profile.foto) {
+            profilePic.src = `http://localhost:8000${profile.foto}`;
+        } else {
+            profilePic.src = '/portal/images/default-avatar.png';
+        }
+
         document.getElementById('aluno-nome').innerText = profile.nome;
         document.getElementById('aluno-email').innerText = profile.email;
         document.getElementById('aluno-telefone').innerText = profile.telefone || 'Não informado';
-        // Adicionada data de nascimento
-        document.getElementById('aluno-nascimento').innerText = profile.data_nascimento ? new Date(profile.data_nascimento + 'T00:00:00').toLocaleDateString() : 'Não informada';
+        document.getElementById('aluno-nascimento').innerText = profile.data_nascimento ? new Date(profile.data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR') : 'Não informada';
     } catch (error) {
         ui.showAlert('Não foi possível carregar seus dados.');
     }
 }
 
+
+
 async function handleEditProfilePage() {
     const form = document.getElementById('edit-profile-form');
+    // Mapeando todos os campos do formulário
     const nomeInput = document.getElementById('nome');
     const emailInput = document.getElementById('email');
+    const cpfInput = document.getElementById('cpf');
     const telefoneInput = document.getElementById('telefone');
     const dataNascimentoInput = document.getElementById('data_nascimento');
+    const enderecoInput = document.getElementById('endereco');
+    const observacoesInput = document.getElementById('observacoes');
+    const fotoInput = document.getElementById('foto');
+    const fotoPreview = document.getElementById('foto-preview');
 
     // 1. Preencher o formulário com os dados atuais
     try {
         const profile = await api.getProfile();
         nomeInput.value = profile.nome || '';
         emailInput.value = profile.email || '';
+        cpfInput.value = profile.cpf || '';
         telefoneInput.value = profile.telefone || '';
         dataNascimentoInput.value = profile.data_nascimento || '';
+        enderecoInput.value = profile.endereco || '';
+        observacoesInput.value = profile.observacoes || '';
+        if (profile.foto) {
+            fotoPreview.src = `http://localhost:8000${profile.foto}`;
+        }
     } catch (error) {
         ui.showAlert('Erro ao carregar seus dados para edição.');
     }
+
+    // Preview da foto ao selecionar
+    fotoInput.addEventListener('change', () => {
+        const file = fotoInput.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                fotoPreview.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
 
     // 2. Lidar com o envio do formulário
     form.addEventListener('submit', async (e) => {
@@ -116,15 +151,23 @@ async function handleEditProfilePage() {
         const button = form.querySelector('button[type="submit"]');
         button.disabled = true;
         button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+        
+        // Montar FormData
+        const formData = new FormData();
+        formData.append('nome', nomeInput.value);
+        formData.append('cpf', cpfInput.value);
+        formData.append('telefone', telefoneInput.value);
+        formData.append('data_nascimento', dataNascimentoInput.value);
+        formData.append('endereco', enderecoInput.value);
+        formData.append('observacoes', observacoesInput.value);
 
-        const updatedData = {
-            nome: nomeInput.value,
-            telefone: telefoneInput.value,
-            data_nascimento: dataNascimentoInput.value,
-        };
+        if (fotoInput.files[0]) {
+            formData.append('foto', fotoInput.files[0]);
+        }
 
         try {
-            await api.updateProfile(updatedData);
+            // A API de update agora usa FormData
+            await api.updateProfile(formData);
             alert('Perfil atualizado com sucesso!');
             window.location.hash = '/dashboard'; // Volta para o perfil
         } catch (error) {
@@ -134,6 +177,7 @@ async function handleEditProfilePage() {
         }
     });
 }
+
 
 async function handlePaymentsPage() {
     const list = document.getElementById('payments-list');
