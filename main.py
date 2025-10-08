@@ -13,18 +13,23 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from typing import Any, Dict, List
 from src.routes import pagamentos_fastapi
-from src.routes import dashboard_fastapi # Adicione dashboard_fastapi
+from src.routes import dashboard_fastapi 
 from src.models import usuario
 from src.routes import auth_fastapi,usuarios_fastapi
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.sessions import SessionMiddleware # <-- ADICIONE ESTA LINHA
+from starlette.middleware.sessions import SessionMiddleware 
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 
-# Importação dos modelos para que o SQLAlchemy os reconheça
-# Linhas CORRIGIDAS
 from src.models import aluno, professor, turma, evento, financeiro, matricula, plano, mensalidade, produto, categoria, historico_matricula, inscricao
 
-from src.routes import alunos_fastapi, professores_fastapi, turmas_fastapi, eventos_fastapi, financeiro_fastapi, matriculas_fastapi, planos_fastapi, mensalidades_fastapi, produtos_fastapi, categorias_fastapi, dashboard_fastapi, inscricoes_fastapi
+from src.routes import (alunos_fastapi, professores_fastapi, turmas_fastapi, eventos_fastapi, 
+                        financeiro_fastapi, matriculas_fastapi, planos_fastapi, mensalidades_fastapi, 
+                        produtos_fastapi, categorias_fastapi, 
+                        dashboard_fastapi, inscricoes_fastapi,portal_aluno_fastapi
+)
+
 from src.database import engine, Base
 
 
@@ -59,6 +64,20 @@ origins = [
     "http://127.0.0.1:8080",
 ]
 
+pwa_dir = Path(__file__).parent / "portal_aluno_pwa"
+app.mount("/portal", StaticFiles(directory=pwa_dir), name="portal")
+
+# Rota principal para servir o index.html do PWA
+@app.get("/portal/{rest_of_path:path}")
+async def serve_pwa(rest_of_path: str):
+    return FileResponse(pwa_dir / "index.html")
+
+# Rota raiz do PWA
+@app.get("/portal")
+async def serve_pwa_root():
+    return FileResponse(pwa_dir / "index.html")
+
+
 app.add_middleware(SessionMiddleware, secret_key="SUA_SECRET_KEY_AQUI_DEVE_SER_A_MESMA_DO_AUTH.PY")
 
 # Configuração de CORS (já existente)
@@ -92,6 +111,7 @@ app.include_router(dashboard_fastapi.router, prefix="/api/v1/dashboard")
 app.include_router(inscricoes_fastapi.router, prefix="/api/v1/inscricoes")
 app.include_router(auth_fastapi.router)
 app.include_router(usuarios_fastapi.router)
+app.include_router(portal_aluno_fastapi.router)
 
 
 

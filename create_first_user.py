@@ -1,7 +1,22 @@
-# Crie o arquivo: create_first_user.py
 from src.database import SessionLocal
-from src.models.usuario import Usuario
 from src.auth import get_password_hash
+
+# Importação de todos os modelos para garantir que o SQLAlchemy
+# conheça todas as tabelas e seus relacionamentos.
+from src.models.usuario import Usuario
+from src.models.aluno import Aluno
+from src.models.matricula import Matricula
+from src.models.turma import Turma
+from src.models.professor import Professor
+from src.models.plano import Plano
+from src.models.mensalidade import Mensalidade
+from src.models.inscricao import Inscricao
+from src.models.evento import Evento
+from src.models.historico_matricula import HistoricoMatricula
+from src.models.produto import Produto
+from src.models.categoria import Categoria
+from src.models.financeiro import Financeiro
+
 
 def create_first_user():
     db = SessionLocal()

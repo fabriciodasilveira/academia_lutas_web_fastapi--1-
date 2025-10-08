@@ -9,7 +9,11 @@ import os
 from authlib.integrations.starlette_client import OAuth
 from starlette.config import Config
 
-from src import database, models
+# --- MODIFICAÇÕES AQUI ---
+from src import database
+from src.models import usuario as models_usuario # Importa o módulo 'usuario' e dá um apelido
+# --- FIM DAS MODIFICAÇÕES ---
+
 
 # --- CONFIGURAÇÃO DE SEGURANÇA ---
 SECRET_KEY = os.environ.get("SECRET_KEY", "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7")
@@ -45,7 +49,8 @@ def create_access_token(data: dict):
 
 # --- DEPENDÊNCIAS DE AUTENTICAÇÃO E AUTORIZAÇÃO ---
 def get_user(db: Session, email: str):
-    return db.query(models.usuario.Usuario).filter(models.usuario.Usuario.email == email).first()
+    # --- MODIFICAÇÃO AQUI ---
+    return db.query(models_usuario.Usuario).filter(models_usuario.Usuario.email == email).first()
 
 async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(database.get_db)):
     credentials_exception = HTTPException(
@@ -64,7 +69,8 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
         raise credentials_exception
     return user
 
-async def get_current_active_user(current_user: models.usuario.Usuario = Depends(get_current_user)):
+# --- MODIFICAÇÃO AQUI ---
+async def get_current_active_user(current_user: models_usuario.Usuario = Depends(get_current_user)):
     """
     Verifica se o usuário está ativo. Bloqueia se o papel for 'pendente'.
     """
@@ -75,13 +81,14 @@ async def get_current_active_user(current_user: models.usuario.Usuario = Depends
         )
     return current_user
 
-async def get_admin_or_gerente(current_user: models.usuario.Usuario = Depends(get_current_active_user)):
+# --- MODIFICAÇÃO AQUI ---
+async def get_admin_or_gerente(current_user: models_usuario.Usuario = Depends(get_current_active_user)):
     if current_user.role not in ["administrador", "gerente"]:
         raise HTTPException(status_code=403, detail="Acesso restrito a Administradores ou Gerentes.")
     return current_user
 
-
-async def get_admin_user(current_user: models.usuario.Usuario = Depends(get_current_active_user)):
+# --- MODIFICAÇÃO AQUI ---
+async def get_admin_user(current_user: models_usuario.Usuario = Depends(get_current_active_user)):
     """
     Verifica se o usuário atual tem o papel de 'administrador'.
     Se não tiver, bloqueia a requisição.

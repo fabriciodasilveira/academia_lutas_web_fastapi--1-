@@ -1,0 +1,21 @@
+{
+    "name": "Portal do Aluno - Academia",
+    "short_name": "Portal Aluno",
+    "description": "Acesse suas informações da academia, pagamentos e eventos.",
+    "start_url": "/portal",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#2563eb",
+    "icons": [
+        {
+            "src": "/portal/images/icon-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/portal/images/icon-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}

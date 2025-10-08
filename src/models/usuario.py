@@ -1,5 +1,5 @@
-# Crie o arquivo: src/models/usuario.py
 from sqlalchemy import Column, Integer, String
+from sqlalchemy.orm import relationship
 from src.database import Base
 
 class Usuario(Base):
@@ -10,3 +10,6 @@ class Usuario(Base):
     nome = Column(String)
     hashed_password = Column(String, nullable=True) # Nulo para logins sociais
     role = Column(String, nullable=False, default="pendente") # Define 'pendente' como padrão
+
+    # Relacionamento inverso
+    aluno = relationship("Aluno", back_populates="usuario", uselist=False)
