@@ -101,12 +101,12 @@ function handleRegisterPage() {
 
 async function handleDashboardPage() {
     try {
+        // Carrega os dados do perfil principal
         const profile = await api.getProfile();
         
-        // Atualiza a foto do perfil
         const profilePic = document.getElementById('profile-picture');
         if (profile.foto) {
-            profilePic.src = `http://localhost:8000${profile.foto}`;
+            profilePic.src = profile.foto;
         } else {
             profilePic.src = '/portal/images/default-avatar.png';
         }
@@ -115,8 +115,31 @@ async function handleDashboardPage() {
         document.getElementById('aluno-email').innerText = profile.email;
         document.getElementById('aluno-telefone').innerText = profile.telefone || 'Não informado';
         document.getElementById('aluno-nascimento').innerText = profile.data_nascimento ? new Date(profile.data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR') : 'Não informada';
+
+        // --- Nova Lógica para Carregar Matrículas ---
+        const matriculasContainer = document.getElementById('matriculas-container');
+        try {
+            const matriculas = await api.getMatriculas();
+            if (matriculas.length > 0) {
+                matriculasContainer.innerHTML = `
+                    <ul class="list-group list-group-flush">
+                        ${matriculas.map(m => `
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>${m.turma.nome}</span>
+                                <small class="text-muted">${m.turma.horario}</small>
+                            </li>
+                        `).join('')}
+                    </ul>
+                `;
+            } else {
+                matriculasContainer.innerHTML = '<p class="text-muted">Você não possui matrículas ativas no momento.</p>';
+            }
+        } catch (error) {
+            matriculasContainer.innerHTML = '<p class="text-danger">Não foi possível carregar suas matrículas.</p>';
+        }
+
     } catch (error) {
-        ui.showAlert('Não foi possível carregar seus dados.');
+        ui.showAlert('Não foi possível carregar seus dados de perfil.');
     }
 }
 
@@ -146,7 +169,7 @@ async function handleEditProfilePage() {
         enderecoInput.value = profile.endereco || '';
         observacoesInput.value = profile.observacoes || '';
         if (profile.foto) {
-            fotoPreview.src = `http://localhost:8000${profile.foto}`;
+            fotoPreview.src = profile.foto;
         }
     } catch (error) {
         ui.showAlert('Erro ao carregar seus dados para edição.');

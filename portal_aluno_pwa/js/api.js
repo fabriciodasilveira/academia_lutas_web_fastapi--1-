@@ -1,4 +1,7 @@
-const API_BASE_URL = 'http://localhost:8000/api/v1';
+// const API_BASE_URL = 'http://localhost:8000/api/v1';
+
+const API_BASE_URL = '/api/v1';
+
 
 const api = {
     async request(endpoint, method = 'GET', body = null, isFormData = false, requiresAuth = true) {
@@ -73,11 +76,9 @@ const api = {
     },
     
     register: (data) => api.request('/portal/register', 'POST', data, false, false),
-
     getProfile: () => api.request('/portal/me'),
-    
     updateProfile: (formData) => api.request('/portal/me', 'PUT', formData, true, true),
-
     getPayments: () => api.request('/portal/pendencias'),
-    getEvents: () => api.request('/eventos')
+    getEvents: () => api.request('/eventos'), 
+    getMatriculas: () => api.request('/portal/matriculas'),
 };

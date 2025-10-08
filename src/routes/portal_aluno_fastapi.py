@@ -13,7 +13,9 @@ from src.models.mensalidade import Mensalidade
 from src.schemas.mensalidade import MensalidadeRead
 from typing import List
 from src.models.inscricao import Inscricao
-from src.schemas.portal_aluno import PendenciaFinanceira # Adicionado
+from src.schemas.portal_aluno import PendenciaFinanceira
+from src.models.matricula import Matricula
+from src.schemas.matricula import MatriculaRead
 
 # --- Lógica de Upload (copiada de alunos_fastapi.py) ---
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -208,3 +210,25 @@ def get_aluno_pendencias_financeiras(
     pendencias.sort(key=lambda x: x.data_vencimento, reverse=True)
     
     return pendencias
+
+@router.get("/matriculas", response_model=List[MatriculaRead])
+def get_aluno_matriculas(
+    current_user: models.usuario.Usuario = Depends(auth.get_current_active_user),
+    db: Session = Depends(database.get_db)
+):
+    """
+    Retorna as matrículas ativas para o aluno logado.
+    """
+    if current_user.role != "aluno":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acesso negado.")
+
+    aluno_profile = db.query(models.aluno.Aluno).filter(models.aluno.Aluno.usuario_id == current_user.id).first()
+    if not aluno_profile:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Perfil de aluno não encontrado.")
+
+    matriculas = db.query(Matricula).filter(
+        Matricula.aluno_id == aluno_profile.id,
+        Matricula.ativa == True
+    ).order_by(Matricula.data_matricula.desc()).all()
+
+    return matriculas

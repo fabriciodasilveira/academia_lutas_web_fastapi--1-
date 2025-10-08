@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from src import auth, database, models
 from src.schemas import usuario as schemas_usuario # Importa especificamente e dá um apelido
 from src import auth, database, models, schemas
+import os
 
 
 router = APIRouter(
@@ -36,6 +37,8 @@ async def login_google(request: Request):
     """
     # CORREÇÃO: Usar a URL explícita para evitar o redirect 307
     redirect_uri = "http://localhost:8000/api/v1/auth/callback/google"
+    # BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
+    # redirect_uri = f"{BACKEND_URL}/api/v1/auth/callback/google"
     
     return await auth.oauth.google.authorize_redirect(request, redirect_uri)
 
@@ -76,6 +79,9 @@ async def auth_google_callback(request: Request, db: Session = Depends(database.
     frontend_url = "http://localhost:5700" 
     response = RedirectResponse(url=f"{frontend_url}/login/callback?token={access_token}")
     # --- FIM DA CORREÇÃO ---
+    # frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5700") 
+    # response = RedirectResponse(url=f"{frontend_url}/login/callback?token={access_token}")
+
     
     return response
 
