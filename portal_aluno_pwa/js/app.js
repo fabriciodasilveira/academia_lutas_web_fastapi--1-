@@ -201,38 +201,46 @@ async function handleEditProfilePage() {
 async function handlePaymentsPage() {
     const list = document.getElementById('payments-list');
     try {
-        const payments = await api.getPayments(); // Agora busca do endpoint correto
-        if (payments.length === 0) {
-            list.innerHTML = '<p class="text-muted text-center mt-4">Nenhuma mensalidade encontrada no seu histórico.</p>';
+        const pendencias = await api.getPayments(); // Agora busca a lista unificada
+        if (pendencias.length === 0) {
+            list.innerHTML = '<p class="text-muted text-center mt-4">Nenhuma pendência financeira encontrada.</p>';
             return;
         }
-        
-        // Ordena para que os pendentes apareçam primeiro
-        payments.sort((a, b) => (a.status === 'pendente' ? -1 : 1) - (b.status === 'pendente' ? -1 : 1));
 
-        list.innerHTML = payments.map(p => {
+        // Ordena para que os pendentes apareçam primeiro
+        pendencias.sort((a, b) => (a.status === 'pendente' ? -1 : 1) - (b.status === 'pendente' ? -1 : 1) || new Date(b.data_vencimento) - new Date(a.data_vencimento));
+
+        list.innerHTML = pendencias.map(p => {
             const vencimento = new Date(p.data_vencimento + 'T00:00:00').toLocaleDateString('pt-BR');
             const isPendente = p.status === 'pendente';
             
+            // Define o ícone e a função de pagamento com base no tipo
+            let iconClass = 'fa-file-invoice-dollar'; // Padrão para mensalidade
+            let payFunction = `pagarMensalidadeOnline(event, ${p.id})`;
+            if (p.tipo === 'inscricao') {
+                iconClass = 'fa-calendar-alt';
+                payFunction = `pagarEventoOnline(event, ${p.id})`;
+            }
+
             return `
             <div class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
                 <div class="me-auto">
-                    <h6 class="mb-1">${p.plano.nome}</h6>
+                    <h6 class="mb-1"><i class="fas ${iconClass} me-2 text-muted"></i>${p.descricao}</h6>
                     <small class="text-muted">Vencimento: ${vencimento} | Valor: R$ ${p.valor.toFixed(2).replace('.', ',')}</small>
                 </div>
                 <div class="mt-2 mt-md-0">
-                    ${isPendente 
-                        ? `<button class="btn btn-sm btn-primary" onclick="pagarMensalidadeOnline(event, ${p.id})">
-                               <i class="fas fa-credit-card me-1"></i>Pagar com Mercado Pago
+                    ${isPendente && p.valor > 0
+                        ? `<button class="btn btn-sm btn-primary" onclick="${payFunction}">
+                               <i class="fas fa-credit-card me-1"></i>Pagar Online
                            </button>`
-                        : `<span class="badge bg-success">Pago</span>`
+                        : `<span class="badge bg-${p.status === 'pago' ? 'success' : 'secondary'}">${p.status.charAt(0).toUpperCase() + p.status.slice(1)}</span>`
                     }
                 </div>
             </div>
             `;
         }).join('');
     } catch (error) {
-        ui.showAlert('Não foi possível carregar seus pagamentos.');
+        ui.showAlert('Não foi possível carregar suas pendências financeiras.');
     }
 }
 

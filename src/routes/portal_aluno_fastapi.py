@@ -12,6 +12,8 @@ from src.schemas import aluno as schemas_aluno
 from src.models.mensalidade import Mensalidade
 from src.schemas.mensalidade import MensalidadeRead
 from typing import List
+from src.models.inscricao import Inscricao
+from src.schemas.portal_aluno import PendenciaFinanceira # Adicionado
 
 # --- Lógica de Upload (copiada de alunos_fastapi.py) ---
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -157,3 +159,52 @@ def get_aluno_mensalidades(
 
     mensalidades = db.query(Mensalidade).filter(Mensalidade.aluno_id == aluno_profile.id).order_by(Mensalidade.data_vencimento.desc()).all()
     return mensalidades
+
+# Adicione esta nova rota ao final do arquivo src/routes/portal_aluno_fastapi.py
+@router.get("/pendencias", response_model=List[PendenciaFinanceira])
+def get_aluno_pendencias_financeiras(
+    current_user: models.usuario.Usuario = Depends(auth.get_current_active_user),
+    db: Session = Depends(database.get_db)
+):
+    """
+    Retorna uma lista unificada de todas as pendências financeiras (mensalidades e inscrições)
+    para o aluno logado.
+    """
+    if current_user.role != "aluno":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acesso negado.")
+
+    aluno_profile = db.query(models.aluno.Aluno).filter(models.aluno.Aluno.usuario_id == current_user.id).first()
+    if not aluno_profile:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Perfil de aluno não encontrado.")
+
+    pendencias = []
+
+    # Busca mensalidades
+    mensalidades = db.query(Mensalidade).filter(Mensalidade.aluno_id == aluno_profile.id).all()
+    for m in mensalidades:
+        pendencias.append(PendenciaFinanceira(
+            tipo='mensalidade',
+            id=m.id,
+            descricao=f"Mensalidade - {m.plano.nome}",
+            data_vencimento=m.data_vencimento,
+            valor=m.valor,
+            status=m.status
+        ))
+
+    # Busca inscrições em eventos
+    inscricoes = db.query(Inscricao).filter(Inscricao.aluno_id == aluno_profile.id).all()
+    for i in inscricoes:
+        pendencias.append(PendenciaFinanceira(
+            tipo='inscricao',
+            id=i.id,
+            descricao=f"Inscrição - {i.evento.nome}",
+            # Usamos a data do evento como referência de "vencimento"
+            data_vencimento=i.evento.data_evento.date(),
+            valor=i.evento.valor_inscricao,
+            status=i.status
+        ))
+
+    # Ordena a lista combinada pela data, mais recentes primeiro
+    pendencias.sort(key=lambda x: x.data_vencimento, reverse=True)
+    
+    return pendencias

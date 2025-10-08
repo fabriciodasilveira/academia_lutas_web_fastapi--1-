@@ -78,6 +78,6 @@ const api = {
     
     updateProfile: (formData) => api.request('/portal/me', 'PUT', formData, true, true),
 
-    getPayments: () => api.request('/portal/mensalidades'),
+    getPayments: () => api.request('/portal/pendencias'),
     getEvents: () => api.request('/eventos')
 };
