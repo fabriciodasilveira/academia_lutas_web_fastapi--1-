@@ -300,4 +300,28 @@
 {% endblock %}
 
 {% block extra_js %}
+<script>
+let alunoToDelete = null;
+
+function confirmDelete(id) {
+    alunoToDelete = id;
+    // Precisamos definir o nome do aluno no modal para a tela de view
+    const alunoNome = document.querySelector('h5.mb-1').textContent;
+    document.getElementById('alunoNameToDelete').textContent = alunoNome;
+
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+}
+
+function deleteAluno() {
+    if (alunoToDelete) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/alunos/${alunoToDelete}/deletar`;
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
+
 {% endblock %}

@@ -150,4 +150,28 @@
 {% endblock %}
 
 {% block extra_js %}
+<script>
+let alunoToDelete = null;
+
+function confirmDelete(id) {
+    alunoToDelete = id;
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+}
+
+function deleteAluno() {
+    if (alunoToDelete) {
+        // Cria um formulário dinamicamente para enviar a requisição POST
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/alunos/${alunoToDelete}/deletar`;
+        
+        // Adiciona o formulário ao corpo do documento e o envia
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
+
 {% endblock %}
+

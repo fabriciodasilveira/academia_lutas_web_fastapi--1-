@@ -36,9 +36,13 @@ router = APIRouter(
     tags=["Portal do Aluno"]
 )
 
+# Em src/routes/portal_aluno_fastapi.py
+
 @router.post("/register", response_model=schemas_aluno.AlunoRead, status_code=status.HTTP_201_CREATED)
 def register_aluno(aluno_data: schemas_portal.AlunoRegistration, db: Session = Depends(database.get_db)):
-    # ... (código existente, sem alterações)
+    """
+    Cria um novo usuário e um perfil de aluno associado em uma única transação.
+    """
     db_user = auth.get_user(db, email=aluno_data.email)
     if db_user:
         raise HTTPException(
@@ -46,6 +50,7 @@ def register_aluno(aluno_data: schemas_portal.AlunoRegistration, db: Session = D
             detail="Este email já está cadastrado no sistema."
         )
 
+    # 1. Prepara os objetos
     hashed_password = auth.get_password_hash(aluno_data.password)
     new_user = models.usuario.Usuario(
         email=aluno_data.email,
@@ -53,20 +58,33 @@ def register_aluno(aluno_data: schemas_portal.AlunoRegistration, db: Session = D
         hashed_password=hashed_password,
         role="aluno"
     )
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
 
     new_aluno = models.aluno.Aluno(
-        usuario_id=new_user.id,
         nome=aluno_data.nome,
         email=aluno_data.email,
         telefone=aluno_data.telefone,
-        data_nascimento=aluno_data.data_nascimento
+        data_nascimento=aluno_data.data_nascimento,
+        # Associa o objeto de usuário diretamente ao relacionamento do aluno
+        usuario=new_user
     )
-    db.add(new_aluno)
-    db.commit()
-    db.refresh(new_aluno)
+
+    try:
+        # 2. Adiciona ambos à sessão
+        db.add(new_user)
+        db.add(new_aluno)
+        
+        # 3. Salva tudo de uma vez
+        db.commit()
+
+        # 4. Atualiza os objetos com os IDs gerados pelo banco
+        db.refresh(new_user)
+        db.refresh(new_aluno)
+    except Exception as e:
+        db.rollback() # Desfaz a transação em caso de erro
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Ocorreu um erro ao criar o usuário: {e}"
+        )
     
     return new_aluno
 

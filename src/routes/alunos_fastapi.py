@@ -64,6 +64,12 @@ def create_aluno(
     endereco: Optional[str] = Form(None),
     observacoes: Optional[str] = Form(None),
     foto: Optional[UploadFile] = File(None),
+    # --- NOVOS CAMPOS ABAIXO ---
+    nome_responsavel: Optional[str] = Form(None),
+    cpf_responsavel: Optional[str] = Form(None),
+    parentesco_responsavel: Optional[str] = Form(None),
+    telefone_responsavel: Optional[str] = Form(None),
+    email_responsavel: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
     """
@@ -104,7 +110,13 @@ def create_aluno(
         telefone=telefone,
         email=email,
         endereco=endereco,
-        observacoes=observacoes
+        observacoes=observacoes,
+        # --- NOVOS CAMPOS ABAIXO ---
+        nome_responsavel=nome_responsavel,
+        cpf_responsavel=cpf_responsavel,
+        parentesco_responsavel=parentesco_responsavel,
+        telefone_responsavel=telefone_responsavel,
+        email_responsavel=email_responsavel
     )
 
     db_aluno = Aluno(**aluno_data.dict(exclude_unset=True))
@@ -206,6 +218,12 @@ def update_aluno(
     endereco: Optional[str] = Form(None),
     observacoes: Optional[str] = Form(None),
     foto: Optional[UploadFile] = File(None),
+    # --- NOVOS CAMPOS ABAIXO ---
+    nome_responsavel: Optional[str] = Form(None),
+    cpf_responsavel: Optional[str] = Form(None),
+    parentesco_responsavel: Optional[str] = Form(None),
+    telefone_responsavel: Optional[str] = Form(None),
+    email_responsavel: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
     """
@@ -253,6 +271,13 @@ def update_aluno(
         db_aluno.endereco = endereco
     if observacoes is not None:
         db_aluno.observacoes = observacoes
+        
+    if nome_responsavel is not None: db_aluno.nome_responsavel = nome_responsavel
+    if cpf_responsavel is not None: db_aluno.cpf_responsavel = cpf_responsavel
+    if parentesco_responsavel is not None: db_aluno.parentesco_responsavel = parentesco_responsavel
+    if telefone_responsavel is not None: db_aluno.telefone_responsavel = telefone_responsavel
+    if email_responsavel is not None: db_aluno.email_responsavel = email_responsavel
+    
 
     # Converte e atualiza data de nascimento se fornecida
     if data_nascimento is not None:

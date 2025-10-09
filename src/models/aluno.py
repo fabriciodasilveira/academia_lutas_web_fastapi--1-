@@ -18,6 +18,12 @@ class Aluno(Base):
     observacoes = Column(String(255))
     foto = Column(String(255))
     data_cadastro = Column(DateTime, default=datetime.utcnow)
+    
+    nome_responsavel = Column(String(100), nullable=True)
+    cpf_responsavel = Column(String(14), nullable=True)
+    parentesco_responsavel = Column(String(50), nullable=True)
+    telefone_responsavel = Column(String(20), nullable=True)
+    email_responsavel = Column(String(100), nullable=True)
 
     # Relacionamentos existentes
     matriculas = relationship("Matricula", back_populates="aluno")

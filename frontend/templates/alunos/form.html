@@ -126,6 +126,26 @@
                         </div>
                     </div>
 
+                    <div id="dados-responsavel" class="row g-3 border-top pt-3 mt-3" style="display: none;">
+                            <h5 class="col-12 text-primary"><i class="fas fa-user-shield me-2"></i>Dados do Responsável (para menores de 18 anos)</h5>
+                            <div class="col-md-6">
+                                <label for="nome_responsavel" class="form-label">Nome do Responsável *</label>
+                                <input type="text" class="form-control" id="nome_responsavel" name="nome_responsavel" value="{{ aluno.nome_responsavel if aluno else '' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="cpf_responsavel" class="form-label">CPF do Responsável *</label>
+                                <input type="text" class="form-control" id="cpf_responsavel" name="cpf_responsavel" value="{{ aluno.cpf_responsavel if aluno else '' }}" placeholder="000.000.000-00">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="parentesco_responsavel" class="form-label">Parentesco *</label>
+                                <input type="text" class="form-control" id="parentesco_responsavel" name="parentesco_responsavel" value="{{ aluno.parentesco_responsavel if aluno else '' }}" placeholder="Ex: Pai, Mãe, Tio">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="telefone_responsavel" class="form-label">Telefone do Responsável</label>
+                                <input type="tel" class="form-control" id="telefone_responsavel" name="telefone_responsavel" value="{{ aluno.telefone_responsavel if aluno else '' }}" placeholder="(00) 00000-0000">
+                            </div>
+                    </div>   
+
                     <!-- Botões -->
                     <div class="row mt-4">
                         <div class="col-12">
@@ -235,6 +255,47 @@ document.querySelector('form').addEventListener('submit', function(e) {
         document.getElementById('nome').focus();
         return false;
     }
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    const dataNascimentoInput = document.getElementById('data_nascimento');
+    const dadosResponsavelDiv = document.getElementById('dados-responsavel');
+    const camposResponsavel = dadosResponsavelDiv.querySelectorAll('input');
+
+    function toggleResponsavelFields() {
+        const dataNascimento = dataNascimentoInput.value;
+        if (!dataNascimento) {
+            dadosResponsavelDiv.style.display = 'none';
+            camposResponsavel.forEach(input => input.required = false);
+            return;
+        }
+
+        const hoje = new Date();
+        const nascimento = new Date(dataNascimento);
+        let idade = hoje.getFullYear() - nascimento.getFullYear();
+        const m = hoje.getMonth() - nascimento.getMonth();
+        if (m < 0 || (m === 0 && hoje.getDate() < nascimento.getDate())) {
+            idade--;
+        }
+
+        if (idade < 18) {
+            dadosResponsavelDiv.style.display = 'flex'; // Usa 'flex' por causa do 'row'
+            // Torna os campos obrigatórios
+            document.getElementById('nome_responsavel').required = true;
+            document.getElementById('cpf_responsavel').required = true;
+            document.getElementById('parentesco_responsavel').required = true;
+        } else {
+            dadosResponsavelDiv.style.display = 'none';
+            // Remove a obrigatoriedade
+            camposResponsavel.forEach(input => input.required = false);
+        }
+    }
+
+    // Verifica ao carregar a página (para o caso de edição)
+    toggleResponsavelFields();
+
+    // Verifica toda vez que a data de nascimento é alterada
+    dataNascimentoInput.addEventListener('change', toggleResponsavelFields);
 });
 
 // Preview da foto

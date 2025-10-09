@@ -18,6 +18,13 @@ class AlunoBase(BaseModel):
     endereco: Optional[str] = Field(None, example="Rua Principal, 123, Rio de Janeiro")
     observacoes: Optional[str] = Field(None, example="Aluno iniciante com experiência em boxe.")
     
+    nome_responsavel: Optional[str] = Field(None, max_length=100)
+    cpf_responsavel: Optional[str] = Field(None, max_length=14)
+    parentesco_responsavel: Optional[str] = Field(None, max_length=50)
+    telefone_responsavel: Optional[str] = Field(None, max_length=20)
+    email_responsavel: Optional[str] = Field(None)
+
+    
 # Schema para criação de Aluno
 class AlunoCreate(AlunoBase):
     pass
@@ -42,6 +49,13 @@ class AlunoUpdate(BaseModel):
     email: Optional[str] = Field(None, example="joao.silva@email.com")
     endereco: Optional[str] = Field(None, example="Rua Principal, 123, Rio de Janeiro")
     observacoes: Optional[str] = Field(None, example="Aluno iniciante com experiência em boxe.")
+    
+    nome_responsavel: Optional[str] = Field(None, max_length=100)
+    cpf_responsavel: Optional[str] = Field(None, max_length=14)
+    parentesco_responsavel: Optional[str] = Field(None, max_length=50)
+    telefone_responsavel: Optional[str] = Field(None, max_length=20)
+    email_responsavel: Optional[str] = Field(None)
+ 
 
 
 class AlunoPaginated(BaseModel):

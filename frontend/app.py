@@ -288,7 +288,14 @@ def alunos_salvar():
             "telefone": request.form.get("telefone"),
             "data_nascimento": request.form.get("data_nascimento"),
             "endereco": request.form.get("endereco"),
-            "observacoes": request.form.get("observacoes")
+            "observacoes": request.form.get("observacoes"),
+            # --- ADICIONE ESTAS LINHAS ---
+            "nome_responsavel": request.form.get("nome_responsavel"),
+            "cpf_responsavel": request.form.get("cpf_responsavel"),
+            "parentesco_responsavel": request.form.get("parentesco_responsavel"),
+            "telefone_responsavel": request.form.get("telefone_responsavel"),
+            "email_responsavel": request.form.get("email_responsavel"),
+            # --- FIM DA ADIÇÃO ---
         }
         data = {k: v for k, v in data.items() if v}
         
