@@ -158,6 +158,42 @@ async function handleEditProfilePage() {
     const fotoInput = document.getElementById('foto');
     const fotoPreview = document.getElementById('foto-preview');
 
+    // Mapeando campos do responsável
+    const dadosResponsavelDiv = document.getElementById('dados-responsavel');
+    const nomeResponsavelInput = document.getElementById('nome_responsavel');
+    const cpfResponsavelInput = document.getElementById('cpf_responsavel');
+    const parentescoResponsavelInput = document.getElementById('parentesco_responsavel');
+    const telefoneResponsavelInput = document.getElementById('telefone_responsavel');
+    const emailResponsavelInput = document.getElementById('email_responsavel');
+    const camposResponsavel = dadosResponsavelDiv.querySelectorAll('input');
+
+    // Lógica para mostrar/ocultar campos do responsável
+    function toggleResponsavelFields() {
+        const dataNascimento = dataNascimentoInput.value;
+        if (!dataNascimento) {
+            dadosResponsavelDiv.style.display = 'none';
+            camposResponsavel.forEach(input => input.required = false);
+            return;
+        }
+        const hoje = new Date();
+        const nascimento = new Date(dataNascimento);
+        let idade = hoje.getFullYear() - nascimento.getFullYear();
+        const m = hoje.getMonth() - nascimento.getMonth();
+        if (m < 0 || (m === 0 && hoje.getDate() < nascimento.getDate())) {
+            idade--;
+        }
+
+        if (idade < 18) {
+            dadosResponsavelDiv.style.display = 'flex';
+            nomeResponsavelInput.required = true;
+            cpfResponsavelInput.required = true;
+            parentescoResponsavelInput.required = true;
+        } else {
+            dadosResponsavelDiv.style.display = 'none';
+            camposResponsavel.forEach(input => input.required = false);
+        }
+    }
+
     // 1. Preencher o formulário com os dados atuais
     try {
         const profile = await api.getProfile();
@@ -171,9 +207,21 @@ async function handleEditProfilePage() {
         if (profile.foto) {
             fotoPreview.src = profile.foto;
         }
+        // Preenche os dados do responsável
+        nomeResponsavelInput.value = profile.nome_responsavel || '';
+        cpfResponsavelInput.value = profile.cpf_responsavel || '';
+        parentescoResponsavelInput.value = profile.parentesco_responsavel || '';
+        telefoneResponsavelInput.value = profile.telefone_responsavel || '';
+        emailResponsavelInput.value = profile.email_responsavel || '';
+        
+        // Verifica a idade ao carregar os dados
+        toggleResponsavelFields();
     } catch (error) {
         ui.showAlert('Erro ao carregar seus dados para edição.');
     }
+
+    // Adiciona o listener para mudanças na data de nascimento
+    dataNascimentoInput.addEventListener('change', toggleResponsavelFields);
 
     // Preview da foto ao selecionar
     fotoInput.addEventListener('change', () => {
@@ -194,7 +242,6 @@ async function handleEditProfilePage() {
         button.disabled = true;
         button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
         
-        // Montar FormData
         const formData = new FormData();
         formData.append('nome', nomeInput.value);
         formData.append('cpf', cpfInput.value);
@@ -202,16 +249,21 @@ async function handleEditProfilePage() {
         formData.append('data_nascimento', dataNascimentoInput.value);
         formData.append('endereco', enderecoInput.value);
         formData.append('observacoes', observacoesInput.value);
+        // Adiciona dados do responsável
+        formData.append('nome_responsavel', nomeResponsavelInput.value);
+        formData.append('cpf_responsavel', cpfResponsavelInput.value);
+        formData.append('parentesco_responsavel', parentescoResponsavelInput.value);
+        formData.append('telefone_responsavel', telefoneResponsavelInput.value);
+        formData.append('email_responsavel', emailResponsavelInput.value);
 
         if (fotoInput.files[0]) {
             formData.append('foto', fotoInput.files[0]);
         }
 
         try {
-            // A API de update agora usa FormData
             await api.updateProfile(formData);
             alert('Perfil atualizado com sucesso!');
-            window.location.hash = '/dashboard'; // Volta para o perfil
+            window.location.hash = '/dashboard';
         } catch (error) {
             ui.showAlert(error.message || 'Não foi possível salvar as alterações.');
             button.disabled = false;

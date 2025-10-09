@@ -117,11 +117,17 @@ def update_current_aluno_profile(
     data_nascimento: Optional[str] = Form(None),
     endereco: Optional[str] = Form(None),
     observacoes: Optional[str] = Form(None),
-    foto: Optional[UploadFile] = File(None)
+    foto: Optional[UploadFile] = File(None),
+    # --- NOVOS CAMPOS DO RESPONSÁVEL ---
+    nome_responsavel: Optional[str] = Form(None),
+    cpf_responsavel: Optional[str] = Form(None),
+    parentesco_responsavel: Optional[str] = Form(None),
+    telefone_responsavel: Optional[str] = Form(None),
+    email_responsavel: Optional[str] = Form(None)
 ):
     """
     Permite que o aluno logado atualize seu próprio perfil.
-    Agora aceita dados de formulário e upload de arquivo.
+    Agora aceita todos os dados do aluno, incluindo os do responsável.
     """
     if current_user.role != "aluno":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acesso negado.")
@@ -130,12 +136,19 @@ def update_current_aluno_profile(
     if not db_aluno:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Perfil de aluno não encontrado.")
 
-    # Atualiza os campos de texto
+    # Atualiza os campos de texto principais
     db_aluno.nome = nome
     db_aluno.cpf = cpf
     db_aluno.telefone = telefone
     db_aluno.endereco = endereco
     db_aluno.observacoes = observacoes
+    
+    # Atualiza os campos do responsável
+    db_aluno.nome_responsavel = nome_responsavel
+    db_aluno.cpf_responsavel = cpf_responsavel
+    db_aluno.parentesco_responsavel = parentesco_responsavel
+    db_aluno.telefone_responsavel = telefone_responsavel
+    db_aluno.email_responsavel = email_responsavel
     
     if data_nascimento:
         try:
@@ -146,13 +159,11 @@ def update_current_aluno_profile(
 
     # Processa a nova foto, se enviada
     if foto:
-        # Remove a foto antiga se ela existir
         if db_aluno.foto:
             old_foto_path = Path(str(BASE_DIR) + db_aluno.foto)
             if old_foto_path.exists():
                 old_foto_path.unlink()
         
-        # Salva a nova foto
         safe_filename = f"{db_aluno.id}_{foto.filename.replace(' ', '_')}"
         file_location = UPLOAD_DIR / safe_filename
         save_upload_file(foto, file_location)

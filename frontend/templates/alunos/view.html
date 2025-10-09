@@ -162,7 +162,6 @@
                 <div class="timeline">
                     {% for evento in historico %}
                         <div class="timeline-item">
-                            {# Define a cor e o ícone com base no tipo do evento #}
                             {% set cor = 'success' if evento.tipo == 'cadastro' else ('primary' if evento.tipo == 'matricula' else 'warning') %}
                             {% set icone = 'fa-user-plus' if evento.tipo == 'cadastro' else ('fa-graduation-cap' if evento.tipo == 'matricula' else 'fa-info-circle') %}
 
@@ -290,13 +289,79 @@
 </div>
 
 <div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" style="color:#000">Confirmar Exclusão</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p style="color:#000">Tem certeza que deseja excluir o aluno <strong id="alunoNameToDelete">{{ aluno.nome }}</strong>?</p>
+                 <p class="text-danger"><i class="fas fa-exclamation-triangle me-1"></i>Esta ação não pode ser desfeita.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" onclick="deleteAluno()">Excluir</button>
+            </div>
+        </div>
     </div>
+</div>
 
 {% else %}
+<div class="row">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-user-times fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">Aluno não encontrado</h5>
+                <p class="text-muted">O aluno solicitado não foi encontrado no sistema.</p>
+                <a href="{{ url_for('alunos_list') }}" class="btn btn-primary">
+                    <i class="fas fa-arrow-left me-1"></i>
+                    Voltar para Lista
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
 {% endif %}
 {% endblock %}
 
 {% block extra_css %}
+<style>
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #dee2e6;
+}
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+.timeline-marker {
+    position: absolute;
+    left: -23px;
+    top: 5px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 2px #dee2e6;
+}
+.timeline-content {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 3px solid #007bff;
+}
+</style>
 {% endblock %}
 
 {% block extra_js %}
@@ -305,10 +370,6 @@ let alunoToDelete = null;
 
 function confirmDelete(id) {
     alunoToDelete = id;
-    // Precisamos definir o nome do aluno no modal para a tela de view
-    const alunoNome = document.querySelector('h5.mb-1').textContent;
-    document.getElementById('alunoNameToDelete').textContent = alunoNome;
-
     const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
     modal.show();
 }
@@ -323,5 +384,4 @@ function deleteAluno() {
     }
 }
 </script>
-
 {% endblock %}

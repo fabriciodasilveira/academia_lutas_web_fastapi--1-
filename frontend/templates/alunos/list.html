@@ -102,7 +102,7 @@
                                         <a href="{{ url_for('alunos_editar', id=aluno.id) }}" class="btn btn-outline-warning" title="Editar">
                                             <i class="fas fa-edit"></i>
                                         </a>
-                                        <button class="btn btn-outline-danger" onclick="confirmDelete({{ aluno.id }})" title="Excluir">
+                                        <button class="btn btn-outline-danger" onclick="confirmDelete({{ aluno.id }}, '{{ aluno.nome }}')" title="Excluir">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </div>
@@ -147,31 +147,45 @@
     </div>
 </div>
 
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" style="color:#000">Confirmar Exclusão</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p style="color:#000">Tem certeza que deseja excluir o aluno <strong id="alunoNameToDelete"></strong>?</p>
+                <p class="text-danger"><i class="fas fa-exclamation-triangle me-1"></i>Esta ação não pode ser desfeita.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" onclick="deleteAluno()">Excluir</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 let alunoToDelete = null;
 
-function confirmDelete(id) {
+function confirmDelete(id, nome) {
     alunoToDelete = id;
+    document.getElementById('alunoNameToDelete').textContent = nome;
     const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
     modal.show();
 }
 
 function deleteAluno() {
     if (alunoToDelete) {
-        // Cria um formulário dinamicamente para enviar a requisição POST
         const form = document.createElement('form');
         form.method = 'POST';
         form.action = `/alunos/${alunoToDelete}/deletar`;
-        
-        // Adiciona o formulário ao corpo do documento e o envia
         document.body.appendChild(form);
         form.submit();
     }
 }
 </script>
-
 {% endblock %}
-
