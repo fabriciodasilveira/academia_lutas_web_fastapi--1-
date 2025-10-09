@@ -91,34 +91,30 @@ function pagarOnline(event, mensalidadeId) {
     const button = event.currentTarget;
     const originalHtml = button.innerHTML;
     
-    // Desabilita o botão e mostra um spinner para feedback visual
     button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...';
     button.disabled = true;
 
+    // CORREÇÃO: Chamar a rota local do Flask
     fetch(`/mensalidades/pagar-online/${mensalidadeId}`, {
         method: 'POST',
     })
     .then(response => {
         if (!response.ok) {
-            throw new Error('Falha na resposta da rede');
+            // Se a resposta não for OK, tenta ler o erro do corpo da resposta
+            return response.json().then(err => { throw new Error(err.error || 'Falha na resposta do servidor.'); });
         }
         return response.json();
     })
     .then(data => {
         if (data.init_point) {
-            // Redireciona o usuário para a página de checkout do Mercado Pago
-            window.location.href = data.init_point;
+            window.location.href = data.init_point; // Redireciona para o checkout
         } else {
-            alert(data.error || 'Erro ao gerar o link de pagamento. Tente novamente.');
-            // Restaura o botão em caso de erro
-            button.innerHTML = originalHtml;
-            button.disabled = false;
+            throw new Error(data.error || 'Link de pagamento não recebido.');
         }
     })
     .catch(error => {
         console.error('Erro:', error);
-        alert('Ocorreu um erro inesperado ao tentar gerar o link de pagamento. Verifique o console para mais detalhes.');
-        // Restaura o botão em caso de erro
+        alert(`Ocorreu um erro inesperado: ${error.message}`);
         button.innerHTML = originalHtml;
         button.disabled = false;
     });

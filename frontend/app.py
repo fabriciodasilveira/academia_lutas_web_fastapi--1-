@@ -1052,6 +1052,8 @@ def planos_deletar(id):
     
     
     
+# Em frontend/app.py
+
 @app.route("/mensalidades")
 @login_required
 def mensalidades_list():
@@ -1130,9 +1132,12 @@ def mensalidades_deletar(id):
 @app.route("/mensalidades/pagar-online/<int:id>", methods=["POST"])
 @login_required
 def mensalidades_pagar_online(id):
-    """Gera o link de pagamento do Mercado Pago e retorna como JSON."""
-    # Chama o endpoint da API que cria a preferência de pagamento
-    response = api_request(f"/pagamentos/gerar/{id}", method="POST")
+    """
+    Gera o link de pagamento do Mercado Pago chamando a API de forma segura.
+    Esta é a rota que o botão 'Pagar Online' da interface chama.
+    """
+    # CORREÇÃO: Esta é a URL correta da API para gerar o link da mensalidade
+    response = api_request(f"/pagamentos/gerar/mensalidade/{id}", method="POST")
     
     if response and response.status_code == 200:
         return jsonify(response.json())
@@ -1140,11 +1145,15 @@ def mensalidades_pagar_online(id):
         error_message = "Falha ao gerar link de pagamento."
         if response:
             try:
-                error_message += f" Detalhe: {response.json().get('detail', '')}"
+                error_message += f" Detalhe: {response.json().get('detail', 'Erro desconhecido da API')}"
             except:
-                pass
+                 error_message += f" (Status: {response.status_code})"
         return jsonify({"error": error_message}), 500
     
+@app.context_processor
+def inject_global_vars():
+    """Injeta variáveis globais em todos os templates."""
+    return dict(API_BASE_URL=API_BASE_URL)
     
 @app.route("/eventos")
 @login_required

@@ -58,6 +58,7 @@ app = FastAPI(
 
 # Configuração de CORS mais segura
 origins = [
+    "http://localhost:5700",
     "http://localhost",
     "http://localhost:8080",
     "http://127.0.0.1",
@@ -105,7 +106,7 @@ app.include_router(planos_fastapi.router, prefix="/api/v1/planos")
 app.include_router(mensalidades_fastapi.router, prefix="/api/v1/mensalidades")
 app.include_router(produtos_fastapi.router, prefix="/api/v1/produtos")
 app.include_router(categorias_fastapi.router, prefix="/api/v1/categorias")
-app.include_router(pagamentos_fastapi.router, prefix="/api/v1")
+app.include_router(pagamentos_fastapi.router, prefix="/api/v1/pagamentos")
 app.include_router(dashboard_fastapi.router, prefix="/api/v1/dashboard")
 app.include_router(dashboard_fastapi.router, prefix="/api/v1/dashboard")
 app.include_router(inscricoes_fastapi.router, prefix="/api/v1/inscricoes")

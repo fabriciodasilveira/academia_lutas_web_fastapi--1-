@@ -9,10 +9,11 @@ from src.database import get_db
 from src.models.mensalidade import Mensalidade
 from src.models.inscricao import Inscricao
 from src.routes import mensalidades_fastapi
+from src import auth
+from src.models import usuario as models_usuario
 
 router = APIRouter(
-    tags=["Pagamentos"],
-    prefix="/pagamentos"
+    tags=["Pagamentos"]
 )
 
 # Carregue seu Access Token de uma variável de ambiente
@@ -24,7 +25,11 @@ if not MERCADO_PAGO_ACCESS_TOKEN:
 sdk = mercadopago.SDK(MERCADO_PAGO_ACCESS_TOKEN)
 
 @router.post("/gerar/mensalidade/{mensalidade_id}")
-def gerar_link_pagamento_mensalidade(mensalidade_id: int, db: Session = Depends(get_db)):
+def gerar_link_pagamento_mensalidade(
+    mensalidade_id: int, 
+    db: Session = Depends(get_db), 
+    current_user: models_usuario.Usuario = Depends(auth.get_current_active_user)
+):
     """
     Gera um link de pagamento do Mercado Pago para uma mensalidade específica.
     """
