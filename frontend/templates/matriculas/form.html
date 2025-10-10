@@ -34,17 +34,24 @@
                     {% endif %}
                     
                     <div class="mb-3">
-                        <label for="aluno_id" class="form-label">Aluno</label>
-                        <select class="form-select" id="aluno_id" name="aluno_id" required>
-                            <option value="">Selecione um aluno</option>
-                            {% for aluno in alunos %}
-                                <option value="{{ aluno.id }}" {% if matricula and matricula.aluno_id == aluno.id %}selected{% endif %}>{{ aluno.nome }}</option>
-                            {% endfor %}
-                        </select>
+                        <label for="aluno_search" class="form-label">Aluno *</label>
+                        <div class="position-relative">
+                            <input type="text" class="form-control" id="aluno_search"
+                                   value="{{ matricula.aluno.nome if matricula else '' }}"
+                                   placeholder="Digite para buscar um aluno..."
+                                   autocomplete="off" required
+                                   {% if matricula %}readonly{% endif %}>
+                            <input type="hidden" id="aluno_id" name="aluno_id"
+                                   value="{{ matricula.aluno_id if matricula else '' }}">
+                            <div id="aluno_results" class="list-group position-absolute w-100" style="z-index: 1000;"></div>
+                        </div>
+                        {% if matricula %}
+                        <div class="form-text">Para alterar o aluno, exclua esta matrícula e crie uma nova.</div>
+                        {% endif %}
                     </div>
                     
                     <div class="mb-3">
-                        <label for="turma_id" class="form-label">Turma</label>
+                        <label for="turma_id" class="form-label">Turma *</label>
                         <select class="form-select" id="turma_id" name="turma_id" required>
                             <option value="">Selecione uma turma</option>
                             {% for turma in turmas %}
@@ -53,7 +60,7 @@
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label for="plano_id" class="form-label">Plano</label>
+                        <label for="plano_id" class="form-label">Plano *</label>
                             <select class="form-select" id="plano_id" name="plano_id" required>
                                 <option value="">Selecione um plano</option>
                                 {% for plano in planos %}
@@ -79,4 +86,68 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('aluno_search');
+    const hiddenInput = document.getElementById('aluno_id');
+    const resultsContainer = document.getElementById('aluno_results');
+    
+    // Não permite a busca se for uma edição de matrícula
+    if (searchInput.hasAttribute('readonly')) {
+        return;
+    }
+
+    let searchTimeout;
+
+    searchInput.addEventListener('keyup', function() {
+        clearTimeout(searchTimeout);
+        const query = searchInput.value;
+
+        if (query.length < 3) {
+            resultsContainer.innerHTML = '';
+            return;
+        }
+
+        // Aguarda 300ms após o usuário parar de digitar para fazer a busca
+        searchTimeout = setTimeout(() => {
+            fetch(`{{ API_BASE_URL }}/api/v1/alunos?nome=${query}`, {
+                headers: {
+                    'Authorization': `Bearer {{ session.get('access_token') }}`
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                resultsContainer.innerHTML = '';
+                if (data.alunos && data.alunos.length > 0) {
+                    data.alunos.forEach(aluno => {
+                        const item = document.createElement('a');
+                        item.href = '#';
+                        item.className = 'list-group-item list-group-item-action';
+                        item.textContent = aluno.nome;
+                        item.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            searchInput.value = aluno.nome;
+                            hiddenInput.value = aluno.id;
+                            resultsContainer.innerHTML = '';
+                        });
+                        resultsContainer.appendChild(item);
+                    });
+                } else {
+                    resultsContainer.innerHTML = '<span class="list-group-item disabled">Nenhum aluno encontrado</span>';
+                }
+            });
+        }, 300);
+    });
+
+    // Limpa os resultados se o usuário clicar fora do campo
+    document.addEventListener('click', function(e) {
+        if (e.target.id !== 'aluno_search') {
+            resultsContainer.innerHTML = '';
+        }
+    });
+});
+</script>
 {% endblock %}
