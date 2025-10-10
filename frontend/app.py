@@ -517,10 +517,11 @@ def turmas_salvar():
             "observacoes": request.form.get("observacoes")
         }
         
-        final_data = {
-            k: v for k, v in turma_data.items()
-            if v is not None
-        }
+        # final_data = {
+        #     k: v for k, v in turma_data.items()
+        #     if v is not None
+        # }
+        final_data = turma_data
         
         turma_id = request.form.get("id")
         

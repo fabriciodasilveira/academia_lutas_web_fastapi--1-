@@ -5,8 +5,9 @@ Rotas FastAPI para o CRUD de Turmas.
 
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session,joinedload
 import logging
+
 
 from src.database import get_db
 from src.models.turma import Turma
@@ -47,9 +48,12 @@ def read_turmas(
     db: Session = Depends(get_db)
 ):
     """
-    Lista turmas com filtros opcionais.
+    Lista turmas com filtros e contagem de alunos ativos.
     """
-    query = db.query(Turma)
+    query = db.query(Turma).options(
+        joinedload(Turma.matriculas),  # Carrega as matrículas para contagem
+        joinedload(Turma.professor)    # Carrega os dados do professor
+    )
     if modalidade:
         query = query.filter(Turma.modalidade.ilike(f"%{modalidade}%"))
     if professor_id:
@@ -58,16 +62,30 @@ def read_turmas(
         query = query.filter(Turma.nivel.ilike(f"%{nivel}%"))
         
     turmas = query.order_by(Turma.modalidade, Turma.horario).offset(skip).limit(limit).all()
+
+    # Calcula o total de alunos ativos para cada turma
+    for turma in turmas:
+        turma.total_alunos = sum(1 for m in turma.matriculas if m.ativa)
+
     return turmas
 
+# Substitua a função read_turma inteira por esta:
 @router.get("/{turma_id}", response_model=TurmaRead)
 def read_turma(turma_id: int, db: Session = Depends(get_db)):
     """
-    Obtém os detalhes de uma turma específica pelo ID.
+    Obtém os detalhes de uma turma, incluindo a contagem de alunos ativos.
     """
-    db_turma = db.query(Turma).filter(Turma.id == turma_id).first()
+    db_turma = db.query(Turma).options(
+        joinedload(Turma.matriculas),
+        joinedload(Turma.professor)
+    ).filter(Turma.id == turma_id).first()
+
     if db_turma is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Turma não encontrada")
+
+    # Calcula o total de alunos ativos
+    db_turma.total_alunos = sum(1 for m in db_turma.matriculas if m.ativa)
+    
     return db_turma
 
 @router.put("/{turma_id}", response_model=TurmaRead)
