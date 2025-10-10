@@ -347,20 +347,55 @@ async function handleEventsPage() {
     try {
         const events = await api.getEvents();
         if (events.length === 0) {
-            list.innerHTML = '<p class="text-muted">Nenhum evento futuro encontrado.</p>';
+            list.innerHTML = '<p class="text-muted text-center mt-4">Nenhum evento futuro encontrado.</p>';
             return;
         }
-        list.innerHTML = events.map(e => `
+        list.innerHTML = events.map(e => {
+            const dataEvento = new Date(e.data_evento).toLocaleString('pt-BR', {
+                day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+            });
+
+            return `
              <div class="card mb-3">
                 <div class="card-body">
-                    <h5 class="card-title">${e.nome}</h5>
-                    <p class="card-text">${e.descricao || ''}</p>
-                    <p class="card-text"><small class="text-muted">${new Date(e.data_evento).toLocaleString()}</small></p>
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h5 class="card-title">${e.nome}</h5>
+                            <p class="card-text"><small class="text-muted">${dataEvento}</small></p>
+                        </div>
+                        ${e.is_inscrito
+                            ? `<button class="btn btn-sm btn-success" disabled><i class="fas fa-check me-1"></i>Inscrito</button>`
+                            : (e.status !== 'Planejado' ? `<button class="btn btn-sm btn-secondary" disabled>${e.status}</button>` : `<button class="btn btn-sm btn-primary" onclick="inscreverEmEvento(event, ${e.id})">Inscrever-se</button>`)
+                        }
+                    </div>
+                    <p class="card-text mt-2">${e.descricao || ''}</p>
                 </div>
             </div>
-        `).join('');
+            `;
+        }).join('');
     } catch (error) {
         ui.showAlert('Não foi possível carregar os eventos.');
+    }
+}
+
+async function inscreverEmEvento(event, eventoId) {
+    const button = event.currentTarget;
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Inscrevendo...';
+
+    try {
+        await api.enrollInEvent(eventoId);
+        ui.showAlert('Inscrição realizada com sucesso! A pendência já está na sua aba de Pagamentos.', 'success');
+        
+        // Atualiza o botão para "Inscrito"
+        button.classList.remove('btn-primary');
+        button.classList.add('btn-success');
+        button.innerHTML = '<i class="fas fa-check me-1"></i>Inscrito';
+        
+    } catch (error) {
+        ui.showAlert(error.message || 'Não foi possível realizar a inscrição.');
+        button.disabled = false;
+        button.innerHTML = 'Inscrever-se';
     }
 }
 

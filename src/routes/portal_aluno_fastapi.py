@@ -16,6 +16,10 @@ from src.models.inscricao import Inscricao
 from src.schemas.portal_aluno import PendenciaFinanceira
 from src.models.matricula import Matricula
 from src.schemas.matricula import MatriculaRead
+from src.schemas.evento import EventoRead as SchemasEventoRead
+from src.models.evento import Evento
+from src.models.inscricao import Inscricao
+from src.schemas.inscricao import InscricaoRead
 
 # --- Lógica de Upload (copiada de alunos_fastapi.py) ---
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -261,3 +265,66 @@ def get_aluno_matriculas(
     ).order_by(Matricula.data_matricula.desc()).all()
 
     return matriculas
+
+
+@router.get("/eventos", response_model=List[SchemasEventoRead])
+def get_portal_eventos(
+    current_user: models.usuario.Usuario = Depends(auth.get_current_active_user),
+    db: Session = Depends(database.get_db)
+):
+    """
+    Lista todos os eventos e indica em quais o aluno logado já está inscrito.
+    """
+    aluno_profile = db.query(models.aluno.Aluno).filter(models.aluno.Aluno.usuario_id == current_user.id).first()
+    if not aluno_profile:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Perfil de aluno não encontrado.")
+
+    todos_eventos = db.query(Evento).order_by(Evento.data_evento.desc()).all()
+    inscricoes_aluno = db.query(Inscricao.evento_id).filter(Inscricao.aluno_id == aluno_profile.id).all()
+    eventos_inscritos_ids = {inscricao.evento_id for inscricao in inscricoes_aluno}
+
+    eventos_com_status = []
+    for evento in todos_eventos:
+        evento_data = SchemasEventoRead.from_orm(evento)
+        evento_data.is_inscrito = evento.id in eventos_inscritos_ids
+        eventos_com_status.append(evento_data)
+
+    return eventos_com_status
+
+@router.post("/eventos/{evento_id}/inscrever", response_model=InscricaoRead)
+def inscrever_aluno_evento(
+    evento_id: int,
+    current_user: models.usuario.Usuario = Depends(auth.get_current_active_user),
+    db: Session = Depends(database.get_db)
+):
+    """
+    Inscreve o aluno logado em um evento.
+    """
+    aluno_profile = db.query(models.aluno.Aluno).filter(models.aluno.Aluno.usuario_id == current_user.id).first()
+    if not aluno_profile:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Perfil de aluno não encontrado.")
+
+    db_evento = db.query(Evento).filter(Evento.id == evento_id).first()
+    if not db_evento:
+        raise HTTPException(status_code=404, detail="Evento não encontrado")
+        
+    db_inscricao_existente = db.query(Inscricao).filter(
+        Inscricao.aluno_id == aluno_profile.id,
+        Inscricao.evento_id == evento_id
+    ).first()
+    if db_inscricao_existente:
+         raise HTTPException(status_code=400, detail="Você já está inscrito neste evento.")
+
+    if db_evento.capacidade > 0 and len(db_evento.inscricoes) >= db_evento.capacidade:
+        raise HTTPException(status_code=400, detail="Evento lotado")
+
+    db_inscricao = Inscricao(aluno_id=aluno_profile.id, evento_id=evento_id)
+    if db_evento.valor_inscricao == 0:
+        db_inscricao.status = "pago"
+        db_inscricao.metodo_pagamento = "Gratuito"
+
+    db.add(db_inscricao)
+    db.commit()
+    db.refresh(db_inscricao)
+    
+    return db_inscricao

@@ -179,7 +179,7 @@ def alunos_list():
     page = request.args.get('page', 1, type=int)
     limit = request.args.get('limit', 20, type=int)
     busca = request.args.get('busca', '')
-    status = request.args.get('status', '') # ADICIONE ESTA LINHA
+    status = request.args.get('status', 'ativo')
     skip = (page - 1) * limit
 
     params = {

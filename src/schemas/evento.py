@@ -32,6 +32,7 @@ class EventoUpdate(BaseModel):
 class EventoRead(EventoBase):
     id: int
     inscricoes: List[InscricaoRead] = []
+    is_inscrito: bool = False
 
     class Config:
         from_attributes = True

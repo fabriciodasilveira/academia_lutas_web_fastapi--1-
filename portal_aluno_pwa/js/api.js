@@ -79,6 +79,7 @@ const api = {
     getProfile: () => api.request('/portal/me'),
     updateProfile: (formData) => api.request('/portal/me', 'PUT', formData, true, true),
     getPayments: () => api.request('/portal/pendencias'),
-    getEvents: () => api.request('/eventos'), 
+    getEvents: () => api.request('/portal/eventos'),
+    enrollInEvent: (eventoId) => api.request(`/portal/eventos/${eventoId}/inscrever`, 'POST'),
     getMatriculas: () => api.request('/portal/matriculas'),
 };
