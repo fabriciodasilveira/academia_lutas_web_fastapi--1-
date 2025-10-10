@@ -5,6 +5,8 @@ Schemas Pydantic para a entidade Turma.
 
 from pydantic import BaseModel, Field
 from typing import Optional, List
+from .professor import ProfessorRead  
+
 
 # Schema base para Turma
 class TurmaBase(BaseModel):
@@ -49,6 +51,7 @@ class TurmaUpdate(BaseModel):
 # Schema para leitura/retorno de Turma
 class TurmaRead(TurmaBase):
     id: int
+    professor: Optional[ProfessorRead] = None
     
     class Config:
         orm_mode = True

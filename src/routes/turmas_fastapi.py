@@ -5,9 +5,8 @@ Rotas FastAPI para o CRUD de Turmas.
 
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session,joinedload
+from sqlalchemy.orm import Session, joinedload
 import logging
-
 
 from src.database import get_db
 from src.models.turma import Turma
@@ -31,8 +30,21 @@ def create_turma(turma: TurmaCreate, db: Session = Depends(get_db)):
         if not db_professor:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Professor com ID {turma.professor_id} não encontrado")
     
-    turma_data = turma.dict(exclude_unset=True)
-    db_turma = Turma(**turma_data)
+    # CORREÇÃO: Construção explícita do objeto para garantir que todos os campos sejam salvos
+    db_turma = Turma(
+        nome=turma.nome,
+        modalidade=turma.modalidade,
+        horario=turma.horario,
+        dias_semana=turma.dias_semana,
+        professor_id=turma.professor_id,
+        nivel=turma.nivel,
+        capacidade_maxima=turma.capacidade_maxima,
+        descricao=turma.descricao,
+        observacoes=turma.observacoes,
+        valor_mensalidade=turma.valor_mensalidade,
+        idade_minima=turma.idade_minima,
+        ativa=turma.ativa
+    )
     db.add(db_turma)
     db.commit()
     db.refresh(db_turma)
@@ -51,8 +63,8 @@ def read_turmas(
     Lista turmas com filtros e contagem de alunos ativos.
     """
     query = db.query(Turma).options(
-        joinedload(Turma.matriculas),  # Carrega as matrículas para contagem
-        joinedload(Turma.professor)    # Carrega os dados do professor
+        joinedload(Turma.matriculas),
+        joinedload(Turma.professor)
     )
     if modalidade:
         query = query.filter(Turma.modalidade.ilike(f"%{modalidade}%"))
@@ -63,13 +75,11 @@ def read_turmas(
         
     turmas = query.order_by(Turma.modalidade, Turma.horario).offset(skip).limit(limit).all()
 
-    # Calcula o total de alunos ativos para cada turma
     for turma in turmas:
         turma.total_alunos = sum(1 for m in turma.matriculas if m.ativa)
 
     return turmas
 
-# Substitua a função read_turma inteira por esta:
 @router.get("/{turma_id}", response_model=TurmaRead)
 def read_turma(turma_id: int, db: Session = Depends(get_db)):
     """
@@ -83,7 +93,6 @@ def read_turma(turma_id: int, db: Session = Depends(get_db)):
     if db_turma is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Turma não encontrada")
 
-    # Calcula o total de alunos ativos
     db_turma.total_alunos = sum(1 for m in db_turma.matriculas if m.ativa)
     
     return db_turma
@@ -101,15 +110,16 @@ def update_turma(
     if db_turma is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Turma não encontrada")
 
+    # Pega os dados enviados para atualização
     update_data = turma_update.dict(exclude_unset=True)
 
-    if "professor_id" in update_data and update_data["professor_id"] is not None:
-        if update_data["professor_id"] != db_turma.professor_id:
-            db_professor = db.query(Professor).filter(Professor.id == update_data["professor_id"]).first()
-            if not db_professor:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Professor com ID {update_data['professor_id']} não encontrado")
-
+    # CORREÇÃO: Itera sobre os dados enviados e atualiza o modelo do banco de dados explicitamente
     for key, value in update_data.items():
+        # Validação extra para o professor_id
+        if key == "professor_id" and value is not None:
+            db_professor = db.query(Professor).filter(Professor.id == value).first()
+            if not db_professor:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Professor com ID {value} não encontrado")
         setattr(db_turma, key, value)
 
     db.commit()
