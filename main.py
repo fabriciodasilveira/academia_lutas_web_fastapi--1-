@@ -56,8 +56,12 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
+frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5700")
+
+
 # Configuração de CORS mais segura
 origins = [
+    frontend_url,
     "http://localhost:5700",
     "http://localhost",
     "http://localhost:8080",

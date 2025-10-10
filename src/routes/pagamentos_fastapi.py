@@ -43,7 +43,8 @@ def gerar_link_pagamento_mensalidade(
     if db_mensalidade.status == 'pago':
         raise HTTPException(status_code=400, detail="Esta mensalidade já foi paga.")
 
-    base_url = "http://localhost:5000" 
+    # base_url = "http://localhost:5000"
+    base_url = os.getenv("FRONTEND_URL", "http://localhost:5700") 
 
     preference_data = {
         "items": [
@@ -89,7 +90,8 @@ def gerar_link_pagamento_evento(inscricao_id: int, db: Session = Depends(get_db)
     if db_inscricao.status == 'pago':
         raise HTTPException(status_code=400, detail="Esta inscrição já foi paga.")
 
-    base_url = "http://localhost:5000" 
+    # base_url = "http://localhost:5000" 
+    base_url = os.getenv("FRONTEND_URL", "http://localhost:5700")
 
     preference_data = {
         "items": [

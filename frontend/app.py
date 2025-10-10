@@ -11,7 +11,9 @@ import requests
 app = Flask(__name__)
 app.secret_key = 'dev-secret-key-change-in-production'
 
-API_BASE_URL = 'http://localhost:8000'
+# API_BASE_URL = 'http://localhost:8000'
+API_BASE_URL = os.environ.get('API_BASE_URL', 'http://localhost:8000')
+
 
 logging.basicConfig(
     level=logging.INFO,
