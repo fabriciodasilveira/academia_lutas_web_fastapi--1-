@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from src import auth, database, models
 from src.schemas import usuario as schemas_usuario # Importa especificamente e dá um apelido
 from src import auth, database, models, schemas
-import os
+import os # Importe o 'os' para usar variáveis de ambiente
 
 
 router = APIRouter(
@@ -34,11 +34,14 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 async def login_google(request: Request):
     """
     Redireciona o usuário para a página de login do Google.
+    Armazena a origem (PWA ou Flask) na sessão para o callback.
     """
-    # CORREÇÃO: Usar a URL explícita para evitar o redirect 307
-    # redirect_uri = "http://localhost:8000/api/v1/auth/callback/google"
-    BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
-    redirect_uri = f"{BACKEND_URL}/api/v1/auth/callback/google"
+    backend_url = os.getenv("BACKEND_URL", "http://localhost:8000")
+    redirect_uri = f"{backend_url}/api/v1/auth/callback/google"
+
+    # Guarda a origem da solicitação na sessão do usuário
+    origin = request.query_params.get('origin', 'flask')
+    request.session['google_auth_origin'] = origin
     
     return await auth.oauth.google.authorize_redirect(request, redirect_uri)
 
@@ -46,6 +49,7 @@ async def login_google(request: Request):
 async def auth_google_callback(request: Request, db: Session = Depends(database.get_db)):
     """
     Callback que o Google chama após o usuário autorizar.
+    Redireciona para o frontend correto (PWA ou Flask) com o token.
     """
     try:
         token = await auth.oauth.google.authorize_access_token(request)
@@ -63,7 +67,7 @@ async def auth_google_callback(request: Request, db: Session = Depends(database.
         new_user = models.usuario.Usuario(
             email=email,
             nome=user_info_from_google.get('name', 'Usuário Google'),
-            role='pendente' # <-- MUDANÇA PRINCIPAL AQUI
+            role='pendente'
         )
         db.add(new_user)
         db.commit()
@@ -74,14 +78,16 @@ async def auth_google_callback(request: Request, db: Session = Depends(database.
         data={"sub": user.email, "role": user.role}
     )
     
-    # --- CORREÇÃO AQUI ---
-    # Define a URL completa do seu frontend
-    # frontend_url = "http://localhost:5700" 
-    # response = RedirectResponse(url=f"{frontend_url}/login/callback?token={access_token}")
-    # --- FIM DA CORREÇÃO ---
-    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5700") 
-    response = RedirectResponse(url=f"{frontend_url}/login/callback?token={access_token}")
+    # --- LÓGICA DE REDIRECIONAMENTO ---
+    origin = request.session.get('google_auth_origin', 'flask')
 
+    if origin == 'pwa':
+        # Se veio do PWA, redireciona para a rota de callback do PWA
+        response = RedirectResponse(url=f"/portal#/login/callback?token={access_token}")
+    else:
+        # Se veio do sistema de gestão (Flask), usa a lógica antiga
+        frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5700") 
+        response = RedirectResponse(url=f"{frontend_url}/login/callback?token={access_token}")
     
     return response
 
