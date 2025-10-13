@@ -76,11 +76,11 @@ async def auth_google_callback(request: Request, db: Session = Depends(database.
     
     # --- CORREÇÃO AQUI ---
     # Define a URL completa do seu frontend
-    frontend_url = "http://localhost:5700" 
-    response = RedirectResponse(url=f"{frontend_url}/login/callback?token={access_token}")
-    # --- FIM DA CORREÇÃO ---
-    # frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5700") 
+    # frontend_url = "http://localhost:5700" 
     # response = RedirectResponse(url=f"{frontend_url}/login/callback?token={access_token}")
+    # --- FIM DA CORREÇÃO ---
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5700") 
+    response = RedirectResponse(url=f"{frontend_url}/login/callback?token={access_token}")
 
     
     return response
