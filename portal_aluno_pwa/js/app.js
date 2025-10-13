@@ -7,6 +7,7 @@ const routes = {
     '/dashboard': { page: '/portal/pages/dashboard.html', handler: handleDashboardPage },
     '/edit-profile': { page: '/portal/pages/edit_profile.html', handler: handleEditProfilePage },
     '/payments': { page: '/portal/pages/payments.html', handler: handlePaymentsPage },
+    '/carteirinha': { page: '/portal/pages/carteirinha.html', handler: handleCarteirinhaPage },
     '/events': { page: '/portal/pages/events.html', handler: handleEventsPage }
 };
 
@@ -422,6 +423,31 @@ async function pagarEventoOnline(event, inscricaoId) {
         ui.showAlert(error.message || 'Não foi possível gerar o link de pagamento.');
         button.disabled = false;
         button.innerHTML = originalHtml;
+    }
+}
+
+// Adicione esta nova função ao final do arquivo portal_aluno_pwa/js/app.js
+
+async function handleCarteirinhaPage() {
+    try {
+        const profile = await api.getProfile();
+        
+        const fotoEl = document.getElementById('aluno-foto');
+        if (profile.foto) {
+            fotoEl.src = profile.foto;
+        } else {
+            fotoEl.src = '/portal/images/default-avatar.png';
+        }
+
+        document.getElementById('aluno-nome').innerText = profile.nome;
+        document.getElementById('aluno-email').innerText = profile.email || 'Não informado';
+        document.getElementById('aluno-telefone').innerText = profile.telefone || 'Não informado';
+        document.getElementById('aluno-nascimento').innerText = profile.data_nascimento 
+            ? new Date(profile.data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR') 
+            : '--/--/----';
+
+    } catch (error) {
+        ui.showAlert('Não foi possível carregar os dados da sua carteirinha.');
     }
 }
 
