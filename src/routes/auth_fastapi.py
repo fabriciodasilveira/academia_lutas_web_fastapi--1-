@@ -36,9 +36,9 @@ async def login_google(request: Request):
     Redireciona o usuário para a página de login do Google.
     """
     # CORREÇÃO: Usar a URL explícita para evitar o redirect 307
-    redirect_uri = "http://localhost:8000/api/v1/auth/callback/google"
-    # BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
-    # redirect_uri = f"{BACKEND_URL}/api/v1/auth/callback/google"
+    # redirect_uri = "http://localhost:8000/api/v1/auth/callback/google"
+    BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
+    redirect_uri = f"{BACKEND_URL}/api/v1/auth/callback/google"
     
     return await auth.oauth.google.authorize_redirect(request, redirect_uri)
 
