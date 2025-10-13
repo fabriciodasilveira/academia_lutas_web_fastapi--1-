@@ -439,6 +439,10 @@ async function handleCarteirinhaPage() {
             fotoEl.src = '/portal/images/default-avatar.png';
         }
 
+        if (profile.id) {
+            document.getElementById('aluno-matricula').innerText = 1000 + profile.id;
+        }
+
         document.getElementById('aluno-nome').innerText = profile.nome;
         document.getElementById('aluno-email').innerText = profile.email || 'Não informado';
         document.getElementById('aluno-telefone').innerText = profile.telefone || 'Não informado';
