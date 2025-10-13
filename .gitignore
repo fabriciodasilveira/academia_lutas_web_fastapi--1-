@@ -42,12 +42,12 @@ docs/_build/
 *.xlsx
 
 # Arquivos de mídia
-*.jpg
-*.jpeg
-*.png
-*.gif
-*.mp4
-*.avi
+# *.jpg
+# *.jpeg
+# *.png
+# *.gif
+# *.mp4
+# *.avi
 
 # Arquivos de configuração de testes
 .pytest_cache/

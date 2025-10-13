@@ -56,7 +56,7 @@ def login():
         else:
             flash("Usuário ou senha inválidos.", "error")
 
-    return render_template("login.html")
+    return render_template("login.html",API_BASE_URL=API_BASE_URL)
 
 @app.route("/logout")
 def logout():
