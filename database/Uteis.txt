@@ -1,6 +1,6 @@
 Id Google
 162196521424-h8ui5keth47mchil92te0b72rvbvos4a.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET="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"
+"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"
 
 Postgress Render
 Internal Database URL
