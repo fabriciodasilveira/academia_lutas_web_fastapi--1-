@@ -20,6 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware 
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+import create_first_user
 
 
 from src.models import aluno, professor, turma, evento, financeiro, matricula, plano, mensalidade, produto, categoria, historico_matricula, inscricao
@@ -119,6 +120,8 @@ app.include_router(usuarios_fastapi.router)
 app.include_router(portal_aluno_fastapi.router)
 
 
+
+create_first_user.create_first_user()
 
 
 
