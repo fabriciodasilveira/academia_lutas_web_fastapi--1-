@@ -5,18 +5,13 @@ from datetime import datetime
 import shutil
 from pathlib import Path
 import logging
-
-# --- Imports para o Armazenamento Externo ---
 import os
 import boto3
 from botocore.client import Config
-# -----------------------------------------
 
 from src import database, models, auth
 from src.schemas import portal_aluno as schemas_portal
 from src.schemas import aluno as schemas_aluno
-
-# Imports que já existiam e são necessários para as outras rotas
 from src.models.mensalidade import Mensalidade
 from src.schemas.mensalidade import MensalidadeRead
 from src.models.inscricao import Inscricao
@@ -27,25 +22,13 @@ from src.schemas.portal_aluno import PendenciaFinanceira
 from src.models.matricula import Matricula
 from src.schemas.matricula import MatriculaRead
 
-# --- Lógica de Upload Local (deixaremos como fallback caso o S3 não esteja configurado) ---
-BASE_DIR = Path(__file__).resolve().parent.parent
-UPLOAD_DIR = BASE_DIR / "static" / "uploads" / "alunos"
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-
-def save_upload_file(upload_file: UploadFile, destination: Path) -> None:
-    try:
-        with destination.open("wb") as buffer:
-            shutil.copyfileobj(upload_file.file, buffer)
-    finally:
-        upload_file.file.close()
-# --- Fim da Lógica de Upload ---
-
 router = APIRouter(
     prefix="/api/v1/portal",
     tags=["Portal do Aluno"]
 )
 
-# --- SUAS ROTAS EXISTENTES (sem alteração) ---
+# --- SUAS ROTAS EXISTENTES (register, me, etc.) FICAM AQUI SEM ALTERAÇÃO ---
+# ... (deixe as outras funções como estão) ...
 @router.post("/register", response_model=schemas_aluno.AlunoRead, status_code=status.HTTP_201_CREATED)
 def register_aluno(aluno_data: schemas_portal.AlunoRegistration, db: Session = Depends(database.get_db)):
     db_user = auth.get_user(db, email=aluno_data.email)
@@ -94,6 +77,7 @@ def get_current_aluno_profile(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Perfil de aluno não encontrado.")
     return aluno_profile
 
+
 # --- FUNÇÃO ATUALIZADA E COMPLETA ---
 @router.put("/me", response_model=schemas_aluno.AlunoRead)
 def update_current_aluno_profile(
@@ -113,9 +97,6 @@ def update_current_aluno_profile(
     telefone_responsavel: Optional[str] = Form(None),
     email_responsavel: Optional[str] = Form(None)
 ):
-    """
-    Permite que o aluno logado atualize seu próprio perfil, com upload para o R2.
-    """
     if current_user.role != "aluno":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acesso negado.")
 
@@ -123,17 +104,15 @@ def update_current_aluno_profile(
     if not db_aluno:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Perfil de aluno não encontrado.")
 
-    # Atualiza os campos de texto
-    db_aluno.nome = nome
-    db_aluno.cpf = cpf
-    db_aluno.telefone = telefone
-    db_aluno.endereco = endereco
-    db_aluno.observacoes = observacoes
-    db_aluno.nome_responsavel = nome_responsavel
-    db_aluno.cpf_responsavel = cpf_responsavel
-    db_aluno.parentesco_responsavel = parentesco_responsavel
-    db_aluno.telefone_responsavel = telefone_responsavel
-    db_aluno.email_responsavel = email_responsavel
+    # Atualiza campos de texto
+    update_data = {
+        "nome": nome, "cpf": cpf, "telefone": telefone, "endereco": endereco,
+        "observacoes": observacoes, "nome_responsavel": nome_responsavel,
+        "cpf_responsavel": cpf_responsavel, "parentesco_responsavel": parentesco_responsavel,
+        "telefone_responsavel": telefone_responsavel, "email_responsavel": email_responsavel
+    }
+    for key, value in update_data.items():
+        setattr(db_aluno, key, value)
     
     if data_nascimento:
         try:
@@ -142,14 +121,16 @@ def update_current_aluno_profile(
             pass
 
     # Processa a nova foto, se enviada
-    if foto:
+    if foto and foto.filename:
+        # Pega as credenciais do ambiente
         s3_endpoint_url = os.getenv("S3_ENDPOINT_URL")
         s3_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
         s3_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
         s3_bucket_name = os.getenv("S3_BUCKET_NAME")
+        public_bucket_url = os.getenv("PUBLIC_BUCKET_URL")
 
-        if not all([s3_endpoint_url, s3_access_key_id, s3_secret_access_key, s3_bucket_name]):
-            raise HTTPException(status_code=500, detail="Configuração de armazenamento não encontrada no servidor.")
+        if not all([s3_endpoint_url, s3_access_key_id, s3_secret_access_key, s3_bucket_name, public_bucket_url]):
+            raise HTTPException(status_code=500, detail="Configuração de armazenamento na nuvem incompleta no servidor.")
 
         try:
             s3_client = boto3.client(
@@ -157,13 +138,11 @@ def update_current_aluno_profile(
                 endpoint_url=s3_endpoint_url,
                 aws_access_key_id=s3_access_key_id,
                 aws_secret_access_key=s3_secret_access_key,
-                region_name='auto'
+                region_name="auto" # Para Cloudflare R2, 'auto' é o recomendado
             )
-
-            # Define um nome de arquivo único
+            
             safe_filename = f"aluno_{db_aluno.id}_{datetime.utcnow().timestamp()}_{foto.filename.replace(' ', '_')}"
             
-            # Faz o upload para o bucket
             s3_client.upload_fileobj(
                 foto.file,
                 s3_bucket_name,
@@ -171,15 +150,7 @@ def update_current_aluno_profile(
                 ExtraArgs={'ContentType': foto.content_type}
             )
             
-            # Constrói a URL pública do bucket R2
-            # Você precisa criar um domínio público no seu bucket R2 para isso funcionar.
-            # Vá em R2 -> Seu Bucket -> Settings e em "Public access" clique em "Allow Access".
-            # Depois, copie o "Public URL" que aparece lá.
-            public_bucket_url = os.getenv("PUBLIC_BUCKET_URL") # Ex: https://pub-xxxxxxxx.r2.dev
-            if not public_bucket_url:
-                 raise HTTPException(status_code=500, detail="URL pública do bucket não configurada.")
-
-            db_aluno.foto = f"{public_bucket_url}/{safe_filename}"
+            db_aluno.foto = f"{public_bucket_url.rstrip('/')}/{safe_filename}"
 
         except Exception as e:
             logging.error(f"Erro no upload para o R2: {e}")
@@ -195,7 +166,6 @@ def get_aluno_matriculas(
     current_user: models.usuario.Usuario = Depends(auth.get_current_active_user),
     db: Session = Depends(database.get_db)
 ):
-    # ... código existente
     if current_user.role != "aluno":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acesso negado.")
     aluno_profile = db.query(models.aluno.Aluno).filter(models.aluno.Aluno.usuario_id == current_user.id).first()
@@ -212,7 +182,6 @@ def get_aluno_pendencias_financeiras(
     current_user: models.usuario.Usuario = Depends(auth.get_current_active_user),
     db: Session = Depends(database.get_db)
 ):
-    # ... código existente
     if current_user.role != "aluno":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acesso negado.")
     aluno_profile = db.query(models.aluno.Aluno).filter(models.aluno.Aluno.usuario_id == current_user.id).first()
@@ -239,7 +208,6 @@ def get_portal_eventos(
     current_user: models.usuario.Usuario = Depends(auth.get_current_active_user),
     db: Session = Depends(database.get_db)
 ):
-    # ... código existente
     aluno_profile = db.query(models.aluno.Aluno).filter(models.aluno.Aluno.usuario_id == current_user.id).first()
     if not aluno_profile:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Perfil de aluno não encontrado.")
@@ -259,7 +227,6 @@ def inscrever_aluno_evento(
     current_user: models.usuario.Usuario = Depends(auth.get_current_active_user),
     db: Session = Depends(database.get_db)
 ):
-    # ... código existente
     aluno_profile = db.query(models.aluno.Aluno).filter(models.aluno.Aluno.usuario_id == current_user.id).first()
     if not aluno_profile:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Perfil de aluno não encontrado.")
