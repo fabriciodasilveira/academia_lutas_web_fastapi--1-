@@ -9,13 +9,19 @@ postgresql://fightclube_db_user:E697XTSxUjhzIXfmUfWd6eRzO4wMABSX@dpg-d3klq8ndiee
 
 Cloud Flare
 fightclube-uploads
+
 Valor do token
-qdbzswKRWW7H9K4vFTfXoL5sFKGBIn2KihxMEIWP
+reQE19do1SxkEeMUX1HP5WhI3_GWaMvJNt9nl8ra
+
+ID da chave de acesso
+305e5c6ff3154a6410c513957d1ab39b
 
 Chave de acesso secreta
-e66741abfd87acbf01730f9e3ec8bcd55fa93f9bc48b28ffc44bc4c7f865a642
-
+3bb3974f6b1c3e678003960ed53d12ccf085460c3d7c8ad5e153cdc13a93e705
 
 Use pontos de extremidade específicos de jurisdição para clientes S3:
 Padrão
 https://3f83073c73c148c0912525319b0c3f30.r2.cloudflarestorage.com
+
+
+COLOCAR TIPO SANGUINEO

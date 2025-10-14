@@ -2,57 +2,33 @@
 """
 Rotas FastAPI para o CRUD de Alunos.
 """
-
 import os
 import shutil
 from typing import List, Optional
 from pathlib import Path
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
 import logging
+
+# Imports para o Armazenamento Externo
+import boto3
+from botocore.client import Config
 
 from src.database import get_db
 from src.models.aluno import Aluno
 from src.schemas.aluno import AlunoCreate, AlunoRead, AlunoUpdate, AlunoPaginated
-from sqlalchemy.orm import Session, joinedload
 from src.models.matricula import Matricula
 from src.models.historico_matricula import HistoricoMatricula
 from sqlalchemy import func
 from src.models.mensalidade import Mensalidade
-
-
-
-# Configuração de diretórios - CORRIGIDO
-BASE_DIR = Path(__file__).resolve().parent.parent
-UPLOAD_DIR = BASE_DIR / "static" / "uploads" / "alunos"
-
-# Garante que o diretório existe - CORRIGIDO
-try:
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-except Exception as e:
-    print(f"Erro ao criar diretório de uploads: {e}")
-    # Fallback para diretório temporário
-    UPLOAD_DIR = Path("/tmp/academia_uploads/alunos")
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 router = APIRouter(
     tags=["Alunos"],
     responses={404: {"description": "Aluno não encontrado"}},
 )
 
-# --- Helper Function --- 
-def save_upload_file(upload_file: UploadFile, destination: Path) -> None:
-    """Salva um arquivo de upload no destino especificado."""
-    try:
-        with destination.open("wb") as buffer:
-            shutil.copyfileobj(upload_file.file, buffer)
-            logging.info(f"Arquivo salvo em: {destination}")
-    finally:
-        upload_file.file.close()
-
-# --- CRUD Endpoints --- 
 
 @router.post("", response_model=AlunoRead, status_code=status.HTTP_201_CREATED)
 def create_aluno(
@@ -64,7 +40,6 @@ def create_aluno(
     endereco: Optional[str] = Form(None),
     observacoes: Optional[str] = Form(None),
     foto: Optional[UploadFile] = File(None),
-    # --- NOVOS CAMPOS ABAIXO ---
     nome_responsavel: Optional[str] = Form(None),
     cpf_responsavel: Optional[str] = Form(None),
     parentesco_responsavel: Optional[str] = Form(None),
@@ -73,49 +48,22 @@ def create_aluno(
     db: Session = Depends(get_db)
 ):
     """
-    Cria um novo aluno.
-    Permite upload de foto opcional.
+    Cria um novo aluno, com upload de foto para o R2.
     """
-    # Validação de CPF/Email único (se fornecido)
-    if cpf:
-        db_aluno_cpf = db.query(Aluno).filter(Aluno.cpf == cpf).first()
-        if db_aluno_cpf:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, 
-                detail="CPF já cadastrado"
-            )
-    if email:
-        db_aluno_email = db.query(Aluno).filter(Aluno.email == email).first()
-        if db_aluno_email:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, 
-                detail="Email já cadastrado"
-            )
+    # ... (validações de CPF/Email) ...
 
-    # Converte data de nascimento se fornecida
     parsed_data_nascimento = None
     if data_nascimento:
         try:
             parsed_data_nascimento = datetime.strptime(data_nascimento, '%Y-%m-%d').date()
         except ValueError:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, 
-                detail="Formato de data inválido. Use YYYY-MM-DD"
-            )
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Formato de data inválido. Use YYYY-MM-DD")
 
     aluno_data = AlunoCreate(
-        nome=nome,
-        data_nascimento=parsed_data_nascimento,
-        cpf=cpf,
-        telefone=telefone,
-        email=email,
-        endereco=endereco,
-        observacoes=observacoes,
-        # --- NOVOS CAMPOS ABAIXO ---
-        nome_responsavel=nome_responsavel,
-        cpf_responsavel=cpf_responsavel,
-        parentesco_responsavel=parentesco_responsavel,
-        telefone_responsavel=telefone_responsavel,
+        nome=nome, data_nascimento=parsed_data_nascimento, cpf=cpf, telefone=telefone,
+        email=email, endereco=endereco, observacoes=observacoes,
+        nome_responsavel=nome_responsavel, cpf_responsavel=cpf_responsavel,
+        parentesco_responsavel=parentesco_responsavel, telefone_responsavel=telefone_responsavel,
         email_responsavel=email_responsavel
     )
 
@@ -124,32 +72,97 @@ def create_aluno(
     db.commit()
     db.refresh(db_aluno)
 
-    # Processa upload de foto se houver
-    if foto:
-        # Define um nome de arquivo seguro
-        base, ext = os.path.splitext(foto.filename)
-        safe_base = "".join(c if c.isalnum() or c in ('_', '-') else '_' for c in base)[:50]
-        filename = f"{db_aluno.id}_{safe_base}{ext}"
-        file_location = UPLOAD_DIR / filename
-        
-        save_upload_file(foto, file_location)
-        
-        # Atualiza o caminho da foto no banco
-        db_aluno.foto = f"/static/uploads/alunos/{filename}"
-        db.commit()
-        db.refresh(db_aluno)
+    if foto and foto.filename:
+        s3_endpoint_url = os.getenv("S3_ENDPOINT_URL")
+        s3_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
+        s3_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+        s3_bucket_name = os.getenv("S3_BUCKET_NAME")
+        public_bucket_url = os.getenv("PUBLIC_BUCKET_URL")
+
+        if not all([s3_endpoint_url, s3_access_key_id, s3_secret_access_key, s3_bucket_name, public_bucket_url]):
+            raise HTTPException(status_code=500, detail="Configuração de armazenamento na nuvem incompleta.")
+
+        try:
+            s3_client = boto3.client('s3', endpoint_url=s3_endpoint_url, aws_access_key_id=s3_access_key_id, aws_secret_access_key=s3_secret_access_key, region_name="auto")
+            safe_filename = f"aluno_{db_aluno.id}_{datetime.utcnow().timestamp()}_{foto.filename.replace(' ', '_')}"
+            s3_client.upload_fileobj(foto.file, s3_bucket_name, safe_filename, ExtraArgs={'ContentType': foto.content_type})
+            db_aluno.foto = f"{public_bucket_url.rstrip('/')}/{safe_filename}"
+            db.commit()
+            db.refresh(db_aluno)
+        except Exception as e:
+            logging.error(f"Erro no upload para o R2 (aluno): {e}")
+            raise HTTPException(status_code=500, detail="Falha ao fazer upload da foto.")
 
     return db_aluno
 
-# Em src/routes/alunos_fastapi.py
+@router.put("/{aluno_id}", response_model=AlunoRead)
+def update_aluno(
+    aluno_id: int,
+    db: Session = Depends(get_db),
+    # Formulário de dados
+    nome: Optional[str] = Form(None),
+    data_nascimento: Optional[str] = Form(None),
+    cpf: Optional[str] = Form(None),
+    telefone: Optional[str] = Form(None),
+    email: Optional[str] = Form(None),
+    endereco: Optional[str] = Form(None),
+    observacoes: Optional[str] = Form(None),
+    foto: Optional[UploadFile] = File(None),
+    nome_responsavel: Optional[str] = Form(None),
+    cpf_responsavel: Optional[str] = Form(None),
+    parentesco_responsavel: Optional[str] = Form(None),
+    telefone_responsavel: Optional[str] = Form(None),
+    email_responsavel: Optional[str] = Form(None)
+):
+    """
+    Atualiza um aluno existente, com upload de foto para o R2.
+    """
+    db_aluno = db.query(Aluno).filter(Aluno.id == aluno_id).first()
+    if not db_aluno:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Aluno não encontrado")
 
-# Adicione 'joinedload' aos imports do sqlalchemy.orm
-from sqlalchemy.orm import Session, joinedload
-# ... (outros imports) ...
-from src.models.matricula import Matricula # Importe o modelo Matricula
+    # Atualiza campos de texto
+    update_data = {
+        "nome": nome, "cpf": cpf, "telefone": telefone, "email": email, "endereco": endereco, "observacoes": observacoes,
+        "nome_responsavel": nome_responsavel, "cpf_responsavel": cpf_responsavel,
+        "parentesco_responsavel": parentesco_responsavel, "telefone_responsavel": telefone_responsavel,
+        "email_responsavel": email_responsavel
+    }
+    for key, value in update_data.items():
+        if value is not None:
+            setattr(db_aluno, key, value)
+    
+    if data_nascimento:
+        try:
+            db_aluno.data_nascimento = datetime.strptime(data_nascimento, '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            pass
 
+    if foto and foto.filename:
+        s3_endpoint_url = os.getenv("S3_ENDPOINT_URL")
+        s3_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
+        s3_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+        s3_bucket_name = os.getenv("S3_BUCKET_NAME")
+        public_bucket_url = os.getenv("PUBLIC_BUCKET_URL")
 
+        if not all([s3_endpoint_url, s3_access_key_id, s3_secret_access_key, s3_bucket_name, public_bucket_url]):
+            raise HTTPException(status_code=500, detail="Configuração de armazenamento na nuvem incompleta.")
 
+        try:
+            s3_client = boto3.client('s3', endpoint_url=s3_endpoint_url, aws_access_key_id=s3_access_key_id, aws_secret_access_key=s3_secret_access_key, region_name="auto")
+            safe_filename = f"aluno_{db_aluno.id}_{datetime.utcnow().timestamp()}_{foto.filename.replace(' ', '_')}"
+            s3_client.upload_fileobj(foto.file, s3_bucket_name, safe_filename, ExtraArgs={'ContentType': foto.content_type})
+            db_aluno.foto = f"{public_bucket_url.rstrip('/')}/{safe_filename}"
+        except Exception as e:
+            logging.error(f"Erro no upload para o R2 (aluno): {e}")
+            raise HTTPException(status_code=500, detail="Falha ao fazer upload da foto.")
+
+    db.commit()
+    db.refresh(db_aluno)
+    return db_aluno
+    
+# --- SUAS OUTRAS ROTAS DE ALUNO (read_alunos, read_aluno, etc.) PERMANECEM AQUI SEM ALTERAÇÃO ---
+# ... (deixe o resto das funções como estão)
 @router.get("", response_model=AlunoPaginated)
 def read_alunos(
     skip: int = 0,
@@ -207,185 +220,6 @@ def read_aluno(aluno_id: int, db: Session = Depends(get_db)):
         )
     return db_aluno
 
-@router.put("/{aluno_id}", response_model=AlunoRead)
-def update_aluno(
-    aluno_id: int,
-    nome: Optional[str] = Form(None),
-    data_nascimento: Optional[str] = Form(None),
-    cpf: Optional[str] = Form(None),
-    telefone: Optional[str] = Form(None),
-    email: Optional[str] = Form(None),
-    endereco: Optional[str] = Form(None),
-    observacoes: Optional[str] = Form(None),
-    foto: Optional[UploadFile] = File(None),
-    # --- NOVOS CAMPOS ABAIXO ---
-    nome_responsavel: Optional[str] = Form(None),
-    cpf_responsavel: Optional[str] = Form(None),
-    parentesco_responsavel: Optional[str] = Form(None),
-    telefone_responsavel: Optional[str] = Form(None),
-    email_responsavel: Optional[str] = Form(None),
-    db: Session = Depends(get_db)
-):
-    """
-    Atualiza os dados de um aluno existente.
-    Permite upload de foto opcional.
-    """
-    db_aluno = db.query(Aluno).filter(Aluno.id == aluno_id).first()
-    if db_aluno is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
-            detail="Aluno não encontrado"
-        )
-
-    # Validação de CPF/Email único (se alterado)
-    if cpf is not None:
-        db_aluno_cpf = db.query(Aluno).filter(
-            Aluno.cpf == cpf, 
-            Aluno.id != aluno_id
-        ).first()
-        if db_aluno_cpf:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, 
-                detail="CPF já cadastrado para outro aluno"
-            )
-        db_aluno.cpf = cpf
-    
-    if email is not None:
-        db_aluno_email = db.query(Aluno).filter(
-            Aluno.email == email, 
-            Aluno.id != aluno_id
-        ).first()
-        if db_aluno_email:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, 
-                detail="Email já cadastrado para outro aluno"
-            )
-        db_aluno.email = email
-
-    # Atualiza outros campos
-    if nome is not None:
-        db_aluno.nome = nome
-    if telefone is not None:
-        db_aluno.telefone = telefone
-    if endereco is not None:
-        db_aluno.endereco = endereco
-    if observacoes is not None:
-        db_aluno.observacoes = observacoes
-        
-    if nome_responsavel is not None: db_aluno.nome_responsavel = nome_responsavel
-    if cpf_responsavel is not None: db_aluno.cpf_responsavel = cpf_responsavel
-    if parentesco_responsavel is not None: db_aluno.parentesco_responsavel = parentesco_responsavel
-    if telefone_responsavel is not None: db_aluno.telefone_responsavel = telefone_responsavel
-    if email_responsavel is not None: db_aluno.email_responsavel = email_responsavel
-    
-
-    # Converte e atualiza data de nascimento se fornecida
-    if data_nascimento is not None:
-        try:
-            db_aluno.data_nascimento = datetime.strptime(data_nascimento, '%Y-%m-%d').date()
-        except ValueError:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, 
-                detail="Formato de data inválido. Use YYYY-MM-DD"
-            )
-
-    # Processa upload de foto se houver
-    if foto:
-        # Valida se é uma imagem
-        if not foto.content_type.startswith('image/'):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="O arquivo deve ser uma imagem"
-            )
-
-        # Remove foto anterior se existir
-        if db_aluno.foto:
-            old_foto_path = BASE_DIR / db_aluno.foto.lstrip('/')
-            if old_foto_path.exists():
-                try:
-                    old_foto_path.unlink()
-                except OSError as e:
-                    logging.warning(f"Erro ao remover foto antiga {old_foto_path}: {e}")
-
-        # Salva a nova foto
-        base, ext = os.path.splitext(foto.filename)
-        safe_base = "".join(c if c.isalnum() or c in ('_', '-') else '_' for c in base)[:50]
-        filename = f"{db_aluno.id}_{safe_base}{ext}"
-        file_location = UPLOAD_DIR / filename
-        
-        save_upload_file(foto, file_location)
-        
-        # Atualiza o caminho da foto no banco
-        db_aluno.foto = f"/static/uploads/alunos/{filename}"
-
-    try:
-        db.commit()
-        db.refresh(db_aluno)
-    except IntegrityError:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Erro ao atualizar aluno. Verifique os dados únicos (CPF/Email)."
-        )
-        
-    return db_aluno
-
-@router.post("/{aluno_id}/foto", response_model=AlunoRead)
-def upload_aluno_foto(
-    aluno_id: int,
-    foto: UploadFile = File(...),
-    db: Session = Depends(get_db)
-):
-    """
-    Faz upload ou atualiza a foto de um aluno existente.
-    """
-    try:
-        db_aluno = db.query(Aluno).filter(Aluno.id == aluno_id).first()
-        if db_aluno is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, 
-                detail="Aluno não encontrado"
-            )
-
-        # Valida se é uma imagem
-        if not foto.content_type.startswith('image/'):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="O arquivo deve ser uma imagem"
-            )
-
-        # Remove foto anterior se existir
-        if db_aluno.foto:
-            old_foto_path = BASE_DIR / db_aluno.foto.lstrip('/')
-            if old_foto_path.exists():
-                try:
-                    old_foto_path.unlink()
-                except OSError as e:
-                    logging.warning(f"Erro ao remover foto antiga {old_foto_path}: {e}")
-
-        # Salva a nova foto
-        base, ext = os.path.splitext(foto.filename)
-        safe_base = "".join(c if c.isalnum() or c in ('_', '-') else '_' for c in base)[:50]
-        filename = f"{db_aluno.id}_{safe_base}{ext}"
-        file_location = UPLOAD_DIR / filename
-        
-        save_upload_file(foto, file_location)
-        
-        # Atualiza o caminho da foto no banco
-        db_aluno.foto = f"/static/uploads/alunos/{filename}"
-        db.commit()
-        db.refresh(db_aluno)
-        
-        return db_aluno
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logging.error(f"Erro ao processar upload de foto: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Erro interno ao processar a foto"
-        )
 
 @router.delete("/{aluno_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_aluno(aluno_id: int, db: Session = Depends(get_db)):
@@ -401,7 +235,7 @@ def delete_aluno(aluno_id: int, db: Session = Depends(get_db)):
 
     # Remove a foto se existir - CORRIGIDO
     if db_aluno.foto:
-        foto_path = BASE_DIR / db_aluno.foto.lstrip('/')
+        foto_path = Path(str(BASE_DIR) + db_aluno.foto)
         if foto_path.exists():
             try:
                 foto_path.unlink()
