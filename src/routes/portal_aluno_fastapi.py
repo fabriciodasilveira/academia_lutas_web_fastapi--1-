@@ -21,6 +21,8 @@ from src.models.evento import Evento
 from src.schemas.portal_aluno import PendenciaFinanceira
 from src.models.matricula import Matricula
 from src.schemas.matricula import MatriculaRead
+from src.image_utils import process_avatar_image
+
 
 router = APIRouter(
     prefix="/api/v1/portal",
@@ -83,7 +85,6 @@ def get_current_aluno_profile(
 def update_current_aluno_profile(
     db: Session = Depends(database.get_db),
     current_user: models.usuario.Usuario = Depends(auth.get_current_active_user),
-    # Todos os campos do formulário
     nome: str = Form(...),
     cpf: Optional[str] = Form(None),
     telefone: Optional[str] = Form(None),
@@ -99,16 +100,13 @@ def update_current_aluno_profile(
 ):
     if current_user.role != "aluno":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acesso negado.")
-
     db_aluno = db.query(models.aluno.Aluno).filter(models.aluno.Aluno.usuario_id == current_user.id).first()
     if not db_aluno:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Perfil de aluno não encontrado.")
 
-    # Atualiza campos de texto
     update_data = {
-        "nome": nome, "cpf": cpf, "telefone": telefone, "endereco": endereco,
-        "observacoes": observacoes, "nome_responsavel": nome_responsavel,
-        "cpf_responsavel": cpf_responsavel, "parentesco_responsavel": parentesco_responsavel,
+        "nome": nome, "cpf": cpf, "telefone": telefone, "endereco": endereco, "observacoes": observacoes,
+        "nome_responsavel": nome_responsavel, "cpf_responsavel": cpf_responsavel, "parentesco_responsavel": parentesco_responsavel,
         "telefone_responsavel": telefone_responsavel, "email_responsavel": email_responsavel
     }
     for key, value in update_data.items():
@@ -117,44 +115,29 @@ def update_current_aluno_profile(
     if data_nascimento:
         try:
             db_aluno.data_nascimento = datetime.strptime(data_nascimento, '%Y-%m-%d').date()
-        except ValueError:
-            pass
+        except ValueError: pass
 
-    # Processa a nova foto, se enviada
     if foto and foto.filename:
-        # Pega as credenciais do ambiente
-        s3_endpoint_url = os.getenv("S3_ENDPOINT_URL")
-        s3_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
-        s3_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
-        s3_bucket_name = os.getenv("S3_BUCKET_NAME")
-        public_bucket_url = os.getenv("PUBLIC_BUCKET_URL")
+        processed_image, mime_type = process_avatar_image(foto.file)
+        if processed_image:
+            s3_endpoint_url = os.getenv("S3_ENDPOINT_URL")
+            s3_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
+            s3_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+            s3_bucket_name = os.getenv("S3_BUCKET_NAME")
+            public_bucket_url = os.getenv("PUBLIC_BUCKET_URL")
 
-        if not all([s3_endpoint_url, s3_access_key_id, s3_secret_access_key, s3_bucket_name, public_bucket_url]):
-            raise HTTPException(status_code=500, detail="Configuração de armazenamento na nuvem incompleta no servidor.")
+            if not all([s3_endpoint_url, s3_access_key_id, s3_secret_access_key, s3_bucket_name, public_bucket_url]):
+                raise HTTPException(status_code=500, detail="Configuração de armazenamento na nuvem incompleta.")
 
-        try:
-            s3_client = boto3.client(
-                's3',
-                endpoint_url=s3_endpoint_url,
-                aws_access_key_id=s3_access_key_id,
-                aws_secret_access_key=s3_secret_access_key,
-                region_name="auto" # Para Cloudflare R2, 'auto' é o recomendado
-            )
-            
-            safe_filename = f"aluno_{db_aluno.id}_{datetime.utcnow().timestamp()}_{foto.filename.replace(' ', '_')}"
-            
-            s3_client.upload_fileobj(
-                foto.file,
-                s3_bucket_name,
-                safe_filename,
-                ExtraArgs={'ContentType': foto.content_type}
-            )
-            
-            db_aluno.foto = f"{public_bucket_url.rstrip('/')}/{safe_filename}"
-
-        except Exception as e:
-            logging.error(f"Erro no upload para o R2: {e}")
-            raise HTTPException(status_code=500, detail=f"Falha ao fazer upload da foto.")
+            try:
+                s3_client = boto3.client('s3', endpoint_url=s3_endpoint_url, aws_access_key_id=s3_access_key_id, aws_secret_access_key=s3_secret_access_key, region_name="auto")
+                base_filename, _ = os.path.splitext(foto.filename)
+                safe_filename = f"aluno_{db_aluno.id}_{datetime.utcnow().timestamp()}_{base_filename.replace(' ', '_')}.jpg"
+                s3_client.upload_fileobj(processed_image, s3_bucket_name, safe_filename, ExtraArgs={'ContentType': mime_type})
+                db_aluno.foto = f"{public_bucket_url.rstrip('/')}/{safe_filename}"
+            except Exception as e:
+                logging.error(f"Erro no upload para o R2 (portal): {e}")
+                raise HTTPException(status_code=500, detail="Falha ao fazer upload da foto.")
 
     db.commit()
     db.refresh(db_aluno)

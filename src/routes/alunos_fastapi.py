@@ -23,6 +23,8 @@ from src.models.matricula import Matricula
 from src.models.historico_matricula import HistoricoMatricula
 from sqlalchemy import func
 from src.models.mensalidade import Mensalidade
+from src.image_utils import process_avatar_image
+
 
 router = APIRouter(
     tags=["Alunos"],
@@ -73,25 +75,37 @@ def create_aluno(
     db.refresh(db_aluno)
 
     if foto and foto.filename:
-        s3_endpoint_url = os.getenv("S3_ENDPOINT_URL")
-        s3_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
-        s3_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
-        s3_bucket_name = os.getenv("S3_BUCKET_NAME")
-        public_bucket_url = os.getenv("PUBLIC_BUCKET_URL")
+        # Processa a imagem antes do upload
+        processed_image, mime_type = process_avatar_image(foto.file)
+        
+        if processed_image:
+            # Pega as credenciais do ambiente
+            s3_endpoint_url = os.getenv("S3_ENDPOINT_URL")
+            s3_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
+            s3_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+            s3_bucket_name = os.getenv("S3_BUCKET_NAME")
+            public_bucket_url = os.getenv("PUBLIC_BUCKET_URL")
 
-        if not all([s3_endpoint_url, s3_access_key_id, s3_secret_access_key, s3_bucket_name, public_bucket_url]):
-            raise HTTPException(status_code=500, detail="Configuração de armazenamento na nuvem incompleta.")
+            if not all([s3_endpoint_url, s3_access_key_id, s3_secret_access_key, s3_bucket_name, public_bucket_url]):
+                raise HTTPException(status_code=500, detail="Configuração de armazenamento na nuvem incompleta.")
 
-        try:
-            s3_client = boto3.client('s3', endpoint_url=s3_endpoint_url, aws_access_key_id=s3_access_key_id, aws_secret_access_key=s3_secret_access_key, region_name="auto")
-            safe_filename = f"aluno_{db_aluno.id}_{datetime.utcnow().timestamp()}_{foto.filename.replace(' ', '_')}"
-            s3_client.upload_fileobj(foto.file, s3_bucket_name, safe_filename, ExtraArgs={'ContentType': foto.content_type})
-            db_aluno.foto = f"{public_bucket_url.rstrip('/')}/{safe_filename}"
-            db.commit()
-            db.refresh(db_aluno)
-        except Exception as e:
-            logging.error(f"Erro no upload para o R2 (aluno): {e}")
-            raise HTTPException(status_code=500, detail="Falha ao fazer upload da foto.")
+            try:
+                s3_client = boto3.client('s3', endpoint_url=s3_endpoint_url, aws_access_key_id=s3_access_key_id, aws_secret_access_key=s3_secret_access_key, region_name="auto")
+                
+                # Garante um nome de arquivo .jpg, já que convertemos para JPEG
+                base_filename, _ = os.path.splitext(foto.filename)
+                safe_filename = f"aluno_{db_aluno.id}_{datetime.utcnow().timestamp()}_{base_filename.replace(' ', '_')}.jpg"
+
+                # Faz o upload do arquivo processado (em memória)
+                s3_client.upload_fileobj(processed_image, s3_bucket_name, safe_filename, ExtraArgs={'ContentType': mime_type})
+                
+                db_aluno.foto = f"{public_bucket_url.rstrip('/')}/{safe_filename}"
+                db.commit()
+                db.refresh(db_aluno)
+            except Exception as e: 
+                logging.error(f"Erro no upload para o R2 (aluno): {e}")
+                # Não lança exceção para não quebrar o cadastro do aluno
+
 
     return db_aluno
 
@@ -139,23 +153,37 @@ def update_aluno(
             pass
 
     if foto and foto.filename:
-        s3_endpoint_url = os.getenv("S3_ENDPOINT_URL")
-        s3_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
-        s3_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
-        s3_bucket_name = os.getenv("S3_BUCKET_NAME")
-        public_bucket_url = os.getenv("PUBLIC_BUCKET_URL")
+        # Processa a imagem antes do upload
+        processed_image, mime_type = process_avatar_image(foto.file)
+        
+        if processed_image:
+            # Pega as credenciais do ambiente
+            s3_endpoint_url = os.getenv("S3_ENDPOINT_URL")
+            s3_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
+            s3_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+            s3_bucket_name = os.getenv("S3_BUCKET_NAME")
+            public_bucket_url = os.getenv("PUBLIC_BUCKET_URL")
 
-        if not all([s3_endpoint_url, s3_access_key_id, s3_secret_access_key, s3_bucket_name, public_bucket_url]):
-            raise HTTPException(status_code=500, detail="Configuração de armazenamento na nuvem incompleta.")
+            if not all([s3_endpoint_url, s3_access_key_id, s3_secret_access_key, s3_bucket_name, public_bucket_url]):
+                raise HTTPException(status_code=500, detail="Configuração de armazenamento na nuvem incompleta.")
 
-        try:
-            s3_client = boto3.client('s3', endpoint_url=s3_endpoint_url, aws_access_key_id=s3_access_key_id, aws_secret_access_key=s3_secret_access_key, region_name="auto")
-            safe_filename = f"aluno_{db_aluno.id}_{datetime.utcnow().timestamp()}_{foto.filename.replace(' ', '_')}"
-            s3_client.upload_fileobj(foto.file, s3_bucket_name, safe_filename, ExtraArgs={'ContentType': foto.content_type})
-            db_aluno.foto = f"{public_bucket_url.rstrip('/')}/{safe_filename}"
-        except Exception as e:
-            logging.error(f"Erro no upload para o R2 (aluno): {e}")
-            raise HTTPException(status_code=500, detail="Falha ao fazer upload da foto.")
+            try:
+                s3_client = boto3.client('s3', endpoint_url=s3_endpoint_url, aws_access_key_id=s3_access_key_id, aws_secret_access_key=s3_secret_access_key, region_name="auto")
+                
+                # Garante um nome de arquivo .jpg, já que convertemos para JPEG
+                base_filename, _ = os.path.splitext(foto.filename)
+                safe_filename = f"aluno_{db_aluno.id}_{datetime.utcnow().timestamp()}_{base_filename.replace(' ', '_')}.jpg"
+
+                # Faz o upload do arquivo processado (em memória)
+                s3_client.upload_fileobj(processed_image, s3_bucket_name, safe_filename, ExtraArgs={'ContentType': mime_type})
+                
+                db_aluno.foto = f"{public_bucket_url.rstrip('/')}/{safe_filename}"
+                db.commit()
+                db.refresh(db_aluno)
+            except Exception as e:
+                logging.error(f"Erro no upload para o R2 (aluno): {e}")
+                # Não lança exceção para não quebrar o cadastro do aluno
+                logging.error(f"Erro no upload para o R2 (aluno): {e}")
 
     db.commit()
     db.refresh(db_aluno)
