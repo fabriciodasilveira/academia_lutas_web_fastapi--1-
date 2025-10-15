@@ -45,22 +45,19 @@ const router = async () => {
 
 // --- FUNÇÕES DE PAGAMENTO ATUALIZADAS PARA STRIPE ---
 
-// Variável global para guardar a instância da Stripe
 let stripe;
 
-// Inicializa a Stripe assim que o app carrega
 async function initializeStripe() {
     try {
-        const keyData = await api.request('/pagamentos/stripe-key');
-        if (keyData.publicKey) {
+        // CORREÇÃO: O último 'false' indica que esta chamada NÃO requer autenticação.
+        const keyData = await api.request('/pagamentos/stripe-key', 'GET', null, false, false);
+        if (keyData && keyData.publicKey) {
             stripe = Stripe(keyData.publicKey);
         } else {
-            console.error("Chave pública da Stripe não recebida.");
-            ui.showAlert("Erro ao configurar o sistema de pagamento.");
+            console.error("Chave pública da Stripe não foi recebida da API.");
         }
     } catch (error) {
         console.error("Erro ao inicializar a Stripe:", error);
-        ui.showAlert("Erro ao carregar o sistema de pagamento.");
     }
 }
 
@@ -77,12 +74,8 @@ async function pagarMensalidadeOnline(event, mensalidadeId) {
     try {
         const sessionData = await api.request(`/pagamentos/stripe/mensalidade/${mensalidadeId}`, 'POST');
         if (sessionData.sessionId) {
-            const { error } = await stripe.redirectToCheckout({
-                sessionId: sessionData.sessionId
-            });
-            if (error) {
-                throw new Error(error.message);
-            }
+            const { error } = await stripe.redirectToCheckout({ sessionId: sessionData.sessionId });
+            if (error) throw new Error(error.message);
         } else {
             throw new Error('Não foi possível iniciar a sessão de pagamento.');
         }
@@ -106,12 +99,8 @@ async function pagarEventoOnline(event, inscricaoId) {
     try {
         const sessionData = await api.request(`/pagamentos/stripe/evento/${inscricaoId}`, 'POST');
         if (sessionData.sessionId) {
-            const { error } = await stripe.redirectToCheckout({
-                sessionId: sessionData.sessionId
-            });
-            if (error) {
-                throw new Error(error.message);
-            }
+            const { error } = await stripe.redirectToCheckout({ sessionId: sessionData.sessionId });
+            if (error) throw new Error(error.message);
         } else {
             throw new Error('Não foi possível iniciar a sessão de pagamento.');
         }
@@ -128,7 +117,6 @@ async function pagarEventoOnline(event, inscricaoId) {
 function handleLoginCallback() {
     ui.toggleNav(false);
     appRoot.innerHTML = '<p class="text-center mt-5">Autenticando...</p>';
-
     const params = new URLSearchParams(window.location.hash.split('?')[1]);
     const token = params.get('token');
 
@@ -495,7 +483,6 @@ async function inscreverEmEvento(event, eventoId) {
 
 window.addEventListener('hashchange', router);
 window.addEventListener('load', () => {
-    // Inicializa a Stripe primeiro
     initializeStripe();
     
     if ('serviceWorker' in navigator) {
