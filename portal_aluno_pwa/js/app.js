@@ -5,9 +5,9 @@ const routes = {
     '/login/callback': { handler: handleLoginCallback, public: true },
     '/register': { page: '/portal/pages/register.html', handler: handleRegisterPage, public: true },
     '/dashboard': { page: '/portal/pages/dashboard.html', handler: handleDashboardPage },
+    '/carteirinha': { page: '/portal/pages/carteirinha.html', handler: handleCarteirinhaPage },
     '/edit-profile': { page: '/portal/pages/edit_profile.html', handler: handleEditProfilePage },
     '/payments': { page: '/portal/pages/payments.html', handler: handlePaymentsPage },
-    '/carteirinha': { page: '/portal/pages/carteirinha.html', handler: handleCarteirinhaPage },
     '/events': { page: '/portal/pages/events.html', handler: handleEventsPage }
 };
 
@@ -43,7 +43,87 @@ const router = async () => {
     }
 };
 
-// --- Handlers de Página ---
+// --- FUNÇÕES DE PAGAMENTO ATUALIZADAS PARA STRIPE ---
+
+// Variável global para guardar a instância da Stripe
+let stripe;
+
+// Inicializa a Stripe assim que o app carrega
+async function initializeStripe() {
+    try {
+        const keyData = await api.request('/pagamentos/stripe-key');
+        if (keyData.publicKey) {
+            stripe = Stripe(keyData.publicKey);
+        } else {
+            console.error("Chave pública da Stripe não recebida.");
+            ui.showAlert("Erro ao configurar o sistema de pagamento.");
+        }
+    } catch (error) {
+        console.error("Erro ao inicializar a Stripe:", error);
+        ui.showAlert("Erro ao carregar o sistema de pagamento.");
+    }
+}
+
+async function pagarMensalidadeOnline(event, mensalidadeId) {
+    if (!stripe) {
+        ui.showAlert("O sistema de pagamento não está pronto. Tente novamente em alguns segundos.");
+        return;
+    }
+
+    const button = event.currentTarget;
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Abrindo...';
+
+    try {
+        const sessionData = await api.request(`/pagamentos/stripe/mensalidade/${mensalidadeId}`, 'POST');
+        if (sessionData.sessionId) {
+            const { error } = await stripe.redirectToCheckout({
+                sessionId: sessionData.sessionId
+            });
+            if (error) {
+                throw new Error(error.message);
+            }
+        } else {
+            throw new Error('Não foi possível iniciar a sessão de pagamento.');
+        }
+    } catch (error) {
+        ui.showAlert(error.message || 'Não foi possível iniciar o pagamento.');
+        button.disabled = false;
+        button.innerHTML = '<i class="fas fa-credit-card me-1"></i>Pagar Online';
+    }
+}
+
+async function pagarEventoOnline(event, inscricaoId) {
+    if (!stripe) {
+        ui.showAlert("O sistema de pagamento não está pronto. Tente novamente em alguns segundos.");
+        return;
+    }
+    
+    const button = event.currentTarget;
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Abrindo...';
+
+    try {
+        const sessionData = await api.request(`/pagamentos/stripe/evento/${inscricaoId}`, 'POST');
+        if (sessionData.sessionId) {
+            const { error } = await stripe.redirectToCheckout({
+                sessionId: sessionData.sessionId
+            });
+            if (error) {
+                throw new Error(error.message);
+            }
+        } else {
+            throw new Error('Não foi possível iniciar a sessão de pagamento.');
+        }
+    } catch (error) {
+        ui.showAlert(error.message || 'Não foi possível iniciar o pagamento.');
+        button.disabled = false;
+        button.innerHTML = '<i class="fas fa-credit-card me-1"></i>Pagar Online';
+    }
+}
+
+
+// --- HANDLERS DE PÁGINA (Funções existentes) ---
 
 function handleLoginCallback() {
     ui.toggleNav(false);
@@ -97,14 +177,15 @@ function handleLoginPage() {
 
     const togglePassword = document.getElementById('togglePassword');
     const password = document.getElementById('password');
-    const icon = togglePassword.querySelector('i');
-
-    togglePassword.addEventListener('click', function () {
-        const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
-        password.setAttribute('type', type);
-        icon.classList.toggle('fa-eye');
-        icon.classList.toggle('fa-eye-slash');
-    });
+    if (togglePassword && password) {
+        const icon = togglePassword.querySelector('i');
+        togglePassword.addEventListener('click', function () {
+            const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+            password.setAttribute('type', type);
+            icon.classList.toggle('fa-eye');
+            icon.classList.toggle('fa-eye-slash');
+        });
+    }
 }
 
 function handleRegisterPage() {
@@ -165,6 +246,31 @@ async function handleDashboardPage() {
 
     } catch (error) {
         ui.showAlert('Não foi possível carregar seus dados de perfil.');
+    }
+}
+
+async function handleCarteirinhaPage() {
+    try {
+        const profile = await api.getProfile();
+        
+        const fotoEl = document.getElementById('aluno-foto');
+        if (profile.foto) {
+            fotoEl.src = profile.foto;
+        } else {
+            fotoEl.src = '/portal/images/default-avatar.png';
+        }
+
+        document.getElementById('aluno-nome').innerText = profile.nome;
+        if (profile.id) {
+            document.getElementById('aluno-matricula').innerText = 1000 + profile.id;
+        }
+        document.getElementById('aluno-email').innerText = profile.email || 'Não informado';
+        document.getElementById('aluno-telefone').innerText = profile.telefone || 'Não informado';
+        document.getElementById('aluno-nascimento').innerText = profile.data_nascimento 
+            ? new Date(profile.data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR') 
+            : '--/--/----';
+    } catch (error) {
+        ui.showAlert('Não foi possível carregar os dados da sua carteirinha.');
     }
 }
 
@@ -384,80 +490,14 @@ async function inscreverEmEvento(event, eventoId) {
     }
 }
 
-async function pagarMensalidadeOnline(event, mensalidadeId) {
-    const button = event.currentTarget;
-    const originalHtml = button.innerHTML;
-    
-    button.disabled = true;
-    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...';
 
-    try {
-        const data = await api.request(`/pagamentos/gerar/mensalidade/${mensalidadeId}`, 'POST');
-        if (data.init_point) {
-            window.location.href = data.init_point;
-        } else {
-            throw new Error(data.error || 'Link de pagamento não recebido.');
-        }
-    } catch (error) {
-        ui.showAlert(error.message || 'Não foi possível gerar o link de pagamento.');
-        button.disabled = false;
-        button.innerHTML = originalHtml;
-    }
-}
+// --- INICIALIZAÇÃO DO APP ---
 
-async function pagarEventoOnline(event, inscricaoId) {
-    const button = event.currentTarget;
-    const originalHtml = button.innerHTML;
-    
-    button.disabled = true;
-    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...';
-
-    try {
-        const data = await api.request(`/pagamentos/gerar/evento/${inscricaoId}`, 'POST');
-        if (data.init_point) {
-            window.location.href = data.init_point;
-        } else {
-            throw new Error(data.error || 'Link de pagamento não recebido.');
-        }
-    } catch (error) {
-        ui.showAlert(error.message || 'Não foi possível gerar o link de pagamento.');
-        button.disabled = false;
-        button.innerHTML = originalHtml;
-    }
-}
-
-// Adicione esta nova função ao final do arquivo portal_aluno_pwa/js/app.js
-
-async function handleCarteirinhaPage() {
-    try {
-        const profile = await api.getProfile();
-        
-        const fotoEl = document.getElementById('aluno-foto');
-        if (profile.foto) {
-            fotoEl.src = profile.foto;
-        } else {
-            fotoEl.src = '/portal/images/default-avatar.png';
-        }
-
-        if (profile.id) {
-            document.getElementById('aluno-matricula').innerText = 1000 + profile.id;
-        }
-
-        document.getElementById('aluno-nome').innerText = profile.nome;
-        document.getElementById('aluno-email').innerText = profile.email || 'Não informado';
-        document.getElementById('aluno-telefone').innerText = profile.telefone || 'Não informado';
-        document.getElementById('aluno-nascimento').innerText = profile.data_nascimento 
-            ? new Date(profile.data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR') 
-            : '--/--/----';
-
-    } catch (error) {
-        ui.showAlert('Não foi possível carregar os dados da sua carteirinha.');
-    }
-}
-
-// Inicialização e eventos do navegador
 window.addEventListener('hashchange', router);
 window.addEventListener('load', () => {
+    // Inicializa a Stripe primeiro
+    initializeStripe();
+    
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/portal/sw.js')
             .then(() => console.log('Service Worker registrado com sucesso.'))

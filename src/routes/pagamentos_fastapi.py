@@ -1,150 +1,96 @@
-# src/routes/pagamentos_fastapi.py
-
-import mercadopago
+import os
+import stripe
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session, joinedload
-import os
 
 from src.database import get_db
 from src.models.mensalidade import Mensalidade
 from src.models.inscricao import Inscricao
-from src.routes import mensalidades_fastapi
 from src import auth
 from src.models import usuario as models_usuario
 
 router = APIRouter(
-    tags=["Pagamentos"]
+    tags=["Pagamentos"],
+    prefix="/pagamentos"
 )
 
-# Carregue seu Access Token de uma variável de ambiente
-MERCADO_PAGO_ACCESS_TOKEN = "TEST-553726052804131-100313-8e59152f1c52366ae9ad529039d48eec-19988581"
-if not MERCADO_PAGO_ACCESS_TOKEN:
-    print("AVISO: MERCADO_PAGO_ACCESS_TOKEN não está configurado.")
+# Configura a chave secreta da Stripe a partir das variáveis de ambiente
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
-# Inicializa o SDK
-sdk = mercadopago.SDK(MERCADO_PAGO_ACCESS_TOKEN)
+# Endpoint para o frontend buscar a chave pública
+@router.get("/stripe-key")
+def get_stripe_key():
+    return {"publicKey": os.getenv("STRIPE_PUBLIC_KEY")}
 
-@router.post("/gerar/mensalidade/{mensalidade_id}")
-def gerar_link_pagamento_mensalidade(
+def create_checkout_session(db: Session, current_user: models_usuario.Usuario, item_id: int, item_type: str):
+    """Função genérica para criar uma sessão de checkout na Stripe."""
+    if not stripe.api_key:
+        raise HTTPException(status_code=500, detail="Chave de API da Stripe não configurada.")
+
+    frontend_url = os.getenv("FRONTEND_PWA_URL", "http://localhost:8000/portal")
+    line_item = {}
+    
+    if item_type == "mensalidade":
+        db_item = db.query(Mensalidade).options(joinedload(Mensalidade.aluno), joinedload(Mensalidade.plano)).filter(Mensalidade.id == item_id).first()
+        if not db_item or db_item.aluno.usuario_id != current_user.id:
+            raise HTTPException(status_code=404, detail="Mensalidade não encontrada ou não pertence a este usuário.")
+        line_item = {
+            "price_data": {
+                "currency": "brl",
+                "product_data": {
+                    "name": f"Mensalidade - {db_item.plano.nome}",
+                    "description": f"Vencimento: {db_item.data_vencimento.strftime('%d/%m/%Y')}",
+                },
+                "unit_amount": int(db_item.valor * 100),  # Valor em centavos
+            },
+            "quantity": 1,
+        }
+        success_path = "#/payments?payment=success"
+    
+    elif item_type == "inscricao":
+        db_item = db.query(Inscricao).options(joinedload(Inscricao.aluno), joinedload(Inscricao.evento)).filter(Inscricao.id == item_id).first()
+        if not db_item or db_item.aluno.usuario_id != current_user.id:
+            raise HTTPException(status_code=404, detail="Inscrição não encontrada ou não pertence a este usuário.")
+        line_item = {
+            "price_data": {
+                "currency": "brl",
+                "product_data": {
+                    "name": f"Inscrição - {db_item.evento.nome}",
+                },
+                "unit_amount": int(db_item.evento.valor_inscricao * 100),
+            },
+            "quantity": 1,
+        }
+        success_path = "#/events?payment=success"
+
+    try:
+        checkout_session = stripe.checkout.Session.create(
+            payment_method_types=['card', 'boleto', 'pix'],
+            line_items=[line_item],
+            mode='payment',
+            success_url=f"{frontend_url}{success_path}",
+            cancel_url=f"{frontend_url}#/payments?payment=canceled",
+            metadata={
+                'item_id': item_id,
+                'item_type': item_type
+            }
+        )
+        return {"sessionId": checkout_session.id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/stripe/mensalidade/{mensalidade_id}")
+def gerar_checkout_stripe_mensalidade(
     mensalidade_id: int, 
     db: Session = Depends(get_db), 
     current_user: models_usuario.Usuario = Depends(auth.get_current_active_user)
 ):
-    """
-    Gera um link de pagamento do Mercado Pago para uma mensalidade específica.
-    """
-    if not MERCADO_PAGO_ACCESS_TOKEN:
-        raise HTTPException(status_code=500, detail="Access Token do Mercado Pago não configurado no servidor.")
-        
-    db_mensalidade = db.query(Mensalidade).filter(Mensalidade.id == mensalidade_id).first()
-    if not db_mensalidade:
-        raise HTTPException(status_code=404, detail="Mensalidade não encontrada")
+    return create_checkout_session(db, current_user, mensalidade_id, "mensalidade")
 
-    if db_mensalidade.status == 'pago':
-        raise HTTPException(status_code=400, detail="Esta mensalidade já foi paga.")
-
-    # base_url = "http://localhost:5000"
-    base_url = os.getenv("FRONTEND_URL", "http://localhost:5700") 
-
-    preference_data = {
-        "items": [
-            {
-                "title": f"Mensalidade {db_mensalidade.plano.nome} - {db_mensalidade.aluno.nome}",
-                "quantity": 1,
-                "currency_id": "BRL",
-                "unit_price": float(db_mensalidade.valor),
-            }
-        ],
-        "back_urls": {
-            "success": f"{base_url}/mensalidades",
-            "failure": f"{base_url}/mensalidades",
-            "pending": f"{base_url}/mensalidades"
-        },
-        "external_reference": f"mensalidade_{db_mensalidade.id}",
-        "notification_url": "SUA_URL_WEBHOOK_AQUI/api/v1/pagamentos/webhook/mercadopago" 
-    }
-
-    try:
-        preference_response = sdk.preference().create(preference_data)
-        preference = preference_response.get("response")
-        if not preference or "init_point" not in preference:
-            print("Erro ao criar preferência do Mercado Pago:", preference_response)
-            raise HTTPException(status_code=500, detail="Falha ao comunicar com o Mercado Pago.")
-        return {"init_point": preference["init_point"]}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro interno ao gerar link de pagamento: {e}")
-
-
-@router.post("/gerar/evento/{inscricao_id}")
-def gerar_link_pagamento_evento(inscricao_id: int, db: Session = Depends(get_db)):
-    """
-    Gera um link de pagamento do Mercado Pago para uma inscrição de evento.
-    """
-    if not MERCADO_PAGO_ACCESS_TOKEN:
-        raise HTTPException(status_code=500, detail="Access Token do Mercado Pago não configurado no servidor.")
-
-    db_inscricao = db.query(Inscricao).options(joinedload(Inscricao.aluno), joinedload(Inscricao.evento)).filter(Inscricao.id == inscricao_id).first()
-    if not db_inscricao:
-        raise HTTPException(status_code=404, detail="Inscrição não encontrada")
-
-    if db_inscricao.status == 'pago':
-        raise HTTPException(status_code=400, detail="Esta inscrição já foi paga.")
-
-    # base_url = "http://localhost:5000" 
-    base_url = os.getenv("FRONTEND_URL", "http://localhost:5700")
-
-    preference_data = {
-        "items": [
-            {
-                "title": f"Inscrição: {db_inscricao.evento.nome} - {db_inscricao.aluno.nome}",
-                "quantity": 1,
-                "currency_id": "BRL",
-                "unit_price": float(db_inscricao.evento.valor_inscricao),
-            }
-        ],
-        "back_urls": {
-            "success": f"{base_url}/eventos/{db_inscricao.evento_id}",
-            "failure": f"{base_url}/eventos/{db_inscricao.evento_id}",
-            "pending": f"{base_url}/eventos/{db_inscricao.evento_id}"
-        },
-        "external_reference": f"evento_{db_inscricao.id}",
-        "notification_url": "SUA_URL_WEBHOOK_AQUI/api/v1/pagamentos/webhook/mercadopago" 
-    }
-
-    try:
-        preference_response = sdk.preference().create(preference_data)
-        preference = preference_response.get("response")
-        if not preference or "init_point" not in preference:
-            print("Erro ao criar preferência do Mercado Pago:", preference_response)
-            raise HTTPException(status_code=500, detail="Falha ao comunicar com o Mercado Pago.")
-        return {"init_point": preference["init_point"]}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro interno ao gerar link de pagamento: {e}")
-
-
-@router.post("/webhook/mercadopago")
-async def webhook_mercadopago(request: Request, db: Session = Depends(get_db)):
-    """
-    Endpoint para receber notificações de pagamento do Mercado Pago.
-    """
-    body = await request.json()
-    
-    if body.get("type") == "payment":
-        payment_id = body["data"]["id"]
-        payment_info = sdk.payment().get(payment_id)["response"]
-        
-        if payment_info["status"] == "approved":
-            external_reference = payment_info["external_reference"]
-            
-            # Diferencia se o pagamento é de uma mensalidade ou de um evento
-            if external_reference.startswith("mensalidade_"):
-                mensalidade_id = int(external_reference.split('_')[1])
-                mensalidades_fastapi.processar_pagamento(mensalidade_id, db)
-            
-            elif external_reference.startswith("evento_"):
-                inscricao_id = int(external_reference.split('_')[1])
-                # Aqui você precisaria de uma função para confirmar o pagamento da inscrição
-                # Vamos assumir que ela existe em 'inscricoes_fastapi'
-                # inscricoes_fastapi.confirmar_pagamento(inscricao_id, db)
-
-    return {"status": "ok"}
+@router.post("/stripe/evento/{inscricao_id}")
+def gerar_checkout_stripe_evento(
+    inscricao_id: int, 
+    db: Session = Depends(get_db), 
+    current_user: models_usuario.Usuario = Depends(auth.get_current_active_user)
+):
+    return create_checkout_session(db, current_user, inscricao_id, "inscricao")
