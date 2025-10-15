@@ -11,7 +11,6 @@ from src.models import usuario as models_usuario
 
 router = APIRouter(
     tags=["Pagamentos"],
-    prefix="/pagamentos"
 )
 
 # Configura a chave secreta da Stripe a partir das variáveis de ambiente
