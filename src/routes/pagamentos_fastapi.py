@@ -64,7 +64,7 @@ def create_checkout_session(db: Session, current_user: models_usuario.Usuario, i
 
     try:
         checkout_session = stripe.checkout.Session.create(
-            payment_method_types=['card', 'boleto', 'pix'],
+            payment_method_types=['card', 'boleto'],
             line_items=[line_item],
             mode='payment',
             success_url=f"{frontend_url}{success_path}",
