@@ -1,6 +1,6 @@
+import os
 import stripe
 import logging
-import os
 from fastapi import APIRouter, Depends, HTTPException, Request, status, Header
 from sqlalchemy.orm import Session, joinedload
 from datetime import date, datetime
@@ -12,7 +12,6 @@ from src.models.financeiro import Financeiro
 from src import auth
 from src.models import usuario as models_usuario
 
-# CORREÇÃO: O prefixo foi removido daqui para evitar duplicação
 router = APIRouter(
     tags=["Pagamentos"]
 )
@@ -45,8 +44,9 @@ def create_checkout_session(db: Session, current_user: models_usuario.Usuario, i
         success_path = "#/events?payment=success"
 
     try:
-        # A URL de sucesso agora é construída corretamente para o PWA
-        success_url = f"{frontend_pwa_url.rstrip('/')}/{success_path}"
+        # --- CORREÇÃO APLICADA AQUI ---
+        # Removemos a barra entre a URL base e o caminho com hash (#)
+        success_url = f"{frontend_pwa_url.rstrip('/')}{success_path}"
         cancel_url = f"{frontend_pwa_url.rstrip('/')}/#/payments?payment=canceled"
 
         checkout_session = stripe.checkout.Session.create(
