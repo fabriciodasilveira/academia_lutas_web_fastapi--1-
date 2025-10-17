@@ -12,13 +12,16 @@ const routes = {
 };
 
 const router = async () => {
-    const hashParts = window.location.hash.split('?');
-    const path = hashParts[0].slice(1) || '/dashboard';
-    const urlParams = new URLSearchParams(hashParts[1] || '');
-
-    // Lógica para mostrar o alerta de pagamento
+    // --- LÓGICA DE ALERTA DE PAGAMENTO (AJUSTADA) ---
+    const currentHash = window.location.hash;
+    const urlParams = new URLSearchParams(currentHash.split('?')[1] || '');
+    
     if (urlParams.has('payment')) {
         const paymentStatus = urlParams.get('payment');
+        const cleanPath = currentHash.split('?')[0];
+        
+        // Limpa a URL imediatamente para evitar que o alerta apareça novamente
+        window.history.replaceState(null, null, window.location.pathname + cleanPath);
         
         // Atraso para garantir que a página carregou antes de mostrar o alerta
         setTimeout(() => {
@@ -27,11 +30,10 @@ const router = async () => {
             } else if (paymentStatus === 'canceled') {
                 ui.showAlert('O pagamento foi cancelado.', 'info');
             }
-            // Limpa os parâmetros da URL para não mostrar o alerta novamente ao recarregar
-            window.history.replaceState(null, null, window.location.pathname + `#${path}`);
-        }, 500);
+        }, 500); // 500ms é um bom tempo de espera
     }
     
+    const path = (window.location.hash.slice(1).split('?')[0] || '/dashboard');
     const route = routes[path] || routes['/dashboard'];
     
     const token = localStorage.getItem('accessToken');
@@ -428,4 +430,3 @@ window.addEventListener('load', () => {
     });
     router();
 });
-
