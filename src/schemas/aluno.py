@@ -36,6 +36,7 @@ class AlunoRead(AlunoBase):
     foto: Optional[str] = None # Garante que o campo 'foto' está aqui
     data_cadastro: datetime.datetime
     status_geral: str = "Inativo"
+    
 
     class Config:
         from_attributes = True 

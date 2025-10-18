@@ -235,22 +235,46 @@ async function handleDashboardPage() {
 
 async function handleCarteirinhaPage() {
     try {
-        const profile = await api.getProfile();
+        const profile = await api.getProfile(); // Agora a API retorna o status_geral
+        
         const fotoEl = document.getElementById('aluno-foto');
         if (profile.foto) {
             fotoEl.src = profile.foto;
         } else {
             fotoEl.src = '/portal/images/default-avatar.png';
         }
+
         document.getElementById('aluno-nome').innerText = profile.nome;
         if (profile.id) {
             document.getElementById('aluno-matricula').innerText = 1000 + profile.id;
         }
         document.getElementById('aluno-email').innerText = profile.email || 'Não informado';
         document.getElementById('aluno-telefone').innerText = profile.telefone || 'Não informado';
-        document.getElementById('aluno-nascimento').innerText = profile.data_nascimento ? new Date(profile.data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR') : '--/--/----';
+        document.getElementById('aluno-nascimento').innerText = profile.data_nascimento 
+            ? new Date(profile.data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR') 
+            : '--/--/----';
+
+        // --- LÓGICA PARA EXIBIR O STATUS ---
+        const statusBadge = document.getElementById('aluno-status');
+        if (profile.status_geral === "Ativo") {
+            statusBadge.textContent = "Aluno Ativo";
+            statusBadge.classList.add('bg-success');
+            statusBadge.classList.remove('bg-secondary');
+        } else {
+            statusBadge.textContent = "Aluno Inativo";
+            statusBadge.classList.add('bg-secondary');
+            statusBadge.classList.remove('bg-success');
+        }
+        // --- FIM DA LÓGICA ---
+
     } catch (error) {
         ui.showAlert('Não foi possível carregar os dados da sua carteirinha.');
+        // Limpa o status em caso de erro
+        const statusBadge = document.getElementById('aluno-status');
+        if(statusBadge) {
+             statusBadge.textContent = "Erro ao carregar";
+             statusBadge.classList.add('bg-danger');
+        }
     }
 }
 

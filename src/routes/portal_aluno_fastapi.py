@@ -22,6 +22,7 @@ from src.schemas.portal_aluno import PendenciaFinanceira
 from src.models.matricula import Matricula
 from src.schemas.matricula import MatriculaRead
 from src.image_utils import process_avatar_image
+from sqlalchemy.orm import joinedload
 
 
 router = APIRouter(
@@ -74,10 +75,28 @@ def get_current_aluno_profile(
 ):
     if current_user.role != "aluno":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acesso negado.")
-    aluno_profile = db.query(models.aluno.Aluno).filter(models.aluno.Aluno.usuario_id == current_user.id).first()
+
+    # Carrega o aluno E suas matrículas de forma otimizada
+    aluno_profile = db.query(models.aluno.Aluno).options(
+        joinedload(models.aluno.Aluno.matriculas)
+    ).filter(models.aluno.Aluno.usuario_id == current_user.id).first()
+
     if not aluno_profile:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Perfil de aluno não encontrado.")
-    return aluno_profile
+
+    # --- LÓGICA PARA CALCULAR O STATUS ---
+    status_geral = "Inativo"
+    if aluno_profile.matriculas:
+        if any(matricula.ativa for matricula in aluno_profile.matriculas):
+            status_geral = "Ativo"
+    
+    # Converte para o schema Pydantic ANTES de adicionar o campo extra
+    aluno_data = schemas_aluno.AlunoRead.from_orm(aluno_profile)
+    # Adiciona o status calculado ao objeto de resposta
+    aluno_data.status_geral = status_geral
+    # --- FIM DA LÓGICA ---
+
+    return aluno_data
 
 
 # --- FUNÇÃO ATUALIZADA E COMPLETA ---
