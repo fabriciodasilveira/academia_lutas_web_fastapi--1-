@@ -17,7 +17,7 @@ from datetime import datetime
 
 router = APIRouter(
     tags=["Mensalidades"],
-    prefix="/mensalidades",
+    # prefix="/mensalidades",
     responses={404: {"description": "Não encontrado"}},
 )
 
