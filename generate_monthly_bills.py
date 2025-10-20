@@ -8,12 +8,20 @@ from dotenv import load_dotenv
 
 # --- CORREÇÃO: Importar TODOS os modelos relacionados ANTES ---
 from src.database import Base
-# Importe explicitamente todos os modelos que têm relacionamentos usados no script
+# Importe explicitamente todos os modelos que têm relacionamentos
+from src.models.usuario import Usuario # Adicionado caso haja relações futuras
 from src.models.aluno import Aluno
 from src.models.plano import Plano
-from src.models.turma import Turma # Importação crucial que faltava ser usada antes
+from src.models.turma import Turma
+from src.models.professor import Professor # Adicionado por completude
 from src.models.matricula import Matricula
 from src.models.mensalidade import Mensalidade
+from src.models.evento import Evento # Adicionado por causa da Inscricao
+from src.models.inscricao import Inscricao # <<< IMPORTAÇÃO CRUCIAL ADICIONADA >>>
+from src.models.financeiro import Financeiro # Adicionado por completude
+from src.models.historico_matricula import HistoricoMatricula # Adicionado por completude
+from src.models.produto import Produto # Adicionado por completude
+from src.models.categoria import Categoria # Adicionado por completude
 # -----------------------------------------------------------
 
 # Configuração básica de logging
@@ -58,10 +66,11 @@ def generate_bills():
 
     try:
         # Busca matrículas ativas, carregando plano e aluno
+        # Usamos joinedload para otimizar, mas as importações acima resolvem o erro de mapeamento
         active_matriculas = db.query(Matricula).options(
             joinedload(Matricula.plano),
             joinedload(Matricula.aluno),
-            joinedload(Matricula.turma) # Adicionado para garantir que a relação com Turma seja usada
+            joinedload(Matricula.turma)
         ).filter(Matricula.ativa == True).all()
 
         logging.info(f"Encontradas {len(active_matriculas)} matrículas ativas.")
