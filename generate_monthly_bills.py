@@ -6,23 +6,24 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, joinedload
 from dotenv import load_dotenv
 
-# --- CORREÇÃO: Importar TODOS os modelos relacionados ANTES ---
+# --- CORREÇÃO DEFINITIVA: Importar TODOS os modelos do seu projeto ---
 from src.database import Base
-# Importe explicitamente todos os modelos que têm relacionamentos
-from src.models.usuario import Usuario # Adicionado caso haja relações futuras
+# Garanta que TODOS os seus arquivos .py dentro de src/models/ estejam listados aqui
 from src.models.aluno import Aluno
-from src.models.plano import Plano
-from src.models.turma import Turma
-from src.models.professor import Professor # Adicionado por completude
+from src.models.categoria import Categoria
+from src.models.evento import Evento
+from src.models.financeiro import Financeiro
+from src.models.historico_matricula import HistoricoMatricula
+from src.models.inscricao import Inscricao
 from src.models.matricula import Matricula
 from src.models.mensalidade import Mensalidade
-from src.models.evento import Evento # Adicionado por causa da Inscricao
-from src.models.inscricao import Inscricao # <<< IMPORTAÇÃO CRUCIAL ADICIONADA >>>
-from src.models.financeiro import Financeiro # Adicionado por completude
-from src.models.historico_matricula import HistoricoMatricula # Adicionado por completude
-from src.models.produto import Produto # Adicionado por completude
-from src.models.categoria import Categoria # Adicionado por completude
-# -----------------------------------------------------------
+from src.models.plano import Plano
+from src.models.produto import Produto
+from src.models.professor import Professor
+from src.models.turma import Turma
+from src.models.usuario import Usuario
+# Certifique-se de que não falta nenhum modelo!
+# ------------------------------------------------------------------
 
 # Configuração básica de logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -66,7 +67,6 @@ def generate_bills():
 
     try:
         # Busca matrículas ativas, carregando plano e aluno
-        # Usamos joinedload para otimizar, mas as importações acima resolvem o erro de mapeamento
         active_matriculas = db.query(Matricula).options(
             joinedload(Matricula.plano),
             joinedload(Matricula.aluno),
