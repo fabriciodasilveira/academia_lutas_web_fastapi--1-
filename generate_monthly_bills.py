@@ -6,9 +6,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, joinedload
 from dotenv import load_dotenv
 
-# --- CORREÇÃO DEFINITIVA: Importar TODOS os modelos do seu projeto ---
+# --- GARANTIR QUE TODAS AS IMPORTAÇÕES ESTEJAM AQUI ---
 from src.database import Base
-# Garanta que TODOS os seus arquivos .py dentro de src/models/ estejam listados aqui
 from src.models.aluno import Aluno
 from src.models.categoria import Categoria
 from src.models.evento import Evento
@@ -22,8 +21,8 @@ from src.models.produto import Produto
 from src.models.professor import Professor
 from src.models.turma import Turma
 from src.models.usuario import Usuario
-# Certifique-se de que não falta nenhum modelo!
-# ------------------------------------------------------------------
+# ------------------------------------------------------
+
 
 # Configuração básica de logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
