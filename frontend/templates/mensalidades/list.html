@@ -61,9 +61,6 @@
                                                 <i class="fas fa-cash-register me-1"></i> Recebimento no Balcão
                                             </button>
                                         </form>
-                                        <button class="btn btn-sm btn-primary ms-2" onclick="pagarOnline(event, {{ mensalidade.id }})">
-                                            <i class="fas fa-credit-card me-1"></i> Pagar Online
-                                        </button>
                                     </div>
                                     {% else %}
                                     <span class="text-success"><i class="fas fa-check-circle"></i> Pago em {{ mensalidade.data_pagamento }}</span>
@@ -86,38 +83,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
-function pagarOnline(event, mensalidadeId) {
-    const button = event.currentTarget;
-    const originalHtml = button.innerHTML;
-    
-    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...';
-    button.disabled = true;
 
-    // CORREÇÃO: Chamar a rota local do Flask
-    fetch(`/mensalidades/pagar-online/${mensalidadeId}`, {
-        method: 'POST',
-    })
-    .then(response => {
-        if (!response.ok) {
-            // Se a resposta não for OK, tenta ler o erro do corpo da resposta
-            return response.json().then(err => { throw new Error(err.error || 'Falha na resposta do servidor.'); });
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data.init_point) {
-            window.location.href = data.init_point; // Redireciona para o checkout
-        } else {
-            throw new Error(data.error || 'Link de pagamento não recebido.');
-        }
-    })
-    .catch(error => {
-        console.error('Erro:', error);
-        alert(`Ocorreu um erro inesperado: ${error.message}`);
-        button.innerHTML = originalHtml;
-        button.disabled = false;
-    });
-}
-</script>
 {% endblock %}
