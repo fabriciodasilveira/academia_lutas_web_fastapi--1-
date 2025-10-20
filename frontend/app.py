@@ -77,15 +77,22 @@ def format_datetime_filter(s):
     except (ValueError, TypeError):
         return s
 
-
-
-# Em frontend/app.py
-
-# Em frontend/app.py
-
-# Em frontend/app.py
-
-# Em frontend/app.py
+@app.template_filter('format_date_br')
+def format_date_br_filter(value):
+    """Formata uma data (string YYYY-MM-DD ou objeto date) para DD/MM/YYYY."""
+    if not value:
+        return ""
+    try:
+        if isinstance(value, str):
+            dt_obj = date.fromisoformat(value)
+        elif isinstance(value, date):
+            dt_obj = value
+        else:
+            return value # Retorna o valor original se não for string ou date
+        return dt_obj.strftime('%d/%m/%Y')
+    except (ValueError, TypeError):
+        return value # Retorna original em caso de erro
+    
 
 def api_request(endpoint, method='GET', data=None, files=None, json=None, params=None, headers=None):
     """
@@ -1062,16 +1069,50 @@ def planos_deletar(id):
     
     
     
-# Em frontend/app.py
-
 @app.route("/mensalidades")
 @login_required
 def mensalidades_list():
-    response = api_request("/mensalidades")
+    page = request.args.get('page', 1, type=int)
+    limit = 20 # Define o limite por página aqui (pode ser ajustável depois)
+    busca = request.args.get('busca', '')
+    status_filtro = request.args.get('status', '') # Filtro de status pendente/pago
+    skip = (page - 1) * limit
+
+    # Monta os parâmetros para a API
+    params = {
+        "skip": skip,
+        "limit": limit
+    }
+    if busca:
+        params["busca_aluno"] = busca
+    if status_filtro:
+        params["status"] = status_filtro
+
+    response = api_request("/mensalidades", params=params)
+
     mensalidades = []
+    total_mensalidades = 0
+    total_pages = 0
+
     if response and response.status_code == 200:
-        mensalidades = response.json()
-    return render_template("mensalidades/list.html", mensalidades=mensalidades)
+        data = response.json()
+        mensalidades = data.get("mensalidades", [])
+        total_mensalidades = data.get("total", 0)
+        if total_mensalidades > 0 and limit > 0:
+            total_pages = math.ceil(total_mensalidades / limit)
+    else:
+        flash("Erro ao carregar mensalidades da API.", "error")
+
+    return render_template(
+        "mensalidades/list.html",
+        mensalidades=mensalidades,
+        page=page,
+        limit=limit,
+        total_pages=total_pages,
+        total_mensalidades=total_mensalidades,
+        busca=busca,
+        status_filtro=status_filtro # Passa o filtro para o template
+    )
 
 
 @app.route("/mensalidades/novo")

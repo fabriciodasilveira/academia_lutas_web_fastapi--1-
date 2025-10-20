@@ -9,6 +9,7 @@ from datetime import date
 
 from src.schemas.aluno import AlunoRead
 from src.schemas.plano import PlanoRead
+from typing import List
 
 # Schema base para Mensalidade
 class MensalidadeBase(BaseModel):
@@ -39,3 +40,10 @@ class MensalidadeRead(MensalidadeBase):
 
     class Config:
         orm_mode = True
+
+class MensalidadePaginated(BaseModel):
+    total: int
+    mensalidades: List[MensalidadeRead]
+
+    class Config:
+        from_attributes = True # Necessário para Pydantic V2+

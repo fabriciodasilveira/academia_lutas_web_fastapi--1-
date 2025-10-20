@@ -13,9 +13,9 @@ from src.schemas.mensalidade import MensalidadeCreate, MensalidadeRead
 from src.models.aluno import Aluno
 from src.models.plano import Plano
 from src.models.financeiro import Financeiro
+from src.schemas.mensalidade import MensalidadePaginated
 
-# --- CORREÇÃO APLICADA AQUI ---
-# Removemos o 'prefix="/mensalidades"' da definição do APIRouter
+
 router = APIRouter(
     tags=["Mensalidades"],
     responses={404: {"description": "Não encontrado"}},
@@ -37,28 +37,40 @@ def create_mensalidade(mensalidade: MensalidadeCreate, db: Session = Depends(get
     db.refresh(db_mensalidade)
     return db_mensalidade
 
-@router.get("", response_model=List[MensalidadeRead])
+@router.get("", response_model=MensalidadePaginated) # Altera o response_model
 def read_mensalidades(
     skip: int = 0,
-    limit: int = 100,
+    limit: int = 20, # Define um limite padrão menor para paginação
     status: Optional[str] = None,
+    busca_aluno: Optional[str] = None, # Novo parâmetro de busca
     db: Session = Depends(get_db)
 ):
     """
-    Lista todas as mensalidades com filtros.
+    Lista mensalidades com filtros, busca por nome do aluno,
+    ordenação por nome e paginação.
     """
     query = db.query(Mensalidade).options(
-        joinedload(Mensalidade.aluno),
+        joinedload(Mensalidade.aluno), # Garante que o aluno seja carregado
         joinedload(Mensalidade.plano)
-    )
+    ).join(Aluno, Mensalidade.aluno_id == Aluno.id) # Faz o JOIN para poder buscar e ordenar
 
     if status:
         query = query.filter(Mensalidade.status == status)
-    
-    mensalidades = query.order_by(Mensalidade.data_vencimento.desc()).offset(skip).limit(limit).all()
-    # Filtra mensalidades com aluno None (caso de aluno deletado) para evitar erro de validação
-    mensalidades_validas = [m for m in mensalidades if m.aluno is not None and m.plano is not None]
-    return mensalidades_validas # Retorna apenas as mensalidades válidas
+    if busca_aluno:
+        # Filtra pelo nome do aluno (case-insensitive)
+        query = query.filter(Aluno.nome.ilike(f"%{busca_aluno}%"))
+
+    # Conta o total ANTES de aplicar limit/offset
+    total = query.count()
+
+    # Ordena pelo nome do aluno e depois pela data de vencimento
+    mensalidades_paginadas = query.order_by(Aluno.nome.asc(), Mensalidade.data_vencimento.desc())\
+                                  .offset(skip).limit(limit).all()
+
+    # Filtra mensalidades com aluno/plano None para evitar erro de validação (mantido)
+    mensalidades_validas = [m for m in mensalidades_paginadas if m.aluno is not None and m.plano is not None]
+
+    return {"total": total, "mensalidades": mensalidades_validas}
 
 @router.delete("/{mensalidade_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_mensalidade(mensalidade_id: int, db: Session = Depends(get_db)):
