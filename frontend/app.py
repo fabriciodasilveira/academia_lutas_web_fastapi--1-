@@ -1609,8 +1609,7 @@ def page_not_found(e):
 
 # --- Execução Principal ---
 if __name__ == '__main__':
-    debug_mode = os.getenv('FLASK_DEBUG', 'False').lower() in ['true', '1', 't']
-    app.run(debug=debug_mode, host='0.0.0.0', port=5700)
+    app.run(debug=True, host='0.0.0.0', port=5700)
 
 # from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 # import requests
