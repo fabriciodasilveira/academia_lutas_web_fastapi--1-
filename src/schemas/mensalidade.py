@@ -10,6 +10,7 @@ from datetime import date
 from src.schemas.aluno import AlunoRead
 from src.schemas.plano import PlanoRead
 from typing import List
+from .matricula import MatriculaRead # Importe MatriculaRead
 
 # Schema base para Mensalidade
 class MensalidadeBase(BaseModel):
@@ -35,11 +36,16 @@ class MensalidadeUpdate(BaseModel):
 # Schema para leitura/retorno de Mensalidade
 class MensalidadeRead(MensalidadeBase):
     id: int
-    aluno: AlunoRead
-    plano: PlanoRead
+    valor: float
+    data_vencimento: date
+    data_pagamento: Optional[date] = None
+    status: str
+    aluno: Optional[AlunoRead] = None
+    plano: Optional[PlanoRead] = None
+    matricula: Optional[MatriculaRead] = None # Adiciona a matrícula (que contém a turma)
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class MensalidadePaginated(BaseModel):
     total: int

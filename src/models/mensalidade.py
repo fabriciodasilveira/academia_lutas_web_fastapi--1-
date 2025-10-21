@@ -24,7 +24,7 @@ class Mensalidade(Base):
     # --- RELACIONAMENTOS USANDO NOMES DAS CLASSES ---
     aluno = relationship(Aluno, back_populates="mensalidades")
     plano = relationship(Plano) # Plano não tem back_populates para mensalidades
-    matricula = relationship(Matricula, back_populates="mensalidades")
+    matricula = relationship(Matricula, back_populates="mensalidades", lazy="joined")
     # ------------------------------------------------
 
 # # -*- coding: utf-8 -*-

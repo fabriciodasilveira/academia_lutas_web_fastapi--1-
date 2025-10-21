@@ -1,5 +1,5 @@
 
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, Response
 import requests
 import os
 import logging
@@ -8,6 +8,8 @@ import math
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session # Adicione 'session'
 from functools import wraps # Adicione 'wraps'
 import requests
+import pandas as pd # Para Exportação
+import io # Para Exportação
 
 app = Flask(__name__)
 app.secret_key = 'dev-secret-key-change-in-production'
@@ -66,33 +68,26 @@ def logout():
     return redirect(url_for('login'))
 
 
+# (filtros format_datetime e format_date_br existentes)
 @app.template_filter('format_datetime')
-@login_required
 def format_datetime_filter(s):
-    if not s:
-        return ""
+    # ... (código existente)
+    if not s: return ""
     try:
-        # Tenta converter de string ISO para objeto datetime
-        dt_obj = datetime.fromisoformat(s)
+        dt_obj = datetime.fromisoformat(str(s).replace('Z', '+00:00')) # Trata 'Z' de UTC
         return dt_obj.strftime('%d/%m/%Y %H:%M')
-    except (ValueError, TypeError):
-        return s
+    except (ValueError, TypeError): return s
 
 @app.template_filter('format_date_br')
 def format_date_br_filter(value):
-    """Formata uma data (string YYYY-MM-DD ou objeto date) para DD/MM/YYYY."""
-    if not value:
-        return ""
+    # ... (código existente)
+    if not value: return ""
     try:
-        if isinstance(value, str):
-            dt_obj = date.fromisoformat(value)
-        elif isinstance(value, date):
-            dt_obj = value
-        else:
-            return value # Retorna o valor original se não for string ou date
+        if isinstance(value, str): dt_obj = date.fromisoformat(value)
+        elif isinstance(value, date): dt_obj = value
+        else: return value
         return dt_obj.strftime('%d/%m/%Y')
-    except (ValueError, TypeError):
-        return value # Retorna original em caso de erro
+    except (ValueError, TypeError): return value
     
 
 def api_request(endpoint, method='GET', data=None, files=None, json=None, params=None, headers=None):
@@ -765,43 +760,70 @@ def matriculas_deletar(id):
 
 
 
-# @app.route("/financeiro/dashboard")
-# @login_required
-# def financeiro_dashboard():
-#     hoje = date.today()
-#     primeiro_dia_mes = hoje.replace(day=1)
+# --- NOVA ROTA PARA EXPORTAÇÃO ---
+@app.route("/mensalidades/exportar")
+@login_required
+def mensalidades_exportar():
+    busca = request.args.get('busca', '')
+    status_filtro = request.args.get('status', '') # Pega os mesmos filtros da lista
 
-#     balanco_response = api_request(f"/financeiro/balanco?data_inicio={primeiro_dia_mes.strftime('%Y-%m-%d')}&data_fim={hoje.strftime('%Y-%m-%d')}")
-#     stats = {}
-#     if balanco_response and balanco_response.status_code == 200:
-#         stats = balanco_response.json()
-    
-#     transacoes_response = api_request("/financeiro/transacoes?limit=5")
-#     transacoes = []
-#     if transacoes_response and transacoes_response.status_code == 200:
-#         transacoes_data = transacoes_response.json()
-#         for transacao in transacoes_data:
-#             if transacao.get('data'):
-#                 transacao['data'] = datetime.fromisoformat(transacao['data'])
-#             transacoes.append(transacao)
-    
-#     # Buscamos as categorias da API
-#     categorias_response = api_request("/categorias")
-#     categorias = categorias_response.json() if categorias_response and categorias_response.status_code == 200 else []
-    
-#     # Busca por mensalidades pendentes
-#     mensalidades_pendentes_response = api_request("/mensalidades?status=pendente")
-#     mensalidades_pendentes = []
-#     if mensalidades_pendentes_response and mensalidades_pendentes_response.status_code == 200:
-#         mensalidades_pendentes = mensalidades_pendentes_response.json()
+    params = { "limit": 10000 } # Pega "todos" (ajuste se tiver mais de 10k)
+    if busca: params["busca_aluno"] = busca
+    if status_filtro: params["status"] = status_filtro
 
-#     return render_template(
-#         "financeiro/dashboard.html", 
-#         stats=stats, 
-#         transacoes=transacoes, 
-#         categorias=categorias,
-#         mensalidades_pendentes=mensalidades_pendentes
-#     )
+    response = api_request("/mensalidades", params=params)
+    if response is None: return redirect(url_for('login', next=request.url))
+
+    if response.status_code == 200:
+        data = response.json()
+        mensalidades_data = data.get("mensalidades", [])
+
+        # Prepara dados para o Pandas DataFrame
+        export_data = []
+        for m in mensalidades_data:
+            export_data.append({
+                "Aluno": m.get('aluno', {}).get('nome', 'N/A') if m.get('aluno') else 'N/A',
+                "Turma": m.get('matricula', {}).get('turma', {}).get('nome', 'N/A') if m.get('matricula') and m['matricula'].get('turma') else 'N/A',
+                "Plano": m.get('plano', {}).get('nome', 'N/A') if m.get('plano') else 'N/A',
+                "Vencimento": format_date_br_filter(m.get('data_vencimento')),
+                "Valor (R$)": m.get('valor'),
+                "Status": m.get('status', '').capitalize(),
+                "Data Pagamento": format_date_br_filter(m.get('data_pagamento')) if m.get('data_pagamento') else '',
+            })
+
+        if not export_data:
+            flash("Nenhuma mensalidade encontrada para exportar com os filtros atuais.", "info")
+            return redirect(url_for('mensalidades_list', busca=busca, status=status_filtro))
+
+        try:
+            df = pd.DataFrame(export_data)
+
+            # Cria o arquivo Excel em memória
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                df.to_excel(writer, index=False, sheet_name='Mensalidades')
+            output.seek(0)
+
+            # Monta nome do arquivo
+            filename = f"mensalidades_{date.today().strftime('%Y%m%d')}"
+            if status_filtro: filename += f"_{status_filtro}"
+            if busca: filename += f"_busca_{busca}"
+            filename += ".xlsx"
+
+            return Response(
+                output,
+                mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                headers={"Content-Disposition": f"attachment;filename={filename}"}
+            )
+        except Exception as e:
+             app.logger.error(f"Erro ao gerar XLSX: {e}", exc_info=True)
+             flash(f"Erro ao gerar arquivo Excel: {e}", "danger")
+             return redirect(url_for('mensalidades_list', busca=busca, status=status_filtro))
+
+    else:
+        flash(f"Erro ao buscar dados para exportação ({response.status_code}).", "danger")
+        return redirect(url_for('mensalidades_list', busca=busca, status=status_filtro))
+    
 
 # --- Rotas Financeiras ---
 @app.route("/financeiro/dashboard")

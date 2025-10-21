@@ -25,7 +25,7 @@ class Matricula(Base):
 
     # --- RELACIONAMENTOS USANDO NOMES DAS CLASSES (onde possível) ---
     aluno = relationship(Aluno, back_populates="matriculas")
-    turma = relationship(Turma, back_populates="matriculas")
+    turma = relationship(Turma, back_populates="matriculas", lazy="joined")
     plano = relationship(Plano) # Plano não tem back_populates para matriculas
 
     # Para evitar importação circular, mantemos strings aqui por enquanto

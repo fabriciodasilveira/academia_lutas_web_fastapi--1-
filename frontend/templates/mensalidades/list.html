@@ -10,7 +10,11 @@
                 <i class="fas fa-file-invoice-dollar me-2"></i>
                 Mensalidades <span class="badge bg-secondary">{{ total_mensalidades }}</span>
             </h1>
-            </div>
+             <a href="{{ url_for('mensalidades_exportar', busca=busca, status=status_filtro) }}" class="btn btn-success">
+                <i class="fas fa-file-excel me-1"></i>
+                Exportar XLSX
+            </a>
+        </div>
     </div>
 </div>
 
@@ -56,7 +60,7 @@
                             <tr>
                                 <th>Aluno</th>
                                 <th>Plano</th>
-                                <th>Vencimento</th>
+                                <th>Turma</th> <th>Vencimento</th>
                                 <th>Valor (R$)</th>
                                 <th>Status</th>
                                 <th>Data Pagamento</th>
@@ -76,6 +80,13 @@
                                     {% endif %}
                                 </td>
                                 <td>{{ mensalidade.plano.nome if mensalidade.plano else 'N/A' }}</td>
+                                <td>
+                                    {% if mensalidade.matricula and mensalidade.matricula.turma %}
+                                        {{ mensalidade.matricula.turma.nome }}
+                                    {% else %}
+                                        <small class="text-muted">N/A</small>
+                                    {% endif %}
+                                </td>
                                 <td>{{ mensalidade.data_vencimento | format_date_br }}</td>
                                 <td>{{ "%.2f"|format(mensalidade.valor) }}</td>
                                 <td>
@@ -91,14 +102,14 @@
                                 <td>
                                     <div class="btn-group btn-group-sm" role="group">
                                         {% if mensalidade.status == 'pendente' %}
-                                        <button class="btn btn-outline-success" onclick="confirmPayment({{ mensalidade.id }}, '{{ mensalidade.aluno.nome }}', '{{ "%.2f"|format(mensalidade.valor) }}')" title="Registrar Pagamento Manual">
+                                         <button class="btn btn-outline-success" onclick="confirmPayment({{ mensalidade.id }}, '{{ mensalidade.aluno.nome if mensalidade.aluno else 'Aluno desconhecido' }}', '{{ "%.2f"|format(mensalidade.valor) }}')" title="Registrar Pagamento Manual">
                                             <i class="fas fa-cash-register"></i> Pagar
                                         </button>
-                                        <button class="btn btn-outline-primary" onclick="pagarOnline(event, {{ mensalidade.id }})" title="Gerar Link de Pagamento Online">
-                                            <i class="fas fa-credit-card"></i> Online
+                                        <button class="btn btn-outline-info" onclick="alert('Função Cobrar ainda não implementada!')" title="Cobrar Aluno (Em breve)">
+                                            <i class="fas fa-comment-dollar"></i> Cobrar
                                         </button>
                                         {% endif %}
-                                        <button class="btn btn-outline-danger" onclick="confirmDelete({{ mensalidade.id }}, '{{ mensalidade.aluno.nome }}', '{{ mensalidade.data_vencimento | format_date_br }}')" title="Excluir Mensalidade">
+                                        <button class="btn btn-outline-danger" onclick="confirmDelete({{ mensalidade.id }}, '{{ mensalidade.aluno.nome if mensalidade.aluno else 'Aluno desconhecido' }}', '{{ mensalidade.data_vencimento | format_date_br }}')" title="Excluir Mensalidade">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </div>
@@ -124,35 +135,12 @@
             <div class="card-footer bg-transparent">
                 <nav aria-label="Paginação das mensalidades">
                     <ul class="pagination justify-content-center mb-0">
-                        <li class="page-item {% if page == 1 %}disabled{% endif %}">
-                            <a class="page-link" href="{{ url_for('mensalidades_list', page=page-1, busca=busca, status=status_filtro) }}">Anterior</a>
-                        </li>
-                        {% set start_page = [1, page-2] | max %}
-                        {% set end_page = [total_pages, page+2] | min %}
-
-                        {% if start_page > 1 %}
-                            <li class="page-item"><a class="page-link" href="{{ url_for('mensalidades_list', page=1, busca=busca, status=status_filtro) }}">1</a></li>
-                            {% if start_page > 2 %}
-                            <li class="page-item disabled"><span class="page-link">...</span></li>
-                            {% endif %}
-                        {% endif %}
-
-                        {% for p in range(start_page, end_page + 1) %}
-                        <li class="page-item {% if p == page %}active{% endif %}">
-                            <a class="page-link" href="{{ url_for('mensalidades_list', page=p, busca=busca, status=status_filtro) }}">{{ p }}</a>
-                        </li>
-                        {% endfor %}
-
-                         {% if end_page < total_pages %}
-                            {% if end_page < total_pages - 1 %}
-                            <li class="page-item disabled"><span class="page-link">...</span></li>
-                            {% endif %}
-                            <li class="page-item"><a class="page-link" href="{{ url_for('mensalidades_list', page=total_pages, busca=busca, status=status_filtro) }}">{{ total_pages }}</a></li>
-                        {% endif %}
-
-                        <li class="page-item {% if page == total_pages %}disabled{% endif %}">
-                            <a class="page-link" href="{{ url_for('mensalidades_list', page=page+1, busca=busca, status=status_filtro) }}">Próximo</a>
-                        </li>
+                        <li class="page-item {% if page == 1 %}disabled{% endif %}"><a class="page-link" href="{{ url_for('mensalidades_list', page=page-1, busca=busca, status=status_filtro) }}">Anterior</a></li>
+                        {% set start_page = [1, page-2] | max %}{% set end_page = [total_pages, page+2] | min %}
+                        {% if start_page > 1 %}<li class="page-item"><a class="page-link" href="{{ url_for('mensalidades_list', page=1, busca=busca, status=status_filtro) }}">1</a></li>{% if start_page > 2 %}<li class="page-item disabled"><span class="page-link">...</span></li>{% endif %}{% endif %}
+                        {% for p in range(start_page, end_page + 1) %}<li class="page-item {% if p == page %}active{% endif %}"><a class="page-link" href="{{ url_for('mensalidades_list', page=p, busca=busca, status=status_filtro) }}">{{ p }}</a></li>{% endfor %}
+                        {% if end_page < total_pages %}{% if end_page < total_pages - 1 %}<li class="page-item disabled"><span class="page-link">...</span></li>{% endif %}<li class="page-item"><a class="page-link" href="{{ url_for('mensalidades_list', page=total_pages, busca=busca, status=status_filtro) }}">{{ total_pages }}</a></li>{% endif %}
+                        <li class="page-item {% if page == total_pages %}disabled{% endif %}"><a class="page-link" href="{{ url_for('mensalidades_list', page=page+1, busca=busca, status=status_filtro) }}">Próximo</a></li>
                     </ul>
                 </nav>
             </div>
@@ -161,46 +149,8 @@
     </div>
 </div>
 
-<div class="modal fade" id="paymentModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" style="color:#000;">Confirmar Pagamento Manual</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p style="color:#000;">Confirmar recebimento manual da mensalidade de <strong id="paymentAlunoName"></strong> no valor de R$ <strong id="paymentValue"></strong>?</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <form id="paymentForm" method="POST" style="display: inline;">
-                    <button type="submit" class="btn btn-success">Confirmar Pagamento</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="deleteModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" style="color:#000;">Confirmar Exclusão</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                 <p style="color:#000;">Tem certeza que deseja excluir a mensalidade de <strong id="deleteAlunoName"></strong> com vencimento em <strong id="deleteDueDate"></strong>?</p>
-                 <p class="text-danger"><small>Esta ação não pode ser desfeita.</small></p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                 <form id="deleteForm" method="POST" style="display: inline;">
-                    <button type="submit" class="btn btn-danger">Excluir</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+<div class="modal fade" id="paymentModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" style="color:#000;">Confirmar Pagamento Manual</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><p style="color:#000;">Confirmar recebimento manual da mensalidade de <strong id="paymentAlunoName"></strong> no valor de R$ <strong id="paymentValue"></strong>?</p></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><form id="paymentForm" method="POST" style="display: inline;"><button type="submit" class="btn btn-success">Confirmar Pagamento</button></form></div></div></div></div>
+<div class="modal fade" id="deleteModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" style="color:#000;">Confirmar Exclusão</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><p style="color:#000;">Tem certeza que deseja excluir a mensalidade de <strong id="deleteAlunoName"></strong> com vencimento em <strong id="deleteDueDate"></strong>?</p><p class="text-danger"><small>Esta ação não pode ser desfeita.</small></p></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><form id="deleteForm" method="POST" style="display: inline;"><button type="submit" class="btn btn-danger">Excluir</button></form></div></div></div></div>
 
 {% endblock %}
 
@@ -208,8 +158,8 @@
 <script>
 // Para o Modal de Pagamento Manual
 function confirmPayment(id, alunoNome, valor) {
-    document.getElementById('paymentAlunoName').textContent = alunoNome;
-    document.getElementById('paymentValue').textContent = valor.replace('.', ','); // Formata valor
+    document.getElementById('paymentAlunoName').textContent = alunoNome || 'Aluno desconhecido';
+    document.getElementById('paymentValue').textContent = valor.replace('.', ',');
     document.getElementById('paymentForm').action = `/mensalidades/pagar/${id}`;
     const modal = new bootstrap.Modal(document.getElementById('paymentModal'));
     modal.show();
@@ -217,141 +167,15 @@ function confirmPayment(id, alunoNome, valor) {
 
 // Para o Modal de Exclusão
 function confirmDelete(id, alunoNome, vencimento) {
-    document.getElementById('deleteAlunoName').textContent = alunoNome;
+    document.getElementById('deleteAlunoName').textContent = alunoNome || 'Aluno desconhecido';
     document.getElementById('deleteDueDate').textContent = vencimento;
     document.getElementById('deleteForm').action = `/mensalidades/deletar/${id}`;
     const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
     modal.show();
 }
 
-
-// Para o Pagamento Online via Stripe (código existente)
-function pagarOnline(event, mensalidadeId) {
-    const button = event.currentTarget;
-    const originalHtml = button.innerHTML;
-    
-    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...';
-    button.disabled = true;
-
-    // Constrói a URL completa para a API de pagamento da Stripe
-    const apiUrl = `{{ API_BASE_URL }}/api/v1/pagamentos/stripe/mensalidade/${mensalidadeId}`;
-
-    fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer {{ session.get('access_token') }}`,
-            'Content-Type': 'application/json'
-        }
-    })
-    .then(response => {
-        if (!response.ok) {
-            return response.json().then(err => { throw new Error(err.detail || 'Falha ao gerar o link Stripe.'); });
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data.sessionId) {
-            // Usa a chave pública para redirecionar ao checkout
-             const stripePublicKey = "{{ session.get('STRIPE_PUBLIC_KEY') }}"; // Precisa passar essa chave do Flask
-             if (!stripePublicKey) {
-                 throw new Error("Chave pública da Stripe não encontrada.")
-             }
-             const stripe = Stripe(stripePublicKey);
-             stripe.redirectToCheckout({ sessionId: data.sessionId });
-
-        } else {
-            throw new Error('ID da sessão Stripe não recebido.');
-        }
-    })
-    .catch(error => {
-        console.error('Erro Stripe:', error);
-        alert(`Ocorreu um erro inesperado: ${error.message}`);
-        button.innerHTML = originalHtml;
-        button.disabled = false;
-    });
-}
-
-// --- ADICIONAL: Passar a Chave Pública Stripe para o JS ---
-// No seu app.py, na função que renderiza esta página (mensalidades_list),
-// adicione a chave pública à sessão se ainda não estiver lá, ou passe diretamente:
-// Exemplo em app.py:
-// @app.route("/mensalidades")
-// def mensalidades_list():
-//     # ... (código existente)
-//     stripe_pk = os.getenv("STRIPE_PUBLIC_KEY")
-//     return render_template("mensalidades/list.html", ..., stripe_public_key=stripe_pk)
-//
-// E no JS: const stripePublicKey = "{{ stripe_public_key }}";
-// Ou, mais simples, se já estiver na sessão Flask:
-// const stripePublicKey = "{{ session.get('STRIPE_PUBLIC_KEY') }}"; <-- Usado acima
-
-
-// Precisamos buscar a chave pública da API ou injetá-la via Flask
-let stripeInstance = null;
-let stripePublicKey = null;
-
-async function initializeStripeForManagement() {
-    try {
-        const response = await fetch("{{ API_BASE_URL }}/api/v1/pagamentos/stripe-key");
-        if (!response.ok) throw new Error("Falha ao buscar chave Stripe");
-        const keyData = await response.json();
-        if (keyData && keyData.publicKey) {
-             stripePublicKey = keyData.publicKey;
-             stripeInstance = Stripe(stripePublicKey); // Inicializa a Stripe aqui
-        } else {
-            console.error("Chave pública da Stripe não recebida da API.");
-        }
-    } catch (error) {
-        console.error("Erro ao inicializar a Stripe:", error);
-    }
-}
-
-// Chama a inicialização quando a página carrega
-document.addEventListener('DOMContentLoaded', initializeStripeForManagement);
-
-// Modifica a função pagarOnline para usar a instância inicializada
-function pagarOnline(event, mensalidadeId) {
-    if (!stripeInstance) {
-        alert("Sistema de pagamento Stripe não inicializado. Tente novamente.");
-        return;
-    }
-    // ... (resto da função pagarOnline como estava antes, mas usando 'stripeInstance' em vez de 'Stripe(stripePublicKey)')
-     const button = event.currentTarget;
-    const originalHtml = button.innerHTML;
-    
-    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...';
-    button.disabled = true;
-
-    const apiUrl = `{{ API_BASE_URL }}/api/v1/pagamentos/stripe/mensalidade/${mensalidadeId}`;
-
-    fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer {{ session.get('access_token') }}`,
-            'Content-Type': 'application/json'
-        }
-    })
-    .then(response => {
-        if (!response.ok) {
-            return response.json().then(err => { throw new Error(err.detail || 'Falha ao gerar o link Stripe.'); });
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data.sessionId) {
-             stripeInstance.redirectToCheckout({ sessionId: data.sessionId }); // Usa a instância
-        } else {
-            throw new Error('ID da sessão Stripe não recebido.');
-        }
-    })
-    .catch(error => {
-        console.error('Erro Stripe:', error);
-        alert(`Ocorreu um erro inesperado: ${error.message}`);
-        button.innerHTML = originalHtml;
-        button.disabled = false;
-    });
-}
-
-
+// REMOVIDO: Função pagarOnline (Stripe) não é mais usada nesta tela
+// function pagarOnline(event, mensalidadeId) { ... }
 </script>
 {% endblock %}
+

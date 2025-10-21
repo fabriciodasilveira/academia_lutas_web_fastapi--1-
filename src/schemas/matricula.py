@@ -32,12 +32,13 @@ class MatriculaUpdate(BaseModel):
     turma_id: Optional[int] = None
     ativa: Optional[bool] = None
 
-# Schema para leitura/retorno de Matrícula
 class MatriculaRead(MatriculaBase):
     id: int
-    aluno: AlunoRead
-    turma: TurmaRead
-    plano: PlanoRead # ADICIONAR ESTA LINHA
+    data_matricula: Optional[date] = None
+    ativa: bool
+    aluno: Optional[AlunoRead] = None # Inclui dados do aluno
+    turma: Optional[TurmaRead] = None # Inclui dados da turma
+    plano: Optional[PlanoRead] = None # Inclui dados do plano
 
     class Config:
-        orm_mode = True
+        from_attributes = True
