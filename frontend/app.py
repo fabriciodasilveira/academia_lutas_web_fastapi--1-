@@ -765,44 +765,106 @@ def matriculas_deletar(id):
 
 
 
+# @app.route("/financeiro/dashboard")
+# @login_required
+# def financeiro_dashboard():
+#     hoje = date.today()
+#     primeiro_dia_mes = hoje.replace(day=1)
+
+#     balanco_response = api_request(f"/financeiro/balanco?data_inicio={primeiro_dia_mes.strftime('%Y-%m-%d')}&data_fim={hoje.strftime('%Y-%m-%d')}")
+#     stats = {}
+#     if balanco_response and balanco_response.status_code == 200:
+#         stats = balanco_response.json()
+    
+#     transacoes_response = api_request("/financeiro/transacoes?limit=5")
+#     transacoes = []
+#     if transacoes_response and transacoes_response.status_code == 200:
+#         transacoes_data = transacoes_response.json()
+#         for transacao in transacoes_data:
+#             if transacao.get('data'):
+#                 transacao['data'] = datetime.fromisoformat(transacao['data'])
+#             transacoes.append(transacao)
+    
+#     # Buscamos as categorias da API
+#     categorias_response = api_request("/categorias")
+#     categorias = categorias_response.json() if categorias_response and categorias_response.status_code == 200 else []
+    
+#     # Busca por mensalidades pendentes
+#     mensalidades_pendentes_response = api_request("/mensalidades?status=pendente")
+#     mensalidades_pendentes = []
+#     if mensalidades_pendentes_response and mensalidades_pendentes_response.status_code == 200:
+#         mensalidades_pendentes = mensalidades_pendentes_response.json()
+
+#     return render_template(
+#         "financeiro/dashboard.html", 
+#         stats=stats, 
+#         transacoes=transacoes, 
+#         categorias=categorias,
+#         mensalidades_pendentes=mensalidades_pendentes
+#     )
+
+# --- Rotas Financeiras ---
 @app.route("/financeiro/dashboard")
 @login_required
 def financeiro_dashboard():
     hoje = date.today()
     primeiro_dia_mes = hoje.replace(day=1)
-
-    balanco_response = api_request(f"/financeiro/balanco?data_inicio={primeiro_dia_mes.strftime('%Y-%m-%d')}&data_fim={hoje.strftime('%Y-%m-%d')}")
-    stats = {}
-    if balanco_response and balanco_response.status_code == 200:
-        stats = balanco_response.json()
     
-    transacoes_response = api_request("/financeiro/transacoes?limit=5")
+    # Busca balanço do mês atual
+    balanco_params = { "data_inicio": primeiro_dia_mes.strftime('%Y-%m-%d'), "data_fim": hoje.strftime('%Y-%m-%d')}
+    balanco_resp = api_request("/financeiro/balanco", params=balanco_params)
+    if balanco_resp is None: return redirect(url_for('login', next=request.url))
+    stats = balanco_resp.json() if balanco_resp.status_code == 200 else {}
+
+    # Busca últimas 5 transações
+    trans_resp = api_request("/financeiro/transacoes?limit=5&sort_by=data&order=desc")
+    if trans_resp is None: return redirect(url_for('login', next=request.url))
     transacoes = []
-    if transacoes_response and transacoes_response.status_code == 200:
-        transacoes_data = transacoes_response.json()
-        for transacao in transacoes_data:
-            if transacao.get('data'):
-                transacao['data'] = datetime.fromisoformat(transacao['data'])
-            transacoes.append(transacao)
+    if trans_resp.status_code == 200:
+        trans_data = trans_resp.json()
+        # API pode retornar lista ou dict paginado, ajustamos para ambos
+        if isinstance(trans_data, dict) and "transacoes" in trans_data:
+             transacoes = trans_data.get("transacoes", [])
+        elif isinstance(trans_data, list):
+             transacoes = trans_data
+        else:
+            app.logger.error(f"API /financeiro/transacoes retornou tipo inesperado: {type(trans_data)}")
+        # Tenta converter as datas
+        for t in transacoes:
+            if t.get('data'):
+                try: t['data'] = datetime.fromisoformat(t['data'].replace('Z', '+00:00'))
+                except: pass # Ignora se falhar
+
+    # Busca categorias
+    cat_resp = api_request("/categorias")
+    if cat_resp is None: return redirect(url_for('login', next=request.url))
+    categorias = cat_resp.json() if cat_resp.status_code == 200 else []
+
+    # Busca mensalidades pendentes
+    mens_params = {"status": "pendente", "limit": 1000} # Pega um limite alto de pendentes
+    mens_resp = api_request("/mensalidades", params=mens_params)
+    if mens_resp is None: return redirect(url_for('login', next=request.url))
     
-    # Buscamos as categorias da API
-    categorias_response = api_request("/categorias")
-    categorias = categorias_response.json() if categorias_response and categorias_response.status_code == 200 else []
-    
-    # Busca por mensalidades pendentes
-    mensalidades_pendentes_response = api_request("/mensalidades?status=pendente")
     mensalidades_pendentes = []
-    if mensalidades_pendentes_response and mensalidades_pendentes_response.status_code == 200:
-        mensalidades_pendentes = mensalidades_pendentes_response.json()
+    if mens_resp.status_code == 200:
+        # --- CORREÇÃO APLICADA AQUI ---
+        data = mens_resp.json()
+        # Garante que 'data' é um dicionário e tem a chave 'mensalidades'
+        if isinstance(data, dict) and "mensalidades" in data:
+            mensalidades_pendentes = data.get("mensalidades", [])
+        else:
+             app.logger.error(f"API /mensalidades retornou formato inesperado: {type(data)}")
+             flash("Formato de resposta inesperado da API de mensalidades.", "warning")
+        # --- FIM DA CORREÇÃO ---
+    else:
+        app.logger.warning(f"Não foi possível buscar mensalidades pendentes ({mens_resp.status_code})")
+        flash(f"Erro ao buscar mensalidades pendentes ({mens_resp.status_code}).", "warning")
 
-    return render_template(
-        "financeiro/dashboard.html", 
-        stats=stats, 
-        transacoes=transacoes, 
-        categorias=categorias,
-        mensalidades_pendentes=mensalidades_pendentes
-    )
 
+    if not stats: flash("Erro ao carregar balanço financeiro.", "warning")
+
+    return render_template("financeiro/dashboard.html", stats=stats, transacoes=transacoes,
+                           categorias=categorias, mensalidades_pendentes=mensalidades_pendentes)
 
 @app.route("/financeiro/transacoes")
 @login_required
