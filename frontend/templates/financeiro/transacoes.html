@@ -93,9 +93,9 @@
                             </select>
                         </div>
                         <div class="col-md-2">
-                            <select class="form-select" id="categoriaFilter" name="categoria">
+                            <select class="form-select" id="categoriaFilter" name="categoria"> 
                                 <option value="" {% if not request.args.get('categoria') %}selected{% endif %}>Todas categorias</option>
-                                <option value="mensalidade" {% if request.args.get('categoria') == 'mensalidade' %}selected{% endif %}>Mensalidade</option>
+                                <option value="Mensalidade" {% if request.args.get('categoria') == 'Mensalidade' %}selected{% endif %}>Mensalidade</option>
                                 <option value="matricula" {% if request.args.get('categoria') == 'matricula' %}selected{% endif %}>Matrícula</option>
                                 <option value="evento" {% if request.args.get('categoria') == 'evento' %}selected{% endif %}>Evento</option>
                                 <option value="equipamento" {% if request.args.get('categoria') == 'equipamento' %}selected{% endif %}>Equipamento</option>
