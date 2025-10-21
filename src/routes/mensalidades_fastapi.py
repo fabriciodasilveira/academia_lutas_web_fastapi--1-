@@ -14,6 +14,7 @@ from src.models.aluno import Aluno
 from src.models.plano import Plano
 from src.models.financeiro import Financeiro
 from src.schemas.mensalidade import MensalidadePaginated
+from src.models.matricula import Matricula
 
 
 router = APIRouter(
@@ -50,9 +51,10 @@ def read_mensalidades(
     ordenação por nome e paginação.
     """
     query = db.query(Mensalidade).options(
-        joinedload(Mensalidade.aluno), # Garante que o aluno seja carregado
-        joinedload(Mensalidade.plano)
-    ).join(Aluno, Mensalidade.aluno_id == Aluno.id) # Faz o JOIN para poder buscar e ordenar
+        joinedload(Mensalidade.aluno),
+        joinedload(Mensalidade.plano),
+        joinedload(Mensalidade.matricula).joinedload(Matricula.turma) # Carrega matricula e DEPOIS turma
+    ).join(Aluno, Mensalidade.aluno_id == Aluno.id)
 
     if status:
         query = query.filter(Mensalidade.status == status)
