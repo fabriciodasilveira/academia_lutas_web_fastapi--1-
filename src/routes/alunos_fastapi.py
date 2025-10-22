@@ -37,7 +37,6 @@ def create_aluno(
     telefone_responsavel: Optional[str] = Form(None), email_responsavel: Optional[str] = Form(None),
     responsavel_aluno_id: Optional[int] = Form(None), db: Session = Depends(get_db)
 ):
-    # ... (código existente create_aluno) ...
     new_user = None; hashed_password = None; default_password = None
     if responsavel_aluno_id:
         db_responsavel = db.query(Aluno).filter(Aluno.id == responsavel_aluno_id).first()
@@ -52,10 +51,9 @@ def create_aluno(
         new_user = Usuario(email=email, nome=nome, hashed_password=hashed_password, role="aluno")
     parsed_data_nascimento = None
     if data_nascimento: 
-        try: 
-            parsed_data_nascimento = date.fromisoformat(data_nascimento); 
-        except ValueError: 
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Formato data inválido (YYYY-MM-DD)")
+        try: parsed_data_nascimento = date.fromisoformat(data_nascimento); 
+        except ValueError: raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Formato data inválido (YYYY-MM-DD)")
+        
     db_aluno = Aluno( nome=nome, email=email, data_nascimento=parsed_data_nascimento, cpf=cpf, telefone=telefone, endereco=endereco, observacoes=observacoes, nome_responsavel=nome_responsavel, cpf_responsavel=cpf_responsavel, parentesco_responsavel=parentesco_responsavel, telefone_responsavel=telefone_responsavel, email_responsavel=email_responsavel, responsavel_aluno_id=responsavel_aluno_id, usuario=new_user )
     try:
         if new_user: db.add(new_user)
@@ -85,7 +83,6 @@ def update_aluno(
     nome_responsavel: Optional[str] = Form(None), cpf_responsavel: Optional[str] = Form(None), parentesco_responsavel: Optional[str] = Form(None),
     telefone_responsavel: Optional[str] = Form(None), email_responsavel: Optional[str] = Form(None), responsavel_aluno_id: Optional[int] = Form(None)
 ):
-    # ... (código existente update_aluno) ...
     db_aluno = db.query(Aluno).options(joinedload(Aluno.usuario)).filter(Aluno.id == aluno_id).first()
     if not db_aluno: raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Aluno não encontrado")
     if responsavel_aluno_id is not None and responsavel_aluno_id != db_aluno.responsavel_aluno_id:
@@ -130,31 +127,31 @@ def read_alunos(
 ):
     query = db.query(Aluno).options(
         joinedload(Aluno.matriculas),
-        # selectinload(Aluno.dependentes), # <<< REMOVIDO PARA EVITAR O ERRO
-        joinedload(Aluno.responsavel)
+        # selectinload(Aluno.dependentes), # <<< REMOVIDO DAQUI
+        joinedload(Aluno.responsavel)   # Mantém o responsável
     )
-    # ... (filtros de nome, cpf, status permanecem iguais) ...
     if nome: query = query.filter(Aluno.nome.ilike(f"%{nome}%"))
     if cpf: query = query.filter(Aluno.cpf == cpf)
     if status:
         subquery = db.query(Matricula.aluno_id).filter(Matricula.ativa == True).distinct()
         if status == 'ativo': query = query.filter(Aluno.id.in_(subquery))
         elif status == 'inativo': query = query.filter(Aluno.id.notin_(subquery))
-        
+
     total = query.count()
     alunos_paginados = query.order_by(Aluno.nome).offset(skip).limit(limit).all()
 
-    # Monta a resposta - Pydantic/SQLAlchemy lidarão com 'dependentes' (lazy load ou vazio)
     response_alunos = []
     for aluno in alunos_paginados:
+        # Pydantic converterá o aluno; a relação 'dependentes' (dynamic) não será populada aqui
         aluno_read = AlunoRead.from_orm(aluno)
+        # Calcula status_geral após a conversão
         aluno_read.status_geral = "Ativo" if any(m.ativa for m in aluno.matriculas) else "Inativo"
         response_alunos.append(aluno_read)
 
     return {"total": total, "alunos": response_alunos}
 
 
-# --- READ ALUNO (Mantém selectinload aqui, pois é para um único aluno) ---
+# --- READ ALUNO (Mantém selectinload aqui) ---
 @router.get("/{aluno_id}", response_model=AlunoRead)
 def read_aluno(aluno_id: int, db: Session = Depends(get_db)):
     db_aluno = db.query(Aluno).options(
@@ -171,17 +168,17 @@ def read_aluno(aluno_id: int, db: Session = Depends(get_db)):
 # --- DELETE ALUNO (sem alterações) ---
 @router.delete("/{aluno_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_aluno(aluno_id: int, db: Session = Depends(get_db)):
-    # ... (código existente delete_aluno) ...
     db_aluno = db.query(Aluno).options(joinedload(Aluno.usuario)).filter(Aluno.id == aluno_id).first()
     if db_aluno is None: raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Aluno não encontrado")
-    try: db.delete(db_aluno); db.commit(); logging.info(f"Aluno {aluno_id} excluído.")
+    # Lógica S3 delete (opcional)
+    try:
+        db.delete(db_aluno); db.commit(); logging.info(f"Aluno {aluno_id} excluído.")
     except Exception as e: db.rollback(); logging.error(f"Erro excluir aluno {aluno_id}: {e}"); raise HTTPException(status_code=500, detail=f"Erro excluir: {e}")
     return None
 
 # --- OUTRAS ROTAS (histórico, status-detalhado) (sem alterações) ---
 @router.get("/{aluno_id}/historico")
 def get_aluno_historico(aluno_id: int, db: Session = Depends(get_db)):
-    # ... (código existente) ...
     aluno = db.query(Aluno).filter(Aluno.id == aluno_id).first();
     if not aluno: raise HTTPException(status_code=404, detail="Aluno não encontrado"); historico = []
     if aluno.data_cadastro: historico.append({"data": aluno.data_cadastro.isoformat(), "descricao": "Aluno cadastrado", "tipo": "cadastro"})
@@ -194,7 +191,6 @@ def get_aluno_historico(aluno_id: int, db: Session = Depends(get_db)):
 
 @router.get("/{aluno_id}/status-detalhado")
 def get_aluno_status_detalhado(aluno_id: int, db: Session = Depends(get_db)):
-    # ... (código existente) ...
     aluno = db.query(Aluno).filter(Aluno.id == aluno_id).first();
     if not aluno: raise HTTPException(status_code=404, detail="Aluno não encontrado")
     matricula_ativa = db.query(Matricula).filter(Matricula.aluno_id == aluno_id, Matricula.ativa == True).first()
