@@ -1,24 +1,20 @@
 # src/schemas/aluno.py
-from pydantic import BaseModel, Field, EmailStr
-from typing import Optional, List # Adicione List
+from pydantic import BaseModel, Field, EmailStr, validator # Importe validator
+from typing import Optional, List
 from datetime import date, datetime
 
-# --- NOVO: Schema Mínimo para Listar Dependentes ---
 class AlunoDependenteRead(BaseModel):
     id: int
     nome: str
     foto: Optional[str] = None
-
-    class Config:
-        from_attributes = True
-# --- FIM DO NOVO SCHEMA ---
+    class Config: from_attributes = True
 
 class AlunoBase(BaseModel):
     nome: str = Field(..., max_length=100)
     data_nascimento: Optional[date] = None
     cpf: Optional[str] = Field(None, max_length=14)
     telefone: Optional[str] = Field(None, max_length=20)
-    email: Optional[EmailStr] = None # Permitir None
+    email: Optional[EmailStr] = None # Permite None
     endereco: Optional[str] = Field(None, max_length=255)
     observacoes: Optional[str] = Field(None, max_length=255)
     nome_responsavel: Optional[str] = Field(None, max_length=100)
@@ -26,11 +22,18 @@ class AlunoBase(BaseModel):
     parentesco_responsavel: Optional[str] = Field(None, max_length=50)
     telefone_responsavel: Optional[str] = Field(None, max_length=20)
     email_responsavel: Optional[EmailStr] = None
-    responsavel_aluno_id: Optional[int] = None # Adiciona o campo para vínculo
+    responsavel_aluno_id: Optional[int] = None
+
+    # --- NOVO VALIDADOR ---
+    @validator('email', 'email_responsavel', pre=True)
+    def empty_str_to_none(cls, v):
+        """Converte strings vazias para None antes da validação principal."""
+        if isinstance(v, str) and v.strip() == '':
+            return None
+        return v
+    # --- FIM DO VALIDADOR ---
 
 class AlunoCreate(AlunoBase):
-    # Opcional: Adicionar senha se a criação via API também criar o usuário
-    # password: Optional[str] = None
     pass
 
 class AlunoRead(AlunoBase):
@@ -39,18 +42,12 @@ class AlunoRead(AlunoBase):
     foto: Optional[str] = None
     idade: Optional[int] = None
     status_geral: str = "Inativo"
-
-    # --- ADICIONA INFORMAÇÕES DE FAMÍLIA ---
-    # Quem é o responsável por ESTE aluno (se houver)
     responsavel: Optional[AlunoDependenteRead] = None
-    # Quem são os dependentes DESTE aluno (se houver)
     dependentes: List[AlunoDependenteRead] = []
-    # --- FIM DAS ADIÇÕES ---
-
-    class Config:
-        from_attributes = True
+    class Config: from_attributes = True
 
 class AlunoUpdate(BaseModel):
+    # Campos existentes para update
     nome: Optional[str] = Field(None, max_length=100)
     data_nascimento: Optional[date] = None
     cpf: Optional[str] = Field(None, max_length=14)
@@ -63,11 +60,17 @@ class AlunoUpdate(BaseModel):
     parentesco_responsavel: Optional[str] = Field(None, max_length=50)
     telefone_responsavel: Optional[str] = Field(None, max_length=20)
     email_responsavel: Optional[EmailStr] = None
-    responsavel_aluno_id: Optional[int] = None # Permite atualizar/remover vínculo
+    responsavel_aluno_id: Optional[int] = None # None significa remover responsável
+
+    # --- Aplica o mesmo validador ao Update ---
+    @validator('email', 'email_responsavel', pre=True)
+    def empty_str_to_none_update(cls, v):
+        if isinstance(v, str) and v.strip() == '':
+            return None
+        return v
+    # --- Fim do validador ---
 
 class AlunoPaginated(BaseModel):
     total: int
-    alunos: List[AlunoRead] # Usa AlunoRead para ter os dados de família na lista
-
-    class Config:
-        from_attributes = True
+    alunos: List[AlunoRead]
+    class Config: from_attributes = True
