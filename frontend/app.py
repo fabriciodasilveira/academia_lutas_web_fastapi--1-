@@ -584,25 +584,18 @@ def turmas_deletar(id):
 @app.route("/matriculas")
 @login_required
 def matriculas_list():
-    # Pega os parâmetros da URL (ex: ?busca=Joao&status=ativa)
-    busca = request.args.get('busca', '')
-    status = request.args.get('status', '')
-
-    # Monta a URL da API com os parâmetros
-    endpoint = "/matriculas?"
-    params = []
-    if busca:
-        params.append(f"busca={busca}")
-    if status:
-        params.append(f"status={status}")
-    
-    endpoint += "&".join(params)
-    
-    response = api_request(endpoint)
+    busca = request.args.get('busca', ''); status = request.args.get('status', '')
+    params = {"limit": 1000}; # Pega um limite alto por padrão
+    if busca: params["busca"] = busca
+    if status: params["status"] = status
+    response = api_request("/matriculas", params=params);
+    if response is None: return redirect(url_for('login', next=request.url))
     matriculas = []
-    if response and response.status_code == 200:
-        matriculas = response.json()
-        
+    if response.status_code == 200:
+        try: 
+            matriculas = response.json()
+        except: flash("Resposta inválida API matrículas.", "danger")
+    else: flash(f"Erro carregar matrículas ({response.status_code}).", "warning")
     return render_template("matriculas/list.html", matriculas=matriculas, busca=busca, status=status)
 
 
