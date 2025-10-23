@@ -51,9 +51,10 @@ def create_aluno(
         new_user = Usuario(email=email, nome=nome, hashed_password=hashed_password, role="aluno")
     parsed_data_nascimento = None
     if data_nascimento: 
-        try: parsed_data_nascimento = date.fromisoformat(data_nascimento); 
-        except ValueError: raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Formato data inválido (YYYY-MM-DD)")
-        
+        try: 
+            parsed_data_nascimento = date.fromisoformat(data_nascimento); 
+        except ValueError: 
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Formato data inválido (YYYY-MM-DD)")
     db_aluno = Aluno( nome=nome, email=email, data_nascimento=parsed_data_nascimento, cpf=cpf, telefone=telefone, endereco=endereco, observacoes=observacoes, nome_responsavel=nome_responsavel, cpf_responsavel=cpf_responsavel, parentesco_responsavel=parentesco_responsavel, telefone_responsavel=telefone_responsavel, email_responsavel=email_responsavel, responsavel_aluno_id=responsavel_aluno_id, usuario=new_user )
     try:
         if new_user: db.add(new_user)
@@ -96,7 +97,8 @@ def update_aluno(
     for key, value in update_data.items():
         if value is not None: setattr(db_aluno, key, value)
     if data_nascimento: 
-        try: db_aluno.data_nascimento = date.fromisoformat(data_nascimento); 
+        try: 
+            db_aluno.data_nascimento = date.fromisoformat(data_nascimento); 
         except: pass
     if email is not None and db_aluno.email != email:
         if db_aluno.usuario:
