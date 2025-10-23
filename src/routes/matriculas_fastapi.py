@@ -16,7 +16,7 @@ from src.schemas.matricula import MatriculaCreate, MatriculaRead, MatriculaUpdat
 
 router = APIRouter(
     tags=["Matrículas"],
-    prefix="/matriculas",
+    # prefix="/matriculas",
     responses={404: {"description": "Não encontrado"}},
 )
 
