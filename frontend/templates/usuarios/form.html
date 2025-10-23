@@ -28,6 +28,7 @@
                         <label for="role" class="form-label">Permissão *</label>
                         <select class="form-select" name="role" required>
                             <option value="pendente" {% if usuario and usuario.role == 'pendente' %}selected{% endif %}>Pendente</option>
+                            <option value="aluno" {% if usuario and usuario.role == 'aluno' %}selected{% endif %}>Aluno</option>
                             <option value="atendente" {% if usuario and usuario.role == 'atendente' %}selected{% endif %}>Atendente</option>
                             <option value="gerente" {% if usuario and usuario.role == 'gerente' %}selected{% endif %}>Gerente</option>
                             <option value="administrador" {% if usuario and usuario.role == 'administrador' %}selected{% endif %}>Administrador</option>
