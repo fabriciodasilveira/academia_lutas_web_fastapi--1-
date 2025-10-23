@@ -329,15 +329,18 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Confirmar Exclusão</h5>
+                <h5 class="modal-title" style="color:#000;">Confirmar Exclusão</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p>Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita.</p>
+                 <p style="color:#000;">Tem certeza que deseja excluir a transação "<strong id="transacaoDescToDelete"></strong>"?</p>
+                 <p class="text-danger"><small>Esta ação não pode ser desfeita.</small></p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-danger" onclick="deleteTransacao()">Excluir</button>
+                 <form id="deleteForm" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">Excluir</button>
+                </form>
             </div>
         </div>
     </div>
@@ -506,8 +509,13 @@ function editTransacao(id) {
 
 let transacaoToDelete = null;
 
-function confirmDelete(id) {
+function confirmDelete(id, descricao) {
     transacaoToDelete = id;
+    // Atualiza a descrição no modal
+    document.getElementById('transacaoDescToDelete').textContent = descricao || 'esta transação';
+    // Define a action do formulário de exclusão
+    document.getElementById('deleteForm').action = `/financeiro/deletar_transacao/${id}`;
+    // Mostra o modal
     const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
     modal.show();
 }
