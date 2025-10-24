@@ -458,8 +458,8 @@ async function handleBeneficiosPage() {
         },
         {
             logo: '/portal/images/bull.png', // <-- Outro logo
-            nome: 'Empresa Parceira B',
-            desconto: 'Outro benefício, como primeira consulta gratuita.',
+            nome: 'Arthur Carvalho Duarte - ARQUITETURA E URBANISMO',
+            desconto: 'Desconto de 20% em seu projeto.',
             whatsapp: '5532988810989' // <-- Outro número
         },
         {
