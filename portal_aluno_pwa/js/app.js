@@ -8,7 +8,8 @@ const routes = {
     '/carteirinha': { page: '/portal/pages/carteirinha.html', handler: handleCarteirinhaPage },
     '/edit-profile': { page: '/portal/pages/edit_profile.html', handler: handleEditProfilePage },
     '/payments': { page: '/portal/pages/payments.html', handler: handlePaymentsPage },
-    '/events': { page: '/portal/pages/events.html', handler: handleEventsPage }
+    '/events': { page: '/portal/pages/events.html', handler: handleEventsPage },
+    '/beneficios': { page: '/portal/pages/beneficios.html', handler: handleBeneficiosPage }
 };
 
 const router = async () => {
@@ -441,6 +442,80 @@ async function inscreverEmEvento(event, eventoId) {
         button.innerHTML = 'Inscrever-se';
     }
 }
+
+
+// NOVA FUNÇÃO PARA A PÁGINA DE BENEFÍCIOS
+async function handleBeneficiosPage() {
+    const list = document.getElementById('partners-list');
+
+    // --- EDITE OS DADOS AQUI, ADICIONANDO O CAMPO 'whatsapp' ---
+    const partners = [
+         {
+            logo: '/portal/images/iron.png', // <-- Outro logo
+            nome: 'Centro de Treinamento Iron Gym',
+            desconto: '20% de desconto na Mensalidade.',
+            whatsapp: '5532935062330' // <-- Outro número
+        },
+        {
+            logo: '/portal/images/bull.png', // <-- Outro logo
+            nome: 'Empresa Parceira B',
+            desconto: 'Outro benefício, como primeira consulta gratuita.',
+            whatsapp: '5532988810989' // <-- Outro número
+        },
+        {
+            logo: '/portal/images/alexandria.png', // <-- Coloque o caminho correto para o logo
+            nome: 'Alexandria Hamburgueria',             // <-- Nome do parceiro
+            desconto: '20% de desconto em todos os Rodízios.', // <-- Descrição
+            whatsapp: '5532933003620' // <-- NÚMERO DE WHATSAPP (somente números, com código do país e DDD)
+        },
+        {
+            logo: '/portal/images/lucasStarck.png', // <-- Outro logo
+            nome: 'Lucas Starck - Nutricionista Esportivo',
+            desconto: 'Consulta com 50% de desconto para alunos ativos.',
+            whatsapp: '5532998180941' // <-- Outro número
+        },
+       
+        // {
+        //     logo: '/portal/images/logo_parceiro_b.jpg', // <-- Outro logo
+        //     nome: 'Empresa Parceira B',
+        //     desconto: 'Outro benefício, como primeira consulta gratuita.',
+        //     whatsapp: '5532988887777' // <-- Outro número
+        // },
+    ];
+    // --- FIM DA EDIÇÃO ---
+
+    if (partners.length === 0) {
+        list.innerHTML = '<p class="text-muted text-center mt-4">Nenhum parceiro cadastrado no momento.</p>';
+        return;
+    }
+
+    // --- CÓDIGO HTML ATUALIZADO PARA INCLUIR O BOTÃO ---
+    list.innerHTML = partners.map(p => {
+        // Prepara a mensagem para a URL (codifica caracteres especiais)
+        const mensagemWhatsapp = encodeURIComponent("Sou da Academia AZE Studio e vim pelo clube de descontos para parceiros.");
+        // Monta o link do WhatsApp apenas se o número existir
+        const whatsappLink = p.whatsapp ? `https://wa.me/${p.whatsapp}?text=${mensagemWhatsapp}` : null;
+
+        return `
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 text-center shadow-sm">
+                <img src="${p.logo}" class="card-img-top mx-auto mt-3" alt="Logo ${p.nome}" style="max-height: 80px; width: auto; max-width: 150px; object-fit: contain;">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">${p.nome}</h5>
+                    <p class="card-text">${p.desconto}</p>
+                    ${whatsappLink ? `
+                    <a href="${whatsappLink}" target="_blank" class="btn btn-success mt-auto">
+                        <i class="fab fa-whatsapp me-1"></i> Ir para o Parceiro
+                    </a>
+                    ` : ''}
+                </div>
+            </div>
+        </div>
+        `;
+    }).join('');
+    // --- FIM DA ATUALIZAÇÃO DO HTML ---
+}
+
 
 window.addEventListener('hashchange', router);
 window.addEventListener('load', () => {

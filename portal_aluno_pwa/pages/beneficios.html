@@ -1,0 +1,21 @@
+<style>
+    .card-img-top {
+        object-fit: contain; /* Garante que o logo não seja distorcido */
+        max-height: 100px; /* Ajuste a altura máxima conforme necessário */
+        width: auto;      /* Mantém a proporção */
+        max-width: 80%;   /* Evita que logos muito largos ocupem todo o card */
+    }
+</style>
+
+<div id="alert-container"></div>
+<h3 class="mb-4"><i class="fas fa-handshake me-2"></i>Benefícios e Parceiros</h3>
+
+<p class="text-muted mb-4">Confira os descontos exclusivos para alunos da academia:</p>
+
+<div class="row" id="partners-list">
+    <div class="d-flex justify-content-center align-items-center" style="height: 30vh;">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Carregando parceiros...</span>
+        </div>
+    </div>
+</div>
