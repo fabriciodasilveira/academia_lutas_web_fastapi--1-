@@ -454,7 +454,7 @@ async function handleBeneficiosPage() {
             logo: '/portal/images/iron.png', // <-- Outro logo
             nome: 'Centro de Treinamento Iron Gym',
             desconto: '20% de desconto na Mensalidade.',
-            whatsapp: '5532935062330' // <-- Outro número
+            whatsapp: '5532985062330' // <-- Outro número
         },
         {
             logo: '/portal/images/bull.png', // <-- Outro logo
