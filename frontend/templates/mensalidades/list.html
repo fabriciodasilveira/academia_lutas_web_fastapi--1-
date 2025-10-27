@@ -3,6 +3,184 @@
 {% block title %}Mensalidades - Academia de Lutas{% endblock %}
 
 {% block content %}
+{# ... (código existente: título, exportar, filtros) ... #}
+
+<div class="row">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-0">
+                {% if mensalidades %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Aluno</th>
+                                <th>Plano</th>
+                                <th>Turma</th>
+                                <th>Vencimento</th>
+                                <th>Valor (R$)</th>
+                                <th>Status</th>
+                                <th>Data Pagamento</th>
+                                <th width="150">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for mensalidade in mensalidades %}
+                            <tr>
+                                {# ... (colunas existentes: Aluno, Plano, Turma, Vencimento, Valor, Status, Data Pagamento) ... #}
+                                <td>
+                                    {% if mensalidade.aluno %}
+                                    <a href="{{ url_for('alunos_view', id=mensalidade.aluno.id) }}" class="text-decoration-none text-dark fw-bold">
+                                        {{ mensalidade.aluno.nome }}
+                                    </a>
+                                    {% else %}
+                                    <span class="text-muted">Aluno não encontrado</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ mensalidade.plano.nome if mensalidade.plano else 'N/A' }}</td>
+                                <td>
+                                    {% if mensalidade.matricula and mensalidade.matricula.turma %}
+                                        {{ mensalidade.matricula.turma.nome }}
+                                    {% else %}
+                                        <small class="text-muted">N/A</small>
+                                    {% endif %}
+                                </td>
+                                <td>{{ mensalidade.data_vencimento | format_date_br }}</td>
+                                <td>{{ "%.2f"|format(mensalidade.valor) }}</td>
+                                <td>
+                                    {% if mensalidade.status == 'pago' %}
+                                    <span class="badge bg-success">Pago</span>
+                                    {% elif mensalidade.status == 'pendente' %}
+                                    <span class="badge bg-warning text-dark">Pendente</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">{{ mensalidade.status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ mensalidade.data_pagamento | format_date_br if mensalidade.data_pagamento else '--' }}</td>
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        {% if mensalidade.status == 'pendente' %}
+                                         <button class="btn btn-outline-success" onclick="confirmPayment({{ mensalidade.id }}, '{{ mensalidade.aluno.nome if mensalidade.aluno else 'Aluno desconhecido' }}', '{{ "%.2f"|format(mensalidade.valor) }}')" title="Registrar Pagamento Manual">
+                                            <i class="fas fa-cash-register"></i> Pagar
+                                        </button>
+                                        
+                                        {# --- BOTÃO COBRAR MODIFICADO --- #}
+                                        <button class="btn btn-outline-info" 
+                                                {# Passa o telefone do aluno para a função JS. Usa 'None' se não houver aluno ou telefone #}
+                                                onclick="cobrarViaWhatsApp('{{ mensalidade.aluno.telefone if mensalidade.aluno and mensalidade.aluno.telefone else 'None' }}')" 
+                                                title="Cobrar Aluno via WhatsApp">
+                                            <i class="fab fa-whatsapp"></i> Cobrar {# Mudei o ícone #}
+                                        </button>
+                                        {# --- FIM DA MODIFICAÇÃO --- #}
+                                        
+                                        {% endif %}
+                                        <button class="btn btn-outline-danger" onclick="confirmDelete({{ mensalidade.id }}, '{{ mensalidade.aluno.nome if mensalidade.aluno else 'Aluno desconhecido' }}', '{{ mensalidade.data_vencimento | format_date_br }}')" title="Excluir Mensalidade">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {# ... (código existente: else, paginação, modais) ... #}
+                {% elif busca or status_filtro %}
+                 <div class="text-center py-5">
+                    <h5 class="text-muted">Nenhuma mensalidade encontrada para os filtros aplicados.</h5>
+                    <a href="{{ url_for('mensalidades_list') }}">Limpar filtros</a>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <h5 class="text-muted">Nenhuma mensalidade encontrada.</h5>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if total_pages > 1 %}
+            <div class="card-footer bg-transparent">
+                <nav aria-label="Paginação das mensalidades">
+                    <ul class="pagination justify-content-center mb-0">
+                        <li class="page-item {% if page == 1 %}disabled{% endif %}"><a class="page-link" href="{{ url_for('mensalidades_list', page=page-1, busca=busca, status=status_filtro) }}">Anterior</a></li>
+                        {% set start_page = [1, page-2] | max %}{% set end_page = [total_pages, page+2] | min %}
+                        {% if start_page > 1 %}<li class="page-item"><a class="page-link" href="{{ url_for('mensalidades_list', page=1, busca=busca, status=status_filtro) }}">1</a></li>{% if start_page > 2 %}<li class="page-item disabled"><span class="page-link">...</span></li>{% endif %}{% endif %}
+                        {% for p in range(start_page, end_page + 1) %}<li class="page-item {% if p == page %}active{% endif %}"><a class="page-link" href="{{ url_for('mensalidades_list', page=p, busca=busca, status=status_filtro) }}">{{ p }}</a></li>{% endfor %}
+                        {% if end_page < total_pages %}{% if end_page < total_pages - 1 %}<li class="page-item disabled"><span class="page-link">...</span></li>{% endif %}<li class="page-item"><a class="page-link" href="{{ url_for('mensalidades_list', page=total_pages, busca=busca, status=status_filtro) }}">{{ total_pages }}</a></li>{% endif %}
+                        <li class="page-item {% if page == total_pages %}disabled{% endif %}"><a class="page-link" href="{{ url_for('mensalidades_list', page=page+1, busca=busca, status=status_filtro) }}">Próximo</a></li>
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{# ... (Modais existentes: paymentModal, deleteModal) ... #}
+<div class="modal fade" id="paymentModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" style="color:#000;">Confirmar Pagamento Manual</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><p style="color:#000;">Confirmar recebimento manual da mensalidade de <strong id="paymentAlunoName"></strong> no valor de R$ <strong id="paymentValue"></strong>?</p></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><form id="paymentForm" method="POST" style="display: inline;"><button type="submit" class="btn btn-success">Confirmar Pagamento</button></form></div></div></div></div>
+<div class="modal fade" id="deleteModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" style="color:#000;">Confirmar Exclusão</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><p style="color:#000;">Tem certeza que deseja excluir a mensalidade de <strong id="deleteAlunoName"></strong> com vencimento em <strong id="deleteDueDate"></strong>?</p><p class="text-danger"><small>Esta ação não pode ser desfeita.</small></p></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><form id="deleteForm" method="POST" style="display: inline;"><button type="submit" class="btn btn-danger">Excluir</button></form></div></div></div></div>
+
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Para o Modal de Pagamento Manual
+function confirmPayment(id, alunoNome, valor) {
+    document.getElementById('paymentAlunoName').textContent = alunoNome || 'Aluno desconhecido';
+    document.getElementById('paymentValue').textContent = valor.replace('.', ',');
+    document.getElementById('paymentForm').action = `/mensalidades/pagar/${id}`;
+    const modal = new bootstrap.Modal(document.getElementById('paymentModal'));
+    modal.show();
+}
+
+// Para o Modal de Exclusão
+function confirmDelete(id, alunoNome, vencimento) {
+    document.getElementById('deleteAlunoName').textContent = alunoNome || 'Aluno desconhecido';
+    document.getElementById('deleteDueDate').textContent = vencimento;
+    document.getElementById('deleteForm').action = `/mensalidades/deletar/${id}`;
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+}
+
+// --- NOVA FUNÇÃO PARA COBRAR VIA WHATSAPP ---
+function cobrarViaWhatsApp(telefoneAluno) {
+    if (!telefoneAluno || telefoneAluno === 'None' || telefoneAluno.trim() === '') {
+        alert('Este aluno não possui um número de telefone cadastrado.');
+        return;
+    }
+
+    // 1. Limpa o número (remove parênteses, espaços, hífens)
+    let numeroLimpo = telefoneAluno.replace(/\D/g, '');
+
+    // 2. Adiciona o código do país (Brasil: 55) se não estiver presente
+    //    Assumindo que números com 10 ou 11 dígitos são locais (DDD + número)
+    if (numeroLimpo.length === 10 || numeroLimpo.length === 11) {
+        numeroLimpo = '55' + numeroLimpo;
+    } else if (numeroLimpo.length < 10) {
+        alert('O número de telefone parece inválido ou incompleto.');
+        return;
+    }
+    // Números com 12 ou 13 dígitos podem já ter o 55, então não adicionamos
+
+    // 3. Define a mensagem e codifica para URL
+    const mensagem = encodeURIComponent("Sou da AZE Studio e percebi que sua mensalidade está em atraso. Por acaso já efetuou o pagamento de outra forma?");
+
+    // 4. Monta a URL do WhatsApp
+    const urlWhatsApp = `https://wa.me/${numeroLimpo}?text=${mensagem}`;
+
+    // 5. Abre em nova aba
+    window.open(urlWhatsApp, '_blank');
+}
+// --- FIM DA NOVA FUNÇÃO ---
+
+</script>
+{% endblock %}
+
+{% comment %} {% extends "base.html" %}
+
+{% block title %}Mensalidades - Academia de Lutas{% endblock %}
+
+{% block content %}
 <div class="row">
     <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
@@ -178,4 +356,4 @@ function confirmDelete(id, alunoNome, vencimento) {
 // function pagarOnline(event, mensalidadeId) { ... }
 </script>
 {% endblock %}
-
+ {% endcomment %}
