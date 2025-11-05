@@ -15,13 +15,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <link rel="stylesheet" href="/portal/css/style.css">
     <script src="https://js.stripe.com/v3/"></script>
-    <link rel="stylesheet" href="/portal/css/style.css">
-</head>
-<body>
-    <header class="navbar navbar-dark bg-primary shadow-sm" id="main-header" style="display: none;">
+    </head>
+<body class="pwa-body"> <header class="navbar navbar-dark shadow-sm pwa-header" id="main-header" style="display: none;">
         <div class="container-fluid">
             <a class="navbar-brand" href="#/dashboard">
-                <img src="/portal/images/nova.png" alt="Logo" style="height: 60px; border-radius: 15%;" >
+                <img src="/portal/images/nova.png" alt="Logo" class="pwa-logo">
             </a>
             <button id="logout-button" class="btn btn-outline-light">
                 <i class="fas fa-sign-out-alt"></i> Sair
@@ -29,28 +27,28 @@
         </div>
     </header>
 
-    <main id="app-root" class="container py-4"></main>
+    <main id="app-root" class="container py-4 pb-5"></main>
 
-    <nav class="nav" id="main-nav" style="display: none; background-color: #2563eb;">
+    <nav class="nav pwa-nav shadow-lg" id="main-nav" style="display: none;">
         <a href="#/dashboard" class="nav__link">
-            <i class="fas fa-user nav__icon" style="color: #FFFFFF;"></i>
-            <span class="nav__text" style="color: #FFFFFF;">Perfil</span>
+            <i class="fas fa-user nav__icon"></i>
+            <span class="nav__text">Perfil</span>
         </a>
         <a href="#/payments" class="nav__link">
-            <i class="fas fa-file-invoice-dollar nav__icon" style="color: #FFFFFF;"></i>
-            <span class="nav__text" style="color: #FFFFFF;">Pagamentos</span>
+            <i class="fas fa-file-invoice-dollar nav__icon"></i>
+            <span class="nav__text">Pagamentos</span>
         </a>
         <a href="#/events" class="nav__link">
-            <i class="fas fa-calendar-alt nav__icon" style="color: #FFFFFF;"></i>
-            <span class="nav__text" style="color: #FFFFFF;">Eventos</span>
+            <i class="fas fa-calendar-alt nav__icon"></i>
+            <span class="nav__text">Eventos</span>
         </a>
         <a href="#/carteirinha" class="nav__link">
-        <i class="fas fa-id-card nav__icon" style="color: #FFFFFF;"></i>
-        <span class="nav__text" style="color: #FFFFFF;">Carteirinha</span>
+            <i class="fas fa-id-card nav__icon"></i>
+            <span class="nav__text">Carteirinha</span>
         </a>
         <a href="#/beneficios" class="nav__link">
-            <i class="fas fa-handshake nav__icon" style="color: #FFFFFF;"></i>
-            <span class="nav__text" style="color: #FFFFFF;">Benefícios</span>
+            <i class="fas fa-handshake nav__icon"></i>
+            <span class="nav__text">Benefícios</span>
         </a>
     </nav>
     

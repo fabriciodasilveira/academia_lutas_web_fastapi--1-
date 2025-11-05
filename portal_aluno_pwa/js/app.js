@@ -35,6 +35,9 @@ const router = async () => {
     }
     
     const path = (window.location.hash.slice(1).split('?')[0] || '/dashboard');
+    
+    updateActiveNav(path);
+
     const route = routes[path] || routes['/dashboard'];
     
     const token = localStorage.getItem('accessToken');
@@ -424,6 +427,21 @@ async function handleEventsPage() {
     } catch (error) {
         ui.showAlert('Não foi possível carregar os eventos.');
     }
+}
+
+// Nova função para destacar o link ativo na navegação
+function updateActiveNav(path) {
+    const navLinks = document.querySelectorAll('.nav__link');
+    navLinks.forEach(link => {
+        // Limpa a classe de todos
+        link.classList.remove('nav__link--active');
+
+        // Adiciona a classe se o href do link corresponder ao início do path
+        // Ex: link.hash '#/dashboard' corresponde ao path '/dashboard'
+        if (link.hash && path.startsWith(link.hash.slice(1))) {
+            link.classList.add('nav__link--active');
+        }
+    });
 }
 
 async function inscreverEmEvento(event, eventoId) {
