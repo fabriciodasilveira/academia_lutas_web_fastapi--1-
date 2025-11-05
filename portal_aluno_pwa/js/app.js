@@ -12,35 +12,56 @@ const routes = {
     '/beneficios': { page: '/portal/pages/beneficios.html', handler: handleBeneficiosPage }
 };
 
+// (Adicione esta função no início do arquivo, junto com as outras funções)
+function updateActiveNav(path) {
+    const navLinks = document.querySelectorAll('.nav__link');
+    navLinks.forEach(link => {
+        link.classList.remove('nav__link--active');
+        if (link.hash && path.startsWith(link.hash.slice(1))) {
+            link.classList.add('nav__link--active');
+        }
+    });
+}
+
 const router = async () => {
-    // --- LÓGICA DE ALERTA DE PAGAMENTO (AJUSTADA) ---
+    // --- LÓGICA DE ALERTA DE PAGAMENTO (EXISTENTE) ---
     const currentHash = window.location.hash;
     const urlParams = new URLSearchParams(currentHash.split('?')[1] || '');
     
     if (urlParams.has('payment')) {
         const paymentStatus = urlParams.get('payment');
         const cleanPath = currentHash.split('?')[0];
-        
-        // Limpa a URL imediatamente para evitar que o alerta apareça novamente
         window.history.replaceState(null, null, window.location.pathname + cleanPath);
-        
-        // Atraso para garantir que a página carregou antes de mostrar o alerta
         setTimeout(() => {
             if (paymentStatus === 'success') {
                 ui.showAlert('Pagamento realizado com sucesso!', 'success');
             } else if (paymentStatus === 'canceled') {
                 ui.showAlert('O pagamento foi cancelado.', 'info');
             }
-        }, 500); // 500ms é um bom tempo de espera
+        }, 500);
     }
     
     const path = (window.location.hash.slice(1).split('?')[0] || '/dashboard');
     
-    updateActiveNav(path);
-
-    const route = routes[path] || routes['/dashboard'];
+    // ATUALIZA O LINK ATIVO NA NAV
+    updateActiveNav(path); 
     
+    const route = routes[path] || routes['/dashboard'];
     const token = localStorage.getItem('accessToken');
+
+    // --- NOVA LÓGICA PARA CONTROLAR O LAYOUT ---
+    const appRootEl = document.getElementById('app-root');
+    // Se for a tela de login, remove paddings e ativa o layout de tela cheia
+    if (path === '/login') {
+        document.body.classList.add('login-active');
+        appRootEl.classList.remove('py-4', 'pb-5'); // Remove paddings do main
+    } else {
+    // Para todas as outras telas, garante o layout padrão
+        document.body.classList.remove('login-active');
+        appRootEl.classList.add('py-4', 'pb-5'); // Adiciona paddings de volta
+    }
+    // --- FIM DA NOVA LÓGICA ---
+
     if (!route.public && !token) {
         window.location.hash = '/login';
         return;
