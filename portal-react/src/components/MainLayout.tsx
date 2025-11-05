@@ -3,8 +3,34 @@ import { NavLink, useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Navbar, Container, Button } from 'react-bootstrap';
 
+// CSS embutido para a barra de navegação (baseado no seu style.css)
+const navStyle = {
+  position: 'fixed' as 'fixed',
+  bottom: 0,
+  width: '100%',
+  height: '56px',
+  boxShadow: '0 0 3px rgba(0, 0, 0, 0.2)',
+  backgroundColor: '#2563eb', // Cor primária do seu PWA
+  display: 'flex',
+  zIndex: 1000,
+};
+
+const navLinkStyle = (isActive: boolean) => ({
+  display: 'flex',
+  flexDirection: 'column' as 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  flexGrow: 1,
+  textDecoration: 'none',
+  color: isActive ? '#FFFFFF' : '#cce5ff', // Cor branca para ativo, azul claro para inativo
+  padding: '5px 0',
+});
+
+const navIconStyle = { fontSize: '18px' };
+const navTextStyle = { fontSize: '12px' };
+
 const MainLayout = () => {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -12,29 +38,13 @@ const MainLayout = () => {
     navigate('/login', { replace: true });
   };
 
-  // Recriando o seu CSS da barra de navegação inferior com React
-  const navLinkStyle = ({ isActive }: { isActive: boolean }) => ({
-    display: 'flex',
-    flexDirection: 'column' as 'column', // TypeScript precisa disso
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexGrow: 1,
-    textDecoration: 'none',
-    color: isActive ? '#FFFFFF' : '#cce5ff', // Cor ativa e inativa
-    padding: '5px 0'
-  });
-
-  const navIconStyle = { fontSize: '18px' };
-  const navTextStyle = { fontSize: '12px' };
-
   return (
     <>
-      {/* 1. Header (Navbar Superior) */}
       <Navbar bg="primary" variant="dark" className="shadow-sm">
         <Container fluid>
           <Navbar.Brand as={NavLink} to="/dashboard">
-            {/* Você pode colocar seu logo aqui */}
-            AZE Studio
+            {/* Usando o nome do usuário ou "Portal" */}
+            Olá, {user?.nome.split(' ')[0] || 'Aluno'}
           </Navbar.Brand>
           <Button variant="outline-light" onClick={handleLogout}>
             <i className="fas fa-sign-out-alt"></i> Sair
@@ -42,34 +52,28 @@ const MainLayout = () => {
         </Container>
       </Navbar>
 
-      {/* 2. O Conteúdo da Página (Dashboard, Payments, etc.) */}
       <main className="container py-4" style={{ paddingBottom: '70px' }}>
-        <Outlet /> {/* O <Outlet> renderiza o componente da rota filha */}
+        <Outlet /> {/* Aqui entram as páginas (Dashboard, Payments, etc) */}
       </main>
 
-      {/* 3. Navbar Inferior (Fixa) */}
-      <nav style={{
-        position: 'fixed', bottom: 0, width: '100%', 
-        height: '56px', boxShadow: '0 0 3px rgba(0, 0, 0, 0.2)',
-        backgroundColor: '#2563eb', display: 'flex'
-      }}>
-        <NavLink to="/dashboard" style={navLinkStyle}>
+      <nav style={navStyle}>
+        <NavLink to="/dashboard" style={({isActive}) => navLinkStyle(isActive)}>
           <i className="fas fa-user" style={navIconStyle}></i>
           <span style={navTextStyle}>Perfil</span>
         </NavLink>
-        <NavLink to="/payments" style={navLinkStyle}>
+        <NavLink to="/payments" style={({isActive}) => navLinkStyle(isActive)}>
           <i className="fas fa-file-invoice-dollar" style={navIconStyle}></i>
           <span style={navTextStyle}>Pagamentos</span>
         </NavLink>
-        <NavLink to="/events" style={navLinkStyle}>
+        <NavLink to="/events" style={({isActive}) => navLinkStyle(isActive)}>
           <i className="fas fa-calendar-alt" style={navIconStyle}></i>
           <span style={navTextStyle}>Eventos</span>
         </NavLink>
-        <NavLink to="/carteirinha" style={navLinkStyle}>
+        <NavLink to="/carteirinha" style={({isActive}) => navLinkStyle(isActive)}>
           <i className="fas fa-id-card" style={navIconStyle}></i>
           <span style={navTextStyle}>Carteirinha</span>
         </NavLink>
-         <NavLink to="/beneficios" style={navLinkStyle}>
+        <NavLink to="/beneficios" style={({isActive}) => navLinkStyle(isActive)}>
           <i className="fas fa-handshake" style={navIconStyle}></i>
           <span style={navTextStyle}>Benefícios</span>
         </NavLink>
