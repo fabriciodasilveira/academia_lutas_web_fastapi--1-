@@ -38,3 +38,143 @@ body {
 .nav__text {
     font-size: 12px;
 }
+
+/* 1. Wrapper com fundo gradiente (do seu painel de admin) */
+.login-container {
+    /* Garante que o fundo cubra a tela inteira, mesmo em telas curtas */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow-y: auto; /* Permite rolar se o conteúdo for maior (celulares pequenos) */
+    
+    /* Gradiente de fundo inspirado no seu painel de admin */
+    background: linear-gradient(135deg, var(--primary-color) 0%, #1e40af 100%);
+}
+
+/* 2. Logo maior e centralizado */
+.login-logo {
+    height: 120px; /* Um pouco maior que antes */
+    border-radius: 10%;
+    margin-bottom: 0.5rem;
+}
+
+/* 3. Estilo do Card (baseado no seu painel de admin) */
+.card {
+    border-radius: 0.75rem; /* --border-radius */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* --box-shadow */
+    border: none;
+}
+.card.shadow-lg {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* 4. Estilo dos Inputs (baseado no seu painel de admin) */
+.form-control {
+    border-radius: 0.5rem;
+    border: 2px solid #e5e7eb;
+    transition: all 0.3s ease;
+    padding: 0.75rem 1rem;
+    height: 48px; /* Altura fixa para melhor alinhamento */
+}
+.form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+.form-label {
+    font-weight: 600;
+}
+
+/* 5. Estilo dos Inputs com Ícones */
+.input-group-icon {
+    position: relative;
+}
+.input-group-icon .form-control {
+    padding-left: 2.75rem; /* Espaço para o ícone */
+}
+.input-group-icon .input-icon {
+    position: absolute;
+    top: 50%;
+    left: 1rem;
+    transform: translateY(-50%);
+    color: #adb5bd; /* Cinza do Bootstrap */
+    z-index: 3;
+}
+.btn-toggle-pass {
+    position: absolute;
+    top: 50%;
+    right: 0.5rem;
+    transform: translateY(-50%);
+    border: none;
+    background: transparent;
+    color: #adb5bd;
+    cursor: pointer;
+    padding: 0.5rem;
+    z-index: 5;
+}
+
+/* 6. Estilo dos Botões (baseado no seu painel de admin) */
+.btn {
+    border-radius: 0.5rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    padding: 0.75rem 1rem;
+}
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #1d4ed8 100%);
+    box-shadow: 0 4px 14px 0 rgba(37, 99, 235, 0.39);
+    color: #fff;
+    border: none;
+}
+.btn-primary:hover {
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+    box-shadow: 0 6px 20px 0 rgba(37, 99, 235, 0.5);
+    color: #fff;
+}
+
+/* 7. Botão customizado do Google */
+.btn-google {
+    background-color: #fff;
+    color: #444;
+    border: 1px solid #ddd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem; /* Espaçamento entre o logo e o texto */
+    font-weight: 500;
+}
+.btn-google:hover {
+    background-color: #f8f8f8;
+    border-color: #ccc;
+    color: #222;
+}
+.btn-google img {
+    width: 20px;
+    height: 20px;
+}
+
+/* 8. Divisor "OU" */
+.login-divider {
+    text-align: center;
+    margin: 1.5rem 0;
+    position: relative;
+}
+.login-divider::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 100%;
+    height: 1px;
+    background: #e5e7eb; /* Cinza claro */
+}
+.login-divider span {
+    position: relative;
+    background: #fff; /* Fundo do card */
+    padding: 0 0.75rem;
+    color: #6c757d; /* Cinza texto */
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-transform: uppercase;
+}

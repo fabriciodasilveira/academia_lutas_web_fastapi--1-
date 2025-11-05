@@ -1,44 +1,53 @@
-<div class="row justify-content-center align-items-center" style="min-height: 80vh;">
-    <div class="col-md-10 col-lg-8">
-        <div id="alert-container"></div>
-        <div class="text-center mb-4">
-            <img src="/portal/images/nova.png" alt="Logo" style="height: 100px; border-radius: 10%;" >
-            <h3 class="mt-1">Portal do Aluno</h3>
-        </div>
-        <div class="card shadow-sm">
-            <div class="card-body p-4">
-                <form id="login-form">
-                    <div class="mb-3">
-                        <label for="username" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="username" required>
+<div class="login-container">
+    <div class="row justify-content-center align-items-center min-vh-100 py-5">
+        
+        <div class="col-md-7 col-lg-5 col-xl-4">
+            <div id="alert-container"></div>
+            
+            <div class="card shadow-lg border-0">
+                <div class="card-body p-4 p-md-5">
+
+                    <div class="text-center mb-4">
+                        <img src="/portal/images/nova.png" alt="Logo" class="login-logo">
+                        <h3 class="mt-3 h4 fw-light text-muted">Portal do Aluno</h3>
                     </div>
-                    <div class="mb-3">
-                        <label for="password" class="form-label">Senha</label>
-                        <div class="input-group">
-                            <input type="password" class="form-control" id="password" required>
-                            <button class="btn btn-outline-secondary" type="button" id="togglePassword">
-                                <i class="fas fa-eye"></i>
-                            </button>
+                    
+                    <form id="login-form">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Email</label>
+                            <div class="input-group-icon">
+                                <input type="email" class="form-control" id="username" required placeholder="seu.email@exemplo.com">
+                                <i class="fas fa-envelope input-icon"></i>
+                            </div>
                         </div>
-                    </div>
-                    <div class="d-grid mt-4">
-                        <button type="submit" class="btn btn-primary">Entrar</button>
-                    </div>
-                </form>
 
-                <div class="text-center my-3">
-                    <hr>
-                    <span class="text-muted bg-light px-2" style="position: relative; top: -22px;">OU</span>
-                </div>
-                <div class="d-grid">
-                    <a href="/api/v1/auth/login/google?origin=pwa" class="btn btn-outline-secondary">
-                        <img src="https://developers.google.com/identity/images/g-logo.png" width="20" height="20" class="me-2" alt="Google logo">
-                        Entrar com Google
-                    </a>
-                </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Senha</label>
+                            <div class="input-group-icon">
+                                <input type="password" class="form-control" id="password" required placeholder="Sua senha">
+                                <i class="fas fa-lock input-icon"></i>
+                                <button class="btn-toggle-pass" type="button" id="togglePassword">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
 
-                <div class="text-center mt-3">
-                    <!-- <a href="#/register">Não tem uma conta? Cadastre-se</a> -->
+                        <div class="d-grid mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg">Entrar</button>
+                        </div>
+                    </form>
+
+                    <div class="login-divider">
+                        <span>OU</span>
+                    </div>
+
+                    <div class="d-grid">
+                        <a href="/api/v1/auth/login/google?origin=pwa" class="btn btn-google">
+                            <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo">
+                            Entrar com Google
+                        </a>
+                    </div>
+
                 </div>
             </div>
         </div>
