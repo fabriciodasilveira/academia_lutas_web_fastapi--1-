@@ -7,6 +7,7 @@ from src import auth, database, models
 from src.schemas import usuario as schemas_usuario # Importa especificamente e dá um apelido
 from src import auth, database, models, schemas
 import os # Importe o 'os' para usar variáveis de ambiente
+import logging
 
 
 router = APIRouter(
@@ -51,14 +52,33 @@ async def auth_google_callback(request: Request, db: Session = Depends(database.
     Callback que o Google chama após o usuário autorizar.
     Redireciona para o frontend correto (PWA ou Flask) com o token.
     """
+    
+    # --- INÍCIO DA MODIFICAÇÃO (Lógica de Redirecionamento de Erro) ---
+    origin = request.session.get('google_auth_origin', 'flask')
+    
+    if origin == 'pwa':
+        # URL de erro para o PWA
+        error_redirect_url = "/portal#/login?error=auth_timeout"
+        frontend_url = "" # Não é necessário para PWA
+    else:
+        # URL de erro para o painel Flask
+        frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5700") 
+        error_redirect_url = f"{frontend_url}/login?error=auth_timeout"
+    # --- FIM DA MODIFICAÇÃO ---
+
     try:
         token = await auth.oauth.google.authorize_access_token(request)
     except Exception as e:
-        raise HTTPException(status_code=401, detail=f"Não foi possível obter o token do Google: {e}")
+        # --- MODIFICAÇÃO ---
+        # Em vez de 'raise', nós redirecionamos o usuário de volta ao login
+        logging.error(f"Erro no callback do Google OAuth (timeout?): {e}") # Loga o erro real
+        return RedirectResponse(url=error_redirect_url)
+        # --- FIM DA MODIFICAÇÃO ---
 
     user_info_from_google = token.get('userinfo')
     if not user_info_from_google or not user_info_from_google.get('email'):
-        raise HTTPException(status_code=400, detail="Não foi possível obter informações do usuário do Google.")
+        # Erro ao pegar info do usuário, redireciona também
+        return RedirectResponse(url=error_redirect_url)
 
     email = user_info_from_google['email']
     user = auth.get_user(db, email=email)
@@ -78,15 +98,10 @@ async def auth_google_callback(request: Request, db: Session = Depends(database.
         data={"sub": user.email, "role": user.role}
     )
     
-    # --- LÓGICA DE REDIRECIONAMENTO ---
-    origin = request.session.get('google_auth_origin', 'flask')
-
+    # Lógica de redirecionamento de SUCESSO (sem alteração)
     if origin == 'pwa':
-        # Se veio do PWA, redireciona para a rota de callback do PWA
         response = RedirectResponse(url=f"/portal#/login/callback?token={access_token}")
     else:
-        # Se veio do sistema de gestão (Flask), usa a lógica antiga
-        frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5700") 
         response = RedirectResponse(url=f"{frontend_url}/login/callback?token={access_token}")
     
     return response

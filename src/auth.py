@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 import os
 from authlib.integrations.starlette_client import OAuth
 from starlette.config import Config
+import httpx
 
 # --- MODIFICAÇÕES AQUI ---
 from src import database
@@ -24,7 +25,10 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token")
 
 config = Config('.env') # Lê as variáveis do arquivo .env
-oauth = OAuth(config)
+
+timeout_client = httpx.AsyncClient(timeout=15.0)
+
+oauth = OAuth(config, client=timeout_client)
 
 oauth.register(
     name='google',
