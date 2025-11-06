@@ -26,17 +26,23 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token")
 
 config = Config('.env') # Lê as variáveis do arquivo .env
 
+# --- CORREÇÃO APLICADA AQUI ---
+# 1. Inicializa o OAuth SEM o argumento 'client' (que causou o erro)
+oauth = OAuth(config)
+
+# 2. Define o nosso cliente com timeout de 15 segundos
 timeout_client = httpx.AsyncClient(timeout=15.0)
 
-oauth = OAuth(config, client=timeout_client)
-
+# 3. Passa o cliente com timeout para DENTRO do .register()
 oauth.register(
     name='google',
     server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
     client_kwargs={
         'scope': 'openid email profile'
-    }
+    },
+    client=timeout_client # <-- Este é o local correto para o argumento
 )
+# --- FIM DA CORREÇÃO ---
 
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
