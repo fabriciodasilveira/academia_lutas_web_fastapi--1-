@@ -23,6 +23,8 @@ function updateActiveNav(path) {
     });
 }
 
+// Em portal_aluno_pwa/js/app.js
+
 const router = async () => {
     // --- LÓGICA DE ALERTA DE PAGAMENTO (EXISTENTE) ---
     const currentHash = window.location.hash;
@@ -49,18 +51,22 @@ const router = async () => {
     const route = routes[path] || routes['/dashboard'];
     const token = localStorage.getItem('accessToken');
 
-    // --- NOVA LÓGICA PARA CONTROLAR O LAYOUT ---
+    // --- LÓGICA DE LAYOUT CORRIGIDA ---
     const appRootEl = document.getElementById('app-root');
-    // Se for a tela de login, remove paddings e ativa o layout de tela cheia
-    if (path === '/login') {
-        document.body.classList.add('login-active');
-        appRootEl.classList.remove('py-4', 'pb-5'); // Remove paddings do main
+    const bodyEl = document.body;
+
+    if (path === '/login' || path === '/login/callback') {
+        // 1. ATIVA O MODO DE TELA CHEIA (LOGIN)
+        bodyEl.classList.add('login-active');
+        bodyEl.classList.remove('nav-active');
+        appRootEl.classList.remove('py-4'); // Remove padding superior
     } else {
-    // Para todas as outras telas, garante o layout padrão
-        document.body.classList.remove('login-active');
-        appRootEl.classList.add('py-4', 'pb-5'); // Adiciona paddings de volta
+        // 2. ATIVA O MODO DE NAVEGAÇÃO (INTERNO)
+        bodyEl.classList.remove('login-active');
+        bodyEl.classList.add('nav-active');
+        appRootEl.classList.add('py-4'); // Adiciona padding superior
     }
-    // --- FIM DA NOVA LÓGICA ---
+    // --- FIM DA LÓGICA DE LAYOUT ---
 
     if (!route.public && !token) {
         window.location.hash = '/login';
@@ -78,9 +84,9 @@ const router = async () => {
         ui.showLoading(appRoot);
         try {
             const response = await fetch(route.page);
-            appRoot.innerHTML = await response.text();
+            appRootEl.innerHTML = await response.text();
         } catch (error) {
-            appRoot.innerHTML = `<p class="text-danger">Erro ao carregar a página.</p>`;
+            appRootEl.innerHTML = `<p class="text-danger">Erro ao carregar a página.</p>`;
         }
     }
     

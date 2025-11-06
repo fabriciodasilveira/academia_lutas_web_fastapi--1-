@@ -1,255 +1,31 @@
-:root {
-    --primary-color: #2563eb;
-}
-body {
-    margin: 0 0 56px 0; /* Margin bottom para a barra de navegação */
-    background-color: #f8f9fa;
-}
-.nav {
-    position: fixed;
-    bottom: 0;
-    width: 100%;
-    height: 56px;
-    box-shadow: 0 0 3px rgba(0, 0, 0, 0.2);
-    background-color: #ffffff;
-    display: flex;
-    overflow-x: auto;
-}
-.nav__link {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    flex-grow: 1;
-    min-width: 50px;
-    text-decoration: none;
-    color: #6c757d;
-    transition: background-color 0.1s ease-in-out;
-}
-.nav__link:hover {
-    background-color: #eee;
-}
-.nav__link--active {
-    color: var(--primary-color);
-}
-.nav__icon {
-    font-size: 18px;
-}
-.nav__text {
-    font-size: 12px;
-}
+/* --- ESTILOS GLOBAIS DE LAYOUT DO PWA --- */
 
-/* 1. Wrapper com fundo gradiente (do seu painel de admin) */
-.login-container {
-    /* Garante que o fundo cubra a tela inteira, mesmo em telas curtas */
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
+/* Garante que o app preencha a tela */
+html, body {
     height: 100%;
-    overflow-y: auto; /* Permite rolar se o conteúdo for maior (celulares pequenos) */
-    
-    /* Gradiente de fundo inspirado no seu painel de admin */
-    background: linear-gradient(135deg, var(--primary-color) 0%, #1e40af 100%);
+    margin: 0;
+    padding: 0;
 }
 
-/* 2. Logo maior e centralizado */
-.login-logo {
-    height: 120px; /* Um pouco maior que antes */
-    border-radius: 10%;
-    margin-bottom: 0.5rem;
-}
-
-/* 3. Estilo do Card (baseado no seu painel de admin) */
-.card {
-    border-radius: 0.75rem; /* --border-radius */
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* --box-shadow */
-    border: none;
-}
-.card.shadow-lg {
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
-}
-
-/* 4. Estilo dos Inputs (baseado no seu painel de admin) */
-.form-control {
-    border-radius: 0.5rem;
-    border: 2px solid #e5e7eb;
-    transition: all 0.3s ease;
-    padding: 0.75rem 1rem;
-    height: 48px; /* Altura fixa para melhor alinhamento */
-}
-.form-control:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-}
-.form-label {
-    font-weight: 600;
-}
-
-/* 5. Estilo dos Inputs com Ícones */
-.input-group-icon {
-    position: relative;
-}
-.input-group-icon .form-control {
-    padding-left: 2.75rem; /* Espaço para o ícone */
-}
-.input-group-icon .input-icon {
-    position: absolute;
-    top: 50%;
-    left: 1rem;
-    transform: translateY(-50%);
-    color: #adb5bd; /* Cinza do Bootstrap */
-    z-index: 3;
-}
-.btn-toggle-pass {
-    position: absolute;
-    top: 50%;
-    right: 0.5rem;
-    transform: translateY(-50%);
-    border: none;
-    background: transparent;
-    color: #adb5bd;
-    cursor: pointer;
-    padding: 0.5rem;
-    z-index: 5;
-}
-
-/* 6. Estilo dos Botões (baseado no seu painel de admin) */
-.btn {
-    border-radius: 0.5rem;
-    font-weight: 500;
-    transition: all 0.3s ease;
-    padding: 0.75rem 1rem;
-}
-.btn-primary {
-    background: linear-gradient(135deg, var(--primary-color) 0%, #1d4ed8 100%);
-    box-shadow: 0 4px 14px 0 rgba(37, 99, 235, 0.39);
-    color: #fff;
-    border: none;
-}
-.btn-primary:hover {
-    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
-    box-shadow: 0 6px 20px 0 rgba(37, 99, 235, 0.5);
-    color: #fff;
-}
-
-/* 7. Botão customizado do Google */
-.btn-google {
-    background-color: #fff;
-    color: #444;
-    border: 1px solid #ddd;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.75rem; /* Espaçamento entre o logo e o texto */
-    font-weight: 500;
-}
-.btn-google:hover {
-    background-color: #f8f8f8;
-    border-color: #ccc;
-    color: #222;
-}
-.btn-google img {
-    width: 20px;
-    height: 20px;
-}
-
-/* 8. Divisor "OU" */
-.login-divider {
-    text-align: center;
-    margin: 1.5rem 0;
-    position: relative;
-}
-.login-divider::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 50%;
-    width: 100%;
-    height: 1px;
-    background: #e5e7eb; /* Cinza claro */
-}
-.login-divider span {
-    position: relative;
-    background: #fff; /* Fundo do card */
-    padding: 0 0.75rem;
-    color: #6c757d; /* Cinza texto */
-    font-size: 0.9rem;
-    font-weight: 500;
-    text-transform: uppercase;
-}
-
-/* --- MELHORIAS DO APP SHELL (index.html) --- */
-
-/* Fundo do App */
 body.pwa-body {
-    background-color: #f8f9fa; /* Cinza claro do Bootstrap */
-    /* Garante que o padding da nav inferior seja aplicado */
-    padding-bottom: 56px; 
+    background-color: #f8f9fa; /* Fundo cinza padrão */
+    min-height: 100%;
+    height: auto;
+    transition: background-color 0.3s ease;
 }
 
-/* Gradiente do Cabeçalho e Nav */
-.pwa-header, .pwa-nav {
-    background: linear-gradient(135deg, var(--primary-color) 0%, #1d4ed8 100%);
+/* Quando a navegação interna está ativa, 
+   adiciona espaço no fundo para a barra de navegação */
+body.nav-active {
+    /* 56px da nav + 16px de respiro = 72px */
+    padding-bottom: 72px; 
 }
 
-/* Logo do Cabeçalho */
-.pwa-logo {
-    height: 60px;
-    border-radius: 15%;
-}
-
-/* Estilos da Barra de Navegação Inferior (pwa-nav)
-  Substitui o .nav padrão que você tinha
-*/
-.pwa-nav {
-    position: fixed;
-    bottom: 0;
-    width: 100%;
-    height: 56px;
-    display: flex;
-    overflow-x: auto;
-    /* Sombra mais forte para destacar */
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1); 
-}
-
-.pwa-nav .nav__link {
-    color: rgba(255, 255, 255, 0.7); /* Cor branca suave */
-    transition: all 0.2s ease-in-out;
-}
-
-.pwa-nav .nav__link:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    color: #FFFFFF;
-}
-
-/* ESTILO DO LINK ATIVO
-  Esta é a classe mais importante para a nova UI
-*/
-.pwa-nav .nav__link--active {
-    color: #FFFFFF;
-    font-weight: 500;
-    /* Você pode adicionar mais estilos aqui, como um fundo sutil */
-    background-color: rgba(0, 0, 0, 0.1);
-}
-
-/* --- CORREÇÕES DE LAYOUT DO PWA --- */
-
-/* Remove o padding fixo do body que você tinha */
-body.pwa-body {
-    background-color: #f8f9fa;
-    padding-bottom: 0;
-    margin: 0; 
-}
-/* Adiciona o padding SOMENTE se a nav estiver visível */
-body.nav-visible {
-    padding-bottom: 56px;
-}
-
-/* QUANDO A TELA DE LOGIN ESTIVER ATIVA:
-  - Remove o padding do body (da nav)
-*/
+/* Quando o login está ativo, força o body a ter
+   altura total e esconde qualquer barra de rolagem */
 body.login-active {
+    height: 100%;
+    overflow: hidden;
     padding-bottom: 0 !important;
 }
 
@@ -284,13 +60,19 @@ body.login-active {
     background-color: rgba(0, 0, 0, 0.1);
 }
 
-/* --- ESTILOS DA NOVA TELA DE LOGIN (login.html) --- */
+/* --- ESTILOS DA TELA DE LOGIN (login.html) --- */
 .login-wrapper {
     display: flex;
     width: 100%;
-    min-height: 100vh; /* Faz o wrapper preencher a tela inteira */
+    /* CORREÇÃO: 100dvh (Dynamic Viewport Height)
+      Usa a altura REAL da janela, descontando barras do navegador.
+      Isso elimina a barra de rolagem.
+    */
+    min-height: 100dvh; 
     background: linear-gradient(135deg, var(--primary-color) 0%, #1e40af 100%);
-    overflow-y: auto;
+    /* Permite rolagem interna SOMENTE se o card for maior 
+       que a tela (ex: celular deitado) */
+    overflow-y: auto; 
 }
 .login-logo {
     height: 120px;
