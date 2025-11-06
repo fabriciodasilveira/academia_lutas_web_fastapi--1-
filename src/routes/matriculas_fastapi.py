@@ -57,23 +57,36 @@ def create_matricula(matricula: MatriculaCreate, db: Session = Depends(get_db)):
 
     db_matricula = Matricula(**matricula.dict())
     
+    # Em: src/routes/matriculas_fastapi.py (função create_matricula)
+
     try:
+        # 1. Adiciona a matrícula à sessão
         db.add(db_matricula)
         
-        # --- LÓGICA PARA CRIAR A PRIMEIRA MENSALIDADE ---
+        # 2. FLUSH: Salva a matrícula no banco (sem comitar)
+        #    Isso é crucial para que o db_matricula.id seja gerado.
+        db.flush()
+        
+        # 3. Agora que db_matricula.id existe, criamos a mensalidade
+        #    e definimos o matricula_id explicitamente.
         primeira_mensalidade = Mensalidade(
             aluno_id=db_matricula.aluno_id,
             plano_id=db_matricula.plano_id,
             valor=db_plano.valor,
-            # Define o vencimento para 7 dias a partir da data da matrícula
             data_vencimento=date.today() + timedelta(days=7),
-            status="pendente"
+            status="pendente",
+            matricula_id=db_matricula.id  # <-- A CORREÇÃO EXPLÍCITA
         )
-        db.add(primeira_mensalidade)
-        # --- FIM DA LÓGICA ---
         
+        # 4. Adiciona a nova mensalidade à sessão
+        db.add(primeira_mensalidade)
+        
+        # 5. COMMIT: Salva as duas transações (matrícula e mensalidade)
         db.commit()
+        
+        # 6. Atualiza o objeto db_matricula com os dados do banco
         db.refresh(db_matricula)
+        
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Erro de integridade ao criar a matrícula.")

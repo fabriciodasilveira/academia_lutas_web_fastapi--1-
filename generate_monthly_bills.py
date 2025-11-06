@@ -29,6 +29,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 def calculate_next_due_date(last_due_date: date) -> date:
     """Calcula a próxima data de vencimento (assumindo mensalidade)."""
+    # Adiciona 1 mês e mantém o dia (ex: 10/01 -> 10/02)
     return last_due_date + relativedelta(months=1)
 
 def generate_bills():
@@ -57,41 +58,44 @@ def generate_bills():
         return
 
     today = date.today()
-    current_month = today.month
-    current_year = today.year
-    start_of_current_month = date(current_year, current_month, 1)
-
-    logging.info(f"Iniciando geração de mensalidades para {current_month}/{current_year}...")
+    logging.info(f"Iniciando geração de mensalidades (referência: {today.strftime('%d/%m/%Y')})...")
     mensalidades_criadas = 0
+    matriculas_processadas = 0
 
     try:
         # Busca matrículas ativas, carregando plano e aluno
         active_matriculas = db.query(Matricula).options(
             joinedload(Matricula.plano),
-            joinedload(Matricula.aluno),
-            joinedload(Matricula.turma)
+            joinedload(Matricula.aluno)
         ).filter(Matricula.ativa == True).all()
 
         logging.info(f"Encontradas {len(active_matriculas)} matrículas ativas.")
 
         for matricula in active_matriculas:
             # Verifica se as relações foram carregadas corretamente
-            if not matricula.plano or not matricula.aluno or not matricula.turma:
-                logging.warning(f"Matrícula ID {matricula.id} sem plano, aluno ou turma associado(a). Pulando.")
+            if not matricula.plano or not matricula.aluno:
+                logging.warning(f"Matrícula ID {matricula.id} sem plano ou aluno associado. Pulando.")
                 continue
 
+            matriculas_processadas += 1
+
+            # Busca a última mensalidade GERADA para esta matrícula
             last_bill = db.query(Mensalidade)\
                           .filter(Mensalidade.matricula_id == matricula.id)\
                           .order_by(Mensalidade.data_vencimento.desc())\
                           .first()
 
             if not last_bill:
-                logging.warning(f"Matrícula ID {matricula.id} (Aluno: {matricula.aluno.nome}) não possui mensalidade inicial. Pulando.")
+                logging.warning(f"Matrícula ID {matricula.id} (Aluno: {matricula.aluno.nome}) não possui mensalidade inicial (Bug antigo?). Pulando.")
                 continue
 
+            # --- LÓGICA DE CATCH-UP (ALCANÇAR) ---
             next_due_date = calculate_next_due_date(last_bill.data_vencimento)
 
-            if next_due_date.month == current_month and next_due_date.year == current_year:
+            # Continua gerando faturas ENQUANTO a próxima data for menor ou igual a hoje
+            while next_due_date <= today:
+                
+                # Verifica se a fatura para este vencimento já existe
                 existing_bill_for_due_date = db.query(Mensalidade)\
                                                 .filter(
                                                     Mensalidade.matricula_id == matricula.id,
@@ -100,6 +104,7 @@ def generate_bills():
                                                 .first()
 
                 if not existing_bill_for_due_date:
+                    # Se não existe, cria a nova mensalidade
                     new_bill = Mensalidade(
                         aluno_id=matricula.aluno_id,
                         plano_id=matricula.plano_id,
@@ -111,16 +116,23 @@ def generate_bills():
                     db.add(new_bill)
                     mensalidades_criadas += 1
                     logging.info(f"-> Gerada nova mensalidade para Aluno ID {matricula.aluno_id} (Matrícula ID {matricula.id}), Venc: {next_due_date}")
+                
+                # Calcula a próxima data para o loop
+                next_due_date = calculate_next_due_date(next_due_date)
+            # --- FIM DA LÓGICA DE CATCH-UP ---
 
     except Exception as e:
         logging.error(f"Erro durante a busca ou geração de mensalidades: {e}")
         db.rollback()
     else:
-        db.commit()
-        logging.info(f"Processo concluído. {mensalidades_criadas} novas mensalidades geradas.")
+        if mensalidades_criadas > 0:
+            db.commit()
+            logging.info(f"Commit realizado. {mensalidades_criadas} novas mensalidades geradas.")
+        else:
+            logging.info("Nenhuma nova mensalidade precisou ser gerada nesta execução.")
     finally:
         db.close()
-        logging.info("Conexão com o banco de dados fechada.")
+        logging.info(f"Processo concluído. {matriculas_processadas} matrículas ativas verificadas.")
 
 if __name__ == "__main__":
     generate_bills()
