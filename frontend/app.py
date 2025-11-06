@@ -765,7 +765,7 @@ def matriculas_deletar(id):
 @login_required
 def mensalidades_exportar():
     busca = request.args.get('busca', '')
-    status_filtro = request.args.get('status', '') # Pega os mesmos filtros da lista
+    status_filtro = request.args.get('status', 'pendente') # Filtro de status (PADRÃO 'PENDENTE')
 
     params = { "limit": 10000 } # Pega "todos" (ajuste se tiver mais de 10k)
     if busca: params["busca_aluno"] = busca

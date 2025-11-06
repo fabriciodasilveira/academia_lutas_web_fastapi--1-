@@ -6,6 +6,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from datetime import date, datetime
+from sqlalchemy import desc
 
 from src.database import get_db
 from src.models.mensalidade import Mensalidade
@@ -66,7 +67,7 @@ def read_mensalidades(
     total = query.count()
 
     # Ordena pelo nome do aluno e depois pela data de vencimento
-    mensalidades_paginadas = query.order_by(Aluno.nome.asc(), Mensalidade.data_vencimento.desc())\
+    mensalidades_paginadas = query.order_by(desc(Mensalidade.status), Aluno.nome.asc())\
                                   .offset(skip).limit(limit).all()
 
     # Filtra mensalidades com aluno/plano None para evitar erro de validação (mantido)
