@@ -581,12 +581,15 @@ def turmas_deletar(id):
 
 
 
+# Em: frontend/app.py
+
 @app.route("/matriculas")
 @login_required
 def matriculas_list():
-    # Pega os parâmetros da URL (ex: ?busca=Joao&status=ativa)
+    # Pega os parâmetros da URL
     busca = request.args.get('busca', '')
     status = request.args.get('status', '')
+    turma_filtro = request.args.get('turma_id', '') # <-- NOVO FILTRO
 
     # Monta a URL da API com os parâmetros
     endpoint = "/matriculas?"
@@ -595,15 +598,32 @@ def matriculas_list():
         params.append(f"busca={busca}")
     if status:
         params.append(f"status={status}")
+    if turma_filtro: # <-- ADICIONADO
+        params.append(f"turma_id={turma_filtro}")
     
     endpoint += "&".join(params)
     
+    # Busca as matrículas filtradas
     response = api_request(endpoint)
     matriculas = []
     if response and response.status_code == 200:
         matriculas = response.json()
         
-    return render_template("matriculas/list.html", matriculas=matriculas, busca=busca, status=status)
+    # <-- ADICIONADO: Busca a lista completa de turmas para o dropdown
+    turmas_response = api_request("/turmas")
+    turmas = []
+    if turmas_response and turmas_response.status_code == 200:
+        turmas = turmas_response.json()
+    
+    # <-- ATUALIZADO: Passa as novas variáveis para o template
+    return render_template(
+        "matriculas/list.html", 
+        matriculas=matriculas, 
+        busca=busca, 
+        status=status, 
+        turmas=turmas, 
+        turma_filtro=turma_filtro
+    )
 
 
 @app.route("/matriculas/novo")

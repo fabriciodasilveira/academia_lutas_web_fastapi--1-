@@ -140,6 +140,7 @@ def read_matriculas(
     limit: int = 100,
     busca: Optional[str] = None, # Parâmetro de busca
     status: Optional[str] = None, # Parâmetro para filtrar por status (ativa/inativa)
+    turma_id: Optional[int] = None,
     db: Session = Depends(get_db)
 ):
     """
@@ -163,10 +164,12 @@ def read_matriculas(
             query = query.filter(Matricula.ativa == True)
         elif status == 'inativa':
             query = query.filter(Matricula.ativa == False)
+            
+    if turma_id:  # <-- 2. ADICIONE ESTE BLOCO
+        query = query.filter(Matricula.turma_id == turma_id)
         
     matriculas = query.order_by(Matricula.data_matricula.desc()).offset(skip).limit(limit).all()
     return matriculas
-
 
 @router.put("/{matricula_id}", response_model=MatriculaRead)
 def update_matricula(

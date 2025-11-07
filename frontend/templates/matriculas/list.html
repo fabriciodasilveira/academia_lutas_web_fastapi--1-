@@ -24,14 +24,16 @@
             <div class="card-body">
                 <form action="{{ url_for('matriculas_list') }}" method="GET">
                     <div class="row g-3">
-                        <div class="col-md-6">
+                        
+                        <div class="col-md-4">
                             <div class="input-group">
                                 <span class="input-group-text">
                                     <i class="fas fa-search"></i>
                                 </span>
-                                <input type="text" class="form-control" placeholder="Buscar por nome do aluno ou turma..." name="busca" value="{{ busca }}">
+                                <input type="text" class="form-control" placeholder="Buscar por nome do aluno..." name="busca" value="{{ busca }}">
                             </div>
                         </div>
+                        
                         <div class="col-md-3">
                             <select class="form-select" name="status">
                                 <option value="">Todos os status</option>
@@ -39,7 +41,19 @@
                                 <option value="inativa" {% if status == 'inativa' %}selected{% endif %}>Inativa (Trancada)</option>
                             </select>
                         </div>
-                        <div class="col-md-3 d-flex">
+                        
+                        <div class="col-md-3">
+                            <select class="form-select" name="turma_id">
+                                <option value="">Todas as turmas</option>
+                                {% for turma in turmas %}
+                                    <option value="{{ turma.id }}" {% if turma_filtro | string == turma.id | string %}selected{% endif %}>
+                                        {{ turma.nome }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-2 d-flex">
                             <button type="submit" class="btn btn-primary me-2 flex-grow-1">
                                 <i class="fas fa-filter me-1"></i>Filtrar
                             </button>
@@ -47,6 +61,7 @@
                                 <i class="fas fa-times"></i>
                             </a>
                         </div>
+                        
                     </div>
                 </form>
             </div>
