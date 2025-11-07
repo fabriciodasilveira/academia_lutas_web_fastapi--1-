@@ -15,13 +15,14 @@ from src.models.aluno import Aluno
 from src.models.turma import Turma
 from src.schemas.matricula import MatriculaCreate, MatriculaRead, MatriculaUpdate
 from src.models.plano import Plano
-from datetime import date, timedelta
+
+# Imports necessários para a nova lógica de data
+from datetime import date, timedelta, datetime
+from dateutil.relativedelta import relativedelta # <--- Import Adicionado
+
 from src.models.mensalidade import Mensalidade
 from sqlalchemy.orm import Session, joinedload
 from src.models.historico_matricula import HistoricoMatricula
-from datetime import datetime
-
-
 
 
 router = APIRouter(
@@ -34,7 +35,8 @@ router = APIRouter(
 @router.post("", response_model=MatriculaRead, status_code=status.HTTP_201_CREATED)
 def create_matricula(matricula: MatriculaCreate, db: Session = Depends(get_db)):
     """
-    Cria uma nova matrícula de um aluno em uma turma e GERA A PRIMEIRA MENSALIDADE.
+    Cria uma nova matrícula de um aluno em uma turma e GERA A PRIMEIRA MENSALIDADE
+    com cálculo pro-rata e vencimento no dia 10.
     """
     db_aluno = db.query(Aluno).filter(Aluno.id == matricula.aluno_id).first()
     if not db_aluno:
@@ -57,7 +59,43 @@ def create_matricula(matricula: MatriculaCreate, db: Session = Depends(get_db)):
 
     db_matricula = Matricula(**matricula.dict())
     
-    # Em: src/routes/matriculas_fastapi.py (função create_matricula)
+    # --- NOVA LÓGICA DE CÁLCULO PRO-RATA ---
+    
+    DIA_VENCIMENTO_PADRAO = 10
+    today = date.today()
+    valor_plano = db_plano.valor
+
+    # 1. Encontra a data do próximo vencimento (próximo dia 10)
+    data_vencimento_alvo = today.replace(day=DIA_VENCIMENTO_PADRAO)
+    if today.day > DIA_VENCIMENTO_PADRAO:
+        # Se hoje já passou do dia 10, o vencimento é no próximo mês
+        data_vencimento_alvo = data_vencimento_alvo + relativedelta(months=1)
+    
+    # 2. Encontra o início do ciclo de faturamento (vencimento anterior)
+    data_inicio_ciclo = data_vencimento_alvo + relativedelta(months=-1)
+    
+    # 3. Calcula os dias totais no ciclo (ex: 30, 31, 28)
+    dias_totais_no_ciclo = (data_vencimento_alvo - data_inicio_ciclo).days
+    
+    # 4. Calcula os dias que o aluno irá usar (contando o dia de hoje)
+    # (Ex: Se matricula dia 23/11, venc. 10/12. Dias a cobrar = (10/12 - 23/11) = 17 dias)
+    dias_a_cobrar = (data_vencimento_alvo - today).days
+    
+    # Garante que não cobre dias negativos se matricular no dia 10
+    if dias_a_cobrar <= 0: 
+        dias_a_cobrar = 0
+
+    # 5. Calcula o valor proporcional
+    if dias_totais_no_ciclo > 0:
+        valor_diario = valor_plano / dias_totais_no_ciclo
+        valor_proporcional = round(valor_diario * dias_a_cobrar, 2)
+    else:
+        valor_proporcional = valor_plano # Fallback para evitar divisão por zero
+
+    # Se o valor proporcional for 0 (ex: matriculou no dia 10), 
+    # a fatura é R$ 0.00 e o script do mês seguinte gera a fatura cheia.
+    
+    # --- FIM DA LÓGICA PRO-RATA ---
 
     try:
         # 1. Adiciona a matrícula à sessão
@@ -67,24 +105,23 @@ def create_matricula(matricula: MatriculaCreate, db: Session = Depends(get_db)):
         #    Isso é crucial para que o db_matricula.id seja gerado.
         db.flush()
         
-        # 3. Agora que db_matricula.id existe, criamos a mensalidade
-        #    e definimos o matricula_id explicitamente.
+        # 3. Cria a primeira mensalidade (PROPORCIONAL)
         primeira_mensalidade = Mensalidade(
             aluno_id=db_matricula.aluno_id,
             plano_id=db_matricula.plano_id,
-            valor=db_plano.valor,
-            data_vencimento=date.today() + timedelta(days=7),
+            valor=valor_proporcional,           # <-- Valor Proporcional
+            data_vencimento=data_vencimento_alvo, # <-- Data Alvo (Próximo dia 10)
             status="pendente",
-            matricula_id=db_matricula.id  # <-- A CORREÇÃO EXPLÍCITA
+            matricula_id=db_matricula.id  # <-- Vínculo explícito
         )
         
         # 4. Adiciona a nova mensalidade à sessão
         db.add(primeira_mensalidade)
         
-        # 5. COMMIT: Salva as duas transações (matrícula e mensalidade)
+        # 5. COMMIT: Salva as duas transações
         db.commit()
         
-        # 6. Atualiza o objeto db_matricula com os dados do banco
+        # 6. Atualiza o objeto db_matricula
         db.refresh(db_matricula)
         
     except IntegrityError:
