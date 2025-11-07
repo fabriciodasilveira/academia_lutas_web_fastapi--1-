@@ -2,11 +2,11 @@ import os
 import logging
 from datetime import date
 from dateutil.relativedelta import relativedelta
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, and_
 from sqlalchemy.orm import sessionmaker, joinedload
 from dotenv import load_dotenv
 
-# --- GARANTIR QUE TODAS AS IMPORTAÇÕES ESTEJAM AQUI ---
+# --- Importações de todos os modelos (necessário) ---
 from src.database import Base
 from src.models.aluno import Aluno
 from src.models.categoria import Categoria
@@ -27,15 +27,10 @@ from src.models.usuario import Usuario
 # Configuração básica de logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def calculate_next_due_date(last_due_date: date) -> date:
-    """Calcula a próxima data de vencimento (assumindo mensalidade)."""
-    # Adiciona 1 mês e mantém o dia (ex: 10/01 -> 10/02)
-    return last_due_date + relativedelta(months=1)
-
 def generate_bills():
     """
-    Função principal que busca matrículas ativas e gera novas mensalidades
-    para o mês atual, se ainda não existirem.
+    Verifica matrículas ativas e gera a mensalidade para o mês corrente
+    se ela ainda não existir, com vencimento padrão no dia 10.
     """
     load_dotenv()
     DATABASE_URL = os.getenv("DATABASE_URL")
@@ -58,7 +53,17 @@ def generate_bills():
         return
 
     today = date.today()
-    logging.info(f"Iniciando geração de mensalidades (referência: {today.strftime('%d/%m/%Y')})...")
+    DIA_VENCIMENTO_PADRAO = 10
+    
+    # Define a data de vencimento alvo para este mês
+    # Ex: Se hoje é 06/11/2025, a data alvo é 10/11/2025
+    data_vencimento_alvo = today.replace(day=DIA_VENCIMENTO_PADRAO)
+    
+    # Se o script rodar DEPOIS do dia 10 (ex: dia 11), 
+    # ele ainda gera a fatura do mês corrente com vencimento no dia 10.
+    # O script de "catch-up" (alcance) não é mais necessário com esta lógica.
+
+    logging.info(f"Iniciando geração de mensalidades para o vencimento de: {data_vencimento_alvo.strftime('%d/%m/%Y')}")
     mensalidades_criadas = 0
     matriculas_processadas = 0
 
@@ -79,47 +84,35 @@ def generate_bills():
 
             matriculas_processadas += 1
 
-            # Busca a última mensalidade GERADA para esta matrícula
-            last_bill = db.query(Mensalidade)\
-                          .filter(Mensalidade.matricula_id == matricula.id)\
-                          .order_by(Mensalidade.data_vencimento.desc())\
-                          .first()
+            # --- LÓGICA DO USUÁRIO ---
+            # Verifica se já existe uma mensalidade para esta matrícula
+            # E com este vencimento específico.
+            existing_bill = db.query(Mensalidade)\
+                              .filter(
+                                  and_(
+                                      Mensalidade.matricula_id == matricula.id,
+                                      Mensalidade.data_vencimento == data_vencimento_alvo
+                                  )
+                              ).first()
 
-            if not last_bill:
-                logging.warning(f"Matrícula ID {matricula.id} (Aluno: {matricula.aluno.nome}) não possui mensalidade inicial (Bug antigo?). Pulando.")
+            if existing_bill:
+                # Log opcional (pode poluir o log, mas é útil para depurar)
+                # logging.info(f"Matrícula {matricula.id} (Aluno: {matricula.aluno.nome}) já possui fatura para este mês. Pulando.")
                 continue
 
-            # --- LÓGICA DE CATCH-UP (ALCANÇAR) ---
-            next_due_date = calculate_next_due_date(last_bill.data_vencimento)
-
-            # Continua gerando faturas ENQUANTO a próxima data for menor ou igual a hoje
-            while next_due_date <= today:
-                
-                # Verifica se a fatura para este vencimento já existe
-                existing_bill_for_due_date = db.query(Mensalidade)\
-                                                .filter(
-                                                    Mensalidade.matricula_id == matricula.id,
-                                                    Mensalidade.data_vencimento == next_due_date
-                                                )\
-                                                .first()
-
-                if not existing_bill_for_due_date:
-                    # Se não existe, cria a nova mensalidade
-                    new_bill = Mensalidade(
-                        aluno_id=matricula.aluno_id,
-                        plano_id=matricula.plano_id,
-                        matricula_id=matricula.id,
-                        valor=matricula.plano.valor,
-                        data_vencimento=next_due_date,
-                        status="pendente"
-                    )
-                    db.add(new_bill)
-                    mensalidades_criadas += 1
-                    logging.info(f"-> Gerada nova mensalidade para Aluno ID {matricula.aluno_id} (Matrícula ID {matricula.id}), Venc: {next_due_date}")
-                
-                # Calcula a próxima data para o loop
-                next_due_date = calculate_next_due_date(next_due_date)
-            # --- FIM DA LÓGICA DE CATCH-UP ---
+            # Se não existe, cria a nova mensalidade
+            new_bill = Mensalidade(
+                aluno_id=matricula.aluno_id,
+                plano_id=matricula.plano_id,
+                matricula_id=matricula.id,
+                valor=matricula.plano.valor,
+                data_vencimento=data_vencimento_alvo,
+                status="pendente"
+            )
+            db.add(new_bill)
+            mensalidades_criadas += 1
+            logging.info(f"-> GERADA fatura para Aluno ID {matricula.aluno_id} (Matrícula ID {matricula.id}), Venc: {data_vencimento_alvo}")
+            # --- FIM DA LÓGICA ---
 
     except Exception as e:
         logging.error(f"Erro durante a busca ou geração de mensalidades: {e}")
