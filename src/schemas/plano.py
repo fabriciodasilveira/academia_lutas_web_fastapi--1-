@@ -10,7 +10,7 @@ from typing import Optional
 class PlanoBase(BaseModel):
     nome: str = Field(..., max_length=100)
     descricao: Optional[str] = Field(None, max_length=255)
-    valor: float = Field(..., gt=0)
+    valor: float = Field(..., ge=0)
     periodo_meses: int = Field(..., gt=0)
 
 # Schema para criação de Plano
@@ -21,7 +21,7 @@ class PlanoCreate(PlanoBase):
 class PlanoUpdate(BaseModel):
     nome: Optional[str] = Field(None, max_length=100)
     descricao: Optional[str] = Field(None, max_length=255)
-    valor: Optional[float] = Field(None, gt=0)
+    valor: Optional[float] = Field(None, ge=0)
     periodo_meses: Optional[int] = Field(None, gt=0)
 
 # Schema para leitura/retorno de Plano
