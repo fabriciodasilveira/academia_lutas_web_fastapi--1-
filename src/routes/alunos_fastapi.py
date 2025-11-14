@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
 import logging
 
+
 # Imports para o Armazenamento Externo
 import boto3
 from botocore.client import Config
@@ -24,6 +25,8 @@ from src.models.historico_matricula import HistoricoMatricula
 from sqlalchemy import func
 from src.models.mensalidade import Mensalidade
 from src.image_utils import process_avatar_image
+from src.models import usuario as models_usuario
+from src import auth
 
 
 router = APIRouter(
@@ -38,7 +41,7 @@ def create_aluno(
     data_nascimento: Optional[str] = Form(None),
     cpf: Optional[str] = Form(None),
     telefone: Optional[str] = Form(None),
-    email: Optional[str] = Form(None),
+    email: Optional[str] = Form(None), # <--- Este campo é a chave
     endereco: Optional[str] = Form(None),
     observacoes: Optional[str] = Form(None),
     foto: Optional[UploadFile] = File(None),
@@ -50,10 +53,34 @@ def create_aluno(
     db: Session = Depends(get_db)
 ):
     """
-    Cria um novo aluno, com upload de foto para o R2.
+    Cria um novo aluno.
+    Se um email for fornecido, cria também uma conta de usuário (Usuario)
+    para o portal do aluno.
     """
-    # ... (validações de CPF/Email) ...
+    
+    # --- NOVA LÓGICA DE CRIAÇÃO DE USUÁRIO ---
+    db_user = None
+    if email:
+        # Verifica se o e-mail já está em uso na tabela de usuários
+        db_user = db.query(models_usuario.Usuario).filter(models_usuario.Usuario.email == email).first()
+        if db_user:
+            # Se o e-mail já existe, não podemos criar o aluno
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Este email já está cadastrado em outro usuário."
+            )
+        
+        # Cria o novo usuário, sem senha (permitido pelo modelo)
+        # O aluno usará o "Entrar com Google" ou "Esqueci a Senha" (se implementado)
+        db_user = models_usuario.Usuario(
+            email=email,
+            nome=nome,
+            role="aluno" # Define a permissão como 'aluno'
+        )
+        db.add(db_user)
+    # --- FIM DA NOVA LÓGICA ---
 
+    # Processa a data de nascimento
     parsed_data_nascimento = None
     if data_nascimento:
         try:
@@ -61,6 +88,7 @@ def create_aluno(
         except ValueError:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Formato de data inválido. Use YYYY-MM-DD")
 
+    # Prepara os dados do aluno
     aluno_data = AlunoCreate(
         nome=nome, data_nascimento=parsed_data_nascimento, cpf=cpf, telefone=telefone,
         email=email, endereco=endereco, observacoes=observacoes,
@@ -70,16 +98,37 @@ def create_aluno(
     )
 
     db_aluno = Aluno(**aluno_data.dict(exclude_unset=True))
-    db.add(db_aluno)
-    db.commit()
-    db.refresh(db_aluno)
 
+    # --- NOVA LÓGICA DE VÍNCULO ---
+    if db_user:
+        db_aluno.usuario = db_user # Vincula o aluno ao usuário criado
+    # --- FIM DA NOVA LÓGICA ---
+
+    db.add(db_aluno)
+    
+    try:
+        # Faz o commit para salvar Aluno (e Usuário, se houver)
+        # Isso é necessário para que db_aluno.id seja gerado ANTES do upload da foto
+        db.commit()
+    except IntegrityError as e:
+        db.rollback()
+        logging.error(f"Erro de integridade ao salvar aluno: {e}")
+        # Verifica se o erro é de CPF ou Email duplicado (que são UNIQUE)
+        if "cpf" in str(e).lower():
+             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Este CPF já está cadastrado.")
+        if "email" in str(e).lower():
+             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Este Email já está cadastrado.")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro interno ao salvar dados.")
+
+    db.refresh(db_aluno)
+    if db_user:
+        db.refresh(db_user) # Atualiza o usuário também
+
+    # Lógica de Upload de Foto (permanece a mesma)
     if foto and foto.filename:
-        # Processa a imagem antes do upload
         processed_image, mime_type = process_avatar_image(foto.file)
         
         if processed_image:
-            # Pega as credenciais do ambiente
             s3_endpoint_url = os.getenv("S3_ENDPOINT_URL")
             s3_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
             s3_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
@@ -91,21 +140,16 @@ def create_aluno(
 
             try:
                 s3_client = boto3.client('s3', endpoint_url=s3_endpoint_url, aws_access_key_id=s3_access_key_id, aws_secret_access_key=s3_secret_access_key, region_name="auto")
-                
-                # Garante um nome de arquivo .jpg, já que convertemos para JPEG
                 base_filename, _ = os.path.splitext(foto.filename)
                 safe_filename = f"aluno_{db_aluno.id}_{datetime.utcnow().timestamp()}_{base_filename.replace(' ', '_')}.jpg"
-
-                # Faz o upload do arquivo processado (em memória)
                 s3_client.upload_fileobj(processed_image, s3_bucket_name, safe_filename, ExtraArgs={'ContentType': mime_type})
                 
                 db_aluno.foto = f"{public_bucket_url.rstrip('/')}/{safe_filename}"
-                db.commit()
+                db.commit() # Salva a URL da foto no aluno
                 db.refresh(db_aluno)
             except Exception as e: 
                 logging.error(f"Erro no upload para o R2 (aluno): {e}")
-                # Não lança exceção para não quebrar o cadastro do aluno
-
+                # Não lança exceção, pois o aluno já foi criado
 
     return db_aluno
 
