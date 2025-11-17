@@ -68,6 +68,8 @@ def register_aluno(aluno_data: schemas_portal.AlunoRegistration, db: Session = D
         )
     return new_aluno
 
+# Em: src/routes/portal_aluno_fastapi.py
+
 @router.get("/me", response_model=schemas_aluno.AlunoRead)
 def get_current_aluno_profile(
     current_user: models.usuario.Usuario = Depends(auth.get_current_active_user),
@@ -76,25 +78,27 @@ def get_current_aluno_profile(
     if current_user.role != "aluno":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acesso negado.")
 
-    # Carrega o aluno E suas matrículas de forma otimizada
-    aluno_profile = db.query(models.aluno.Aluno).options(
+    # --- LÓGICA DE CONTA FAMILIAR ---
+    # 1. Busca TODOS os perfis de aluno vinculados a este login
+    alunos_vinculados = db.query(models.aluno.Aluno).options(
         joinedload(models.aluno.Aluno.matriculas)
-    ).filter(models.aluno.Aluno.usuario_id == current_user.id).first()
+    ).filter(models.aluno.Aluno.usuario_id == current_user.id).order_by(models.aluno.Aluno.id.asc()).all() # Ordena pelo ID (mais antigo primeiro)
 
-    if not aluno_profile:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Perfil de aluno não encontrado.")
+    if not alunos_vinculados:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nenhum perfil de aluno encontrado para este usuário.")
 
-    # --- LÓGICA PARA CALCULAR O STATUS ---
+    # 2. Seleciona o primeiro perfil (o "principal" da conta) para exibir no PWA
+    aluno_profile = alunos_vinculados[0]
+    # --- FIM DA LÓGICA ---
+
+    # Lógica de status (permanece a mesma)
     status_geral = "Inativo"
     if aluno_profile.matriculas:
         if any(matricula.ativa for matricula in aluno_profile.matriculas):
             status_geral = "Ativo"
     
-    # Converte para o schema Pydantic ANTES de adicionar o campo extra
     aluno_data = schemas_aluno.AlunoRead.from_orm(aluno_profile)
-    # Adiciona o status calculado ao objeto de resposta
     aluno_data.status_geral = status_geral
-    # --- FIM DA LÓGICA ---
 
     return aluno_data
 

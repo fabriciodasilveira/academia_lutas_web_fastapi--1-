@@ -12,4 +12,4 @@ class Usuario(Base):
     role = Column(String, nullable=False, default="pendente") # Define 'pendente' como padrão
 
     # Relacionamento inverso
-    aluno = relationship("Aluno", back_populates="usuario", uselist=False)
+    alunos = relationship("Aluno", back_populates="usuario") # REMOVIDO uselist=False, renomeado para "alunos"

@@ -54,32 +54,26 @@ def create_aluno(
 ):
     """
     Cria um novo aluno.
-    Se um email for fornecido, cria também uma conta de usuário (Usuario)
-    para o portal do aluno.
+    Se um email for fornecido:
+    1. Tenta encontrar um usuário existente (pai/mãe) e vincula o novo aluno a ele.
+    2. Se não encontrar, cria um novo usuário e vincula.
     """
     
-    # --- NOVA LÓGICA DE CRIAÇÃO DE USUÁRIO ---
     db_user = None
     if email:
-        # Verifica se o e-mail já está em uso na tabela de usuários
+        # 1. Tenta ENCONTRAR o usuário (pai/mãe) pelo email
         db_user = db.query(models_usuario.Usuario).filter(models_usuario.Usuario.email == email).first()
-        if db_user:
-            # Se o e-mail já existe, não podemos criar o aluno
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Este email já está cadastrado em outro usuário."
-            )
         
-        # Cria o novo usuário, sem senha (permitido pelo modelo)
-        # O aluno usará o "Entrar com Google" ou "Esqueci a Senha" (se implementado)
-        db_user = models_usuario.Usuario(
-            email=email,
-            nome=nome,
-            role="aluno" # Define a permissão como 'aluno'
-        )
-        db.add(db_user)
-    # --- FIM DA NOVA LÓGICA ---
-
+        if not db_user:
+            # 2. Se NÃO ENCONTROU, cria um novo usuário
+            db_user = models_usuario.Usuario(
+                email=email,
+                nome=nome,
+                role="aluno" # Define a permissão como 'aluno'
+            )
+            db.add(db_user)
+        # Se encontrou (db_user existe), ele apenas será vinculado ao novo aluno
+    
     # Processa a data de nascimento
     parsed_data_nascimento = None
     if data_nascimento:
@@ -99,33 +93,29 @@ def create_aluno(
 
     db_aluno = Aluno(**aluno_data.dict(exclude_unset=True))
 
-    # --- NOVA LÓGICA DE VÍNCULO ---
     if db_user:
-        db_aluno.usuario = db_user # Vincula o aluno ao usuário criado
-    # --- FIM DA NOVA LÓGICA ---
-
+        db_aluno.usuario = db_user # Vincula o aluno (novo ou filho) ao usuário
+    
     db.add(db_aluno)
     
     try:
-        # Faz o commit para salvar Aluno (e Usuário, se houver)
-        # Isso é necessário para que db_aluno.id seja gerado ANTES do upload da foto
         db.commit()
     except IntegrityError as e:
         db.rollback()
         logging.error(f"Erro de integridade ao salvar aluno: {e}")
-        # Verifica se o erro é de CPF ou Email duplicado (que são UNIQUE)
         if "cpf" in str(e).lower():
              raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Este CPF já está cadastrado.")
-        if "email" in str(e).lower():
-             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Este Email já está cadastrado.")
+        # Removemos o erro de email duplicado, pois agora é permitido
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro interno ao salvar dados.")
 
     db.refresh(db_aluno)
     if db_user:
-        db.refresh(db_user) # Atualiza o usuário também
+        db.refresh(db_user)
 
     # Lógica de Upload de Foto (permanece a mesma)
     if foto and foto.filename:
+        # ... (seu código de upload de foto existente) ...
+        # (O código de upload de foto continua aqui)
         processed_image, mime_type = process_avatar_image(foto.file)
         
         if processed_image:
@@ -145,11 +135,11 @@ def create_aluno(
                 s3_client.upload_fileobj(processed_image, s3_bucket_name, safe_filename, ExtraArgs={'ContentType': mime_type})
                 
                 db_aluno.foto = f"{public_bucket_url.rstrip('/')}/{safe_filename}"
-                db.commit() # Salva a URL da foto no aluno
+                db.commit() 
                 db.refresh(db_aluno)
             except Exception as e: 
                 logging.error(f"Erro no upload para o R2 (aluno): {e}")
-                # Não lança exceção, pois o aluno já foi criado
+
 
     return db_aluno
 
