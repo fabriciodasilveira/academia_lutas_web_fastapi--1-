@@ -47,9 +47,9 @@ const api = {
     },
 
     // --- FUNÇÃO DE LOGIN CORRIGIDA COM ASYNC/AWAIT ---
-    login: async (email, password) => {
+    login: async (username, password) => { // Variável renomeada
         const formData = new URLSearchParams();
-        formData.append('username', email);
+        formData.append('username', username); // Agora faz mais sentido
         formData.append('password', password);
         
         try {

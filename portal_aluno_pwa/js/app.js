@@ -194,10 +194,10 @@ function handleLoginPage() {
     const form = document.getElementById('login-form');
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const email = e.target.username.value;
+        const username = e.target.username.value; // Variável renomeada
         const password = e.target.password.value;
         try {
-            const data = await api.login(email, password);
+            const data = await api.login(username, password);
             if (data.user_info.role !== 'aluno') {
                 throw new Error("Acesso permitido somente a alunos.");
             }

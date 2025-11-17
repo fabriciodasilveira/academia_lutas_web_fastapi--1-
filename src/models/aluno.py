@@ -7,13 +7,13 @@ class Aluno(Base):
     __tablename__ = "alunos"
 
     id = Column(Integer, primary_key=True, index=True)
-    usuario_id = Column(Integer, ForeignKey('usuarios.id'), nullable=True) # REMOVIDO unique=True    
+    usuario_id = Column(Integer, ForeignKey('usuarios.id'), nullable=True, unique=True)    
     
     nome = Column(String(100), index=True)
     data_nascimento = Column(Date)
     cpf = Column(String(14), unique=True, index=True)
     telefone = Column(String(20))
-    email = Column(String(100), unique=False, index=True, nullable=True) # REMOVIDO unique=True, ADICIONADO nullable=True
+    email = Column(String(100), unique=True, index=True, nullable=True)
     endereco = Column(String(255))
     observacoes = Column(String(255))
     foto = Column(String(255))
@@ -31,4 +31,4 @@ class Aluno(Base):
     inscricoes = relationship("Inscricao", back_populates="aluno")
     
     # Novo relacionamento
-    usuario = relationship("Usuario", back_populates="alunos") # Renomeado para "alunos" (plural)
+    usuario = relationship("Usuario", back_populates="aluno")

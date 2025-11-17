@@ -1,7 +1,5 @@
 <div class="login-wrapper"> 
-    
     <div class="row justify-content-center align-items-center w-100 m-0">
-        
         <div class="col-md-7 col-lg-5 col-xl-4 p-3">
             <div id="alert-container"></div>
             
@@ -15,16 +13,16 @@
                     
                     <form id="login-form">
                         <div class="mb-3">
-                            <label for="username" class="form-label">Email</label>
+                            <label for="username" class="form-label">Usuário</label>
                             <div class="input-group-icon">
-                                <input type="email" class="form-control" id="username" required placeholder="seu.email@exemplo.com">
-                                <i class="fas fa-envelope input-icon"></i>
+                                <input type="text" class="form-control" id="username" name="username" required placeholder="Seu nome de usuário">
+                                <i class="fas fa-user input-icon"></i>
                             </div>
                         </div>
                         <div class="mb-3">
                             <label for="password" class="form-label">Senha</label>
                             <div class="input-group-icon">
-                                <input type="password" class="form-control" id="password" required placeholder="Sua senha">
+                                <input type="password" class="form-control" id="password" name="password" required placeholder="Sua senha">
                                 <i class="fas fa-lock input-icon"></i>
                                 <button class="btn-toggle-pass" type="button" id="togglePassword">
                                     <i class="fas fa-eye"></i>
@@ -36,18 +34,7 @@
                         </div>
                     </form>
 
-                    <div class="login-divider">
-                        <span>OU</span>
                     </div>
-
-                    <div class="d-grid">
-                        <a href="/api/v1/auth/login/google?origin=pwa" class="btn btn-google">
-                            <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo">
-                            Entrar com Google
-                        </a>
-                    </div>
-
-                </div>
             </div>
         </div>
     </div>

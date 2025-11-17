@@ -8,6 +8,7 @@ import logging
 import os
 import boto3
 from botocore.client import Config
+from src import auth
 
 from src import database, models, auth
 from src.schemas import portal_aluno as schemas_portal
@@ -23,6 +24,7 @@ from src.models.matricula import Matricula
 from src.schemas.matricula import MatriculaRead
 from src.image_utils import process_avatar_image
 from sqlalchemy.orm import joinedload
+from src.schemas import portal_aluno as schemas_portal
 
 
 router = APIRouter(
@@ -30,31 +32,49 @@ router = APIRouter(
     tags=["Portal do Aluno"]
 )
 
-# --- SUAS ROTAS EXISTENTES (register, me, etc.) FICAM AQUI SEM ALTERAÇÃO ---
-# ... (deixe as outras funções como estão) ...
 @router.post("/register", response_model=schemas_aluno.AlunoRead, status_code=status.HTTP_201_CREATED)
 def register_aluno(aluno_data: schemas_portal.AlunoRegistration, db: Session = Depends(database.get_db)):
-    db_user = auth.get_user(db, email=aluno_data.email)
-    if db_user:
+    """
+    Cria um novo Aluno E um novo Usuário (com username).
+    """
+    # Verifica se o USERNAME já existe
+    db_user_check = db.query(models.usuario.Usuario).filter(models.usuario.Usuario.username == aluno_data.username).first()
+    if db_user_check:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Este nome de usuário já está em uso."
+        )
+
+    # Verifica se o EMAIL já existe
+    db_email_check = auth.get_user(db, email=aluno_data.email)
+    if db_email_check:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Este email já está cadastrado no sistema."
         )
+    
     hashed_password = auth.get_password_hash(aluno_data.password)
+    
+    # Cria o novo Usuário com username
     new_user = models.usuario.Usuario(
+        username=aluno_data.username, # <--- NOVO
         email=aluno_data.email,
         nome=aluno_data.nome,
         hashed_password=hashed_password,
         role="aluno"
     )
+    
+    # Cria o novo Aluno
     new_aluno = models.aluno.Aluno(
         nome=aluno_data.nome,
         email=aluno_data.email,
         telefone=aluno_data.telefone,
         data_nascimento=aluno_data.data_nascimento,
-        usuario=new_user
+        usuario=new_user # Vincula o usuário ao aluno
     )
+    
     try:
+        # Adiciona os dois
         db.add(new_user)
         db.add(new_aluno)
         db.commit()
@@ -67,8 +87,6 @@ def register_aluno(aluno_data: schemas_portal.AlunoRegistration, db: Session = D
             detail=f"Ocorreu um erro ao criar o usuário: {e}"
         )
     return new_aluno
-
-# Em: src/routes/portal_aluno_fastapi.py
 
 @router.get("/me", response_model=schemas_aluno.AlunoRead)
 def get_current_aluno_profile(

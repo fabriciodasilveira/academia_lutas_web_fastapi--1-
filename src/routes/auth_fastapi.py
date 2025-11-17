@@ -17,19 +17,27 @@ router = APIRouter(
 
 @router.post("/token", response_model=schemas_usuario.Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
-    user = auth.get_user(db, email=form_data.username) # Usamos email como username
+    
+    # --- ALTERAÇÃO AQUI ---
+    # Trocamos get_user (por email) para get_user_by_username
+    user = auth.get_user_by_username(db, username=form_data.username)
+    # --- FIM DA ALTERAÇÃO ---
+
     if not user or not user.hashed_password or not auth.verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Email ou senha incorretos",
+            detail="Usuário ou senha incorretos", # Mensagem genérica
             headers={"WWW-Authenticate": "Bearer"},
         )
+    
+    # Cria o token com o 'sub' (subject) sendo o username
     access_token = auth.create_access_token(
-        data={"sub": user.email, "role": user.role}
+        data={"sub": user.username, "role": user.role} # Mudado de user.email para user.username
     )
 
     user_info = schemas_usuario.UsuarioRead.from_orm(user)
     return {"access_token": access_token, "token_type": "bearer", "user_info": user_info}
+
 
 @router.get('/login/google')
 async def login_google(request: Request):

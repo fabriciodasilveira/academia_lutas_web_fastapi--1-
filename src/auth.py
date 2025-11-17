@@ -62,6 +62,12 @@ def get_user(db: Session, email: str):
     # --- MODIFICAÇÃO AQUI ---
     return db.query(models_usuario.Usuario).filter(models_usuario.Usuario.email == email).first()
 
+# --- ADICIONE ESTA NOVA FUNÇÃO ---
+def get_user_by_username(db: Session, username: str):
+    """Busca um usuário pelo seu nome de usuário (username)."""
+    return db.query(models_usuario.Usuario).filter(models_usuario.Usuario.username == username).first()
+# --- FIM DA ADIÇÃO ---
+
 async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(database.get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
