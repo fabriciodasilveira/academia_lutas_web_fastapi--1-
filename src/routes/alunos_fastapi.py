@@ -286,7 +286,7 @@ def read_aluno(aluno_id: int, db: Session = Depends(get_db)):
 @router.delete("/{aluno_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_aluno(aluno_id: int, db: Session = Depends(get_db)):
     """
-    Exclui um aluno.
+    Exclui um aluno do banco de dados e sua foto correspondente no S3 (Cloudflare R2).
     """
     db_aluno = db.query(Aluno).filter(Aluno.id == aluno_id).first()
     if db_aluno is None:
@@ -295,15 +295,37 @@ def delete_aluno(aluno_id: int, db: Session = Depends(get_db)):
             detail="Aluno não encontrado"
         )
 
-    # Remove a foto se existir - CORRIGIDO
+    # --- NOVA LÓGICA PARA DELETAR FOTO DO S3 (R2) ---
     if db_aluno.foto:
-        foto_path = Path(str(BASE_DIR) + db_aluno.foto)
-        if foto_path.exists():
-            try:
-                foto_path.unlink()
-            except OSError as e:
-                print(f"Erro ao remover foto {foto_path}: {e}")
+        try:
+            # Pega as credenciais do ambiente
+            s3_endpoint_url = os.getenv("S3_ENDPOINT_URL")
+            s3_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
+            s3_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+            s3_bucket_name = os.getenv("S3_BUCKET_NAME")
 
+            if all([s3_endpoint_url, s3_access_key_id, s3_secret_access_key, s3_bucket_name]):
+                s3_client = boto3.client('s3', 
+                                         endpoint_url=s3_endpoint_url, 
+                                         aws_access_key_id=s3_access_key_id, 
+                                         aws_secret_access_key=s3_secret_access_key, 
+                                         region_name="auto")
+                
+                # Extrai o nome do arquivo (key) da URL completa
+                # Ex: https://.../aluno_1_12345.jpg -> aluno_1_12345.jpg
+                file_key = db_aluno.foto.split('/')[-1]
+
+                s3_client.delete_object(Bucket=s3_bucket_name, Key=file_key)
+                logging.info(f"Foto {file_key} excluída do R2 com sucesso.")
+            else:
+                logging.warning("Configuração S3 incompleta. Não foi possível excluir a foto.")
+        
+        except Exception as e:
+            # Não impede a exclusão do aluno do banco, apenas loga o erro da foto
+            logging.error(f"Erro ao excluir foto {db_aluno.foto} do R2: {e}")
+    # --- FIM DA NOVA LÓGICA ---
+
+    # Exclui o aluno do banco de dados
     db.delete(db_aluno)
     db.commit()
     return None
