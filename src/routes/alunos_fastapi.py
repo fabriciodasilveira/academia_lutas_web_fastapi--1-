@@ -27,6 +27,7 @@ from src.models.mensalidade import Mensalidade
 from src.image_utils import process_avatar_image
 from src.models import usuario as models_usuario
 from src import auth
+import re
 
 
 router = APIRouter(
@@ -37,11 +38,13 @@ router = APIRouter(
 
 @router.post("", response_model=AlunoRead, status_code=status.HTTP_201_CREATED)
 def create_aluno(
+    # --- CAMPO 'password' FOI REMOVIDO ---
+    username: str = Form(...),
     nome: str = Form(...),
     data_nascimento: Optional[str] = Form(None),
-    cpf: Optional[str] = Form(None),
+    cpf: Optional[str] = Form(None), # <--- CPF será usado como senha
     telefone: Optional[str] = Form(None),
-    email: Optional[str] = Form(None), # <--- Este campo é a chave
+    email: Optional[str] = Form(None), 
     endereco: Optional[str] = Form(None),
     observacoes: Optional[str] = Form(None),
     foto: Optional[UploadFile] = File(None),
@@ -53,34 +56,65 @@ def create_aluno(
     db: Session = Depends(get_db)
 ):
     """
-    Cria um novo aluno.
-    Se um email for fornecido:
-    1. Tenta encontrar um usuário existente (pai/mãe) e vincula o novo aluno a ele.
-    2. Se não encontrar, cria um novo usuário e vincula.
+    Cria um novo aluno E sua conta de usuário (Usuario).
+    O Username é definido pelo admin.
+    A Senha Padrão é o CPF do aluno (apenas números).
     """
     
-    db_user = None
-    if email:
-        # 1. Tenta ENCONTRAR o usuário (pai/mãe) pelo email
-        db_user = db.query(models_usuario.Usuario).filter(models_usuario.Usuario.email == email).first()
-        
-        if not db_user:
-            # 2. Se NÃO ENCONTROU, cria um novo usuário
-            db_user = models_usuario.Usuario(
-                email=email,
-                nome=nome,
-                role="aluno" # Define a permissão como 'aluno'
-            )
-            db.add(db_user)
-        # Se encontrou (db_user existe), ele apenas será vinculado ao novo aluno
+    # --- LÓGICA DE CRIAÇÃO DE USUÁRIO ATUALIZADA ---
     
+    # Validação do CPF como Senha
+    if not cpf:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="O CPF é obrigatório (será usado como senha inicial).")
+        
+    # Limpa o CPF para usar como senha (remove '.', '-', '/')
+    senha_padrao = re.sub(r'[^0-9]', '', cpf)
+    
+    if len(senha_padrao) < 6: # Define um mínimo para a senha
+         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="CPF inválido. Deve conter pelo menos 6 números.")
+
+    db_user = None
+    if username:
+        # Verifica se o USERNAME já existe
+        db_user_check = db.query(models_usuario.Usuario).filter(models_usuario.Usuario.username == username).first()
+        if db_user_check:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Este Nome de Usuário já está em uso."
+            )
+        
+        # Verifica se o E-MAIL já existe (na tabela de usuários)
+        if email:
+            db_email_check = db.query(models_usuario.Usuario).filter(models_usuario.Usuario.email == email).first()
+            if db_email_check:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Este Email de usuário já está em uso."
+                )
+
+        # Hash da senha (que é o CPF)
+        hashed_password = auth.get_password_hash(senha_padrao) # <--- USA O CPF
+        
+        # Cria o novo usuário
+        db_user = models_usuario.Usuario(
+            username=username,
+            email=email,
+            nome=nome,
+            hashed_password=hashed_password,
+            role="aluno"
+        )
+        db.add(db_user)
+    else:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Nome de Usuário é obrigatório.")
+    # --- FIM DA LÓGICA DE USUÁRIO ---
+
     # Processa a data de nascimento
     parsed_data_nascimento = None
     if data_nascimento:
         try:
             parsed_data_nascimento = datetime.strptime(data_nascimento, '%Y-%m-%d').date()
         except ValueError:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Formato de data inválido. Use YYYY-MM-DD")
+            pass # Não lança erro, pois o campo é opcional
 
     # Prepara os dados do aluno
     aluno_data = AlunoCreate(
@@ -92,9 +126,7 @@ def create_aluno(
     )
 
     db_aluno = Aluno(**aluno_data.dict(exclude_unset=True))
-
-    if db_user:
-        db_aluno.usuario = db_user # Vincula o aluno (novo ou filho) ao usuário
+    db_aluno.usuario = db_user # Vincula o aluno ao usuário criado
     
     db.add(db_aluno)
     
@@ -103,9 +135,10 @@ def create_aluno(
     except IntegrityError as e:
         db.rollback()
         logging.error(f"Erro de integridade ao salvar aluno: {e}")
-        if "cpf" in str(e).lower():
-             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Este CPF já está cadastrado.")
-        # Removemos o erro de email duplicado, pois agora é permitido
+        if "cpf" in str(e).lower() and "alunos_cpf_key" in str(e).lower():
+             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Este CPF de aluno já está cadastrado.")
+        if "email" in str(e).lower() and "alunos_email_key" in str(e).lower():
+             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Este Email de aluno já está cadastrado.")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro interno ao salvar dados.")
 
     db.refresh(db_aluno)
@@ -115,31 +148,26 @@ def create_aluno(
     # Lógica de Upload de Foto (permanece a mesma)
     if foto and foto.filename:
         # ... (seu código de upload de foto existente) ...
-        # (O código de upload de foto continua aqui)
         processed_image, mime_type = process_avatar_image(foto.file)
-        
         if processed_image:
+            # ... (código s3_client) ...
             s3_endpoint_url = os.getenv("S3_ENDPOINT_URL")
             s3_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
             s3_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
             s3_bucket_name = os.getenv("S3_BUCKET_NAME")
             public_bucket_url = os.getenv("PUBLIC_BUCKET_URL")
-
             if not all([s3_endpoint_url, s3_access_key_id, s3_secret_access_key, s3_bucket_name, public_bucket_url]):
                 raise HTTPException(status_code=500, detail="Configuração de armazenamento na nuvem incompleta.")
-
             try:
                 s3_client = boto3.client('s3', endpoint_url=s3_endpoint_url, aws_access_key_id=s3_access_key_id, aws_secret_access_key=s3_secret_access_key, region_name="auto")
                 base_filename, _ = os.path.splitext(foto.filename)
                 safe_filename = f"aluno_{db_aluno.id}_{datetime.utcnow().timestamp()}_{base_filename.replace(' ', '_')}.jpg"
                 s3_client.upload_fileobj(processed_image, s3_bucket_name, safe_filename, ExtraArgs={'ContentType': mime_type})
-                
                 db_aluno.foto = f"{public_bucket_url.rstrip('/')}/{safe_filename}"
                 db.commit() 
                 db.refresh(db_aluno)
             except Exception as e: 
                 logging.error(f"Erro no upload para o R2 (aluno): {e}")
-
 
     return db_aluno
 

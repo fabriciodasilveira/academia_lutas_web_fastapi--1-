@@ -4,6 +4,12 @@ const API_BASE_URL = '/api/v1';
 
 
 const api = {
+    getMatriculas: () => api.request('/portal/matriculas'),
+    
+    // --- ADICIONE ESTA NOVA FUNÇÃO ---
+    updatePassword: (current_password, new_password) => {
+        return api.request('/portal/me/update-password', 'PUT', { current_password, new_password });
+    },
     async request(endpoint, method = 'GET', body = null, isFormData = false, requiresAuth = true) {
         const url = `${API_BASE_URL}${endpoint}`;
         const headers = new Headers();

@@ -288,6 +288,7 @@ def alunos_salvar():
     try: 
         data = {
             "nome": request.form.get("nome"),
+            "username": request.form.get("username"),
             "email": request.form.get("email"),
             "cpf": request.form.get("cpf"),
             "telefone": request.form.get("telefone"),

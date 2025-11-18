@@ -50,23 +50,34 @@
                         <div class="col-md-6">
                             <label for="email" class="form-label">
                                 <i class="fas fa-envelope me-1"></i>
-                                Email
+                                Email *
                             </label>
                             <input type="email" class="form-control" id="email" name="email" 
-                                   value="{{ aluno.email if aluno else  ''}}">
+                                   value="{{ aluno.email if aluno else ''}}" required>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="username" class="form-label">
+                                <i class="fas fa-user-tag me-1"></i>
+                                Nome de Usuário (Login) *
+                            </label>
+                            <input type="text" class="form-control" id="username" name="username" 
+                                   value="{{ aluno.usuario.username if (aluno and aluno.usuario) else '' }}" 
+                                   {% if aluno %}readonly{% else %}required{% endif %}>
+                            {% if aluno %}<small class="form-text text-muted">Não é possível alterar o usuário após criado.</small>{% endif %}
                         </div>
 
-                        <!-- CPF -->
                         <div class="col-md-6">
                             <label for="cpf" class="form-label">
                                 <i class="fas fa-id-card me-1"></i>
-                                CPF
+                                CPF *
                             </label>
                             <input type="text" class="form-control" id="cpf" name="cpf" 
-                                   value="{{ aluno.cpf if aluno else '' }}" placeholder="000.000.000-00">
+                                   value="{{ aluno.cpf if aluno else '' }}" placeholder="000.000.000-00"
+                                   {% if not aluno %}required{% endif %}>
+                            {% if not aluno %}<small class="form-text text-muted">O CPF (apenas números) será a senha inicial.</small>{% endif %}
                         </div>
 
-                        <!-- Telefone -->
                         <div class="col-md-6">
                             <label for="telefone" class="form-label">
                                 <i class="fas fa-phone me-1"></i>

@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Form, File, Uploa
 from sqlalchemy.orm import Session
 from typing import Optional, List
 from datetime import datetime
+from requests import Response
 import shutil
 from pathlib import Path
 import logging
@@ -9,6 +10,7 @@ import os
 import boto3
 from botocore.client import Config
 from src import auth
+from pydantic import BaseModel, Field # Garanta que BaseModel e Field estão importados
 
 from src import database, models, auth
 from src.schemas import portal_aluno as schemas_portal
@@ -25,6 +27,7 @@ from src.schemas.matricula import MatriculaRead
 from src.image_utils import process_avatar_image
 from sqlalchemy.orm import joinedload
 from src.schemas import portal_aluno as schemas_portal
+
 
 
 router = APIRouter(
@@ -270,3 +273,29 @@ def inscrever_aluno_evento(
     db.commit()
     db.refresh(db_inscricao)
     return db_inscricao
+
+class PasswordUpdate(BaseModel):
+    current_password: str = Field(..., title="Senha Atual")
+    new_password: str = Field(..., min_length=6, title="Nova Senha")
+    
+    
+@router.put("/me/update-password", status_code=status.HTTP_204_NO_CONTENT)
+def update_current_aluno_password(
+    password_data: PasswordUpdate,
+    current_user: models.usuario.Usuario = Depends(auth.get_current_active_user),
+    db: Session = Depends(database.get_db)
+):
+    """
+    Permite ao aluno logado atualizar sua própria senha.
+    """
+    if not auth.verify_password(password_data.current_password, current_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A senha atual está incorreta."
+        )
+    
+    current_user.hashed_password = auth.get_password_hash(password_data.new_password)
+    db.add(current_user)
+    db.commit()
+    
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

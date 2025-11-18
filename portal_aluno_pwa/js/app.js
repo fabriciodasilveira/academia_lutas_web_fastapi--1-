@@ -412,6 +412,33 @@ async function handleEditProfilePage() {
             button.innerHTML = '<i class="fas fa-save me-1"></i> Salvar Alterações';
         }
     });
+    const passwordForm = document.getElementById('update-password-form');
+    passwordForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const button = passwordForm.querySelector('button[type="submit"]');
+        const current_password = document.getElementById('current_password').value;
+        const new_password = document.getElementById('new_password').value;
+        const confirm_password = document.getElementById('confirm_password').value;
+
+        if (new_password !== confirm_password) {
+            ui.showAlert('A nova senha e a confirmação não são iguais.', 'danger');
+            return;
+        }
+
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Atualizando...';
+
+        try {
+            await api.updatePassword(current_password, new_password);
+            alert('Senha atualizada com sucesso!');
+            passwordForm.reset(); // Limpa os campos de senha
+        } catch (error) {
+            ui.showAlert(error.message || 'Não foi possível atualizar a senha.', 'danger');
+        } finally {
+            button.disabled = false;
+            button.innerHTML = '<i class="fas fa-key me-1"></i> Atualizar Senha';
+        }
+    });
 }
 
 async function handlePaymentsPage() {
