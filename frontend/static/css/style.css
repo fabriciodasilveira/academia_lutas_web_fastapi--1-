@@ -151,3 +151,74 @@ body {
     vertical-align: middle;
     color: #374151;
 }
+
+/* --- ESTILOS DA TELA DE LOGIN (ADMIN) --- */
+
+/* Fundo gradiente que preenche a tela */
+body.admin-login-page {
+    background: linear-gradient(135deg, var(--main-bg-color) 0%, #1e40af 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+/* Cartão de Login */
+.admin-login-card {
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+    background-color: #fff;
+    width: 100%;
+    max-width: 400px; /* Largura ideal para login */
+    overflow: hidden;
+}
+
+.admin-login-header {
+    background-color: #fff;
+    padding: 2.5rem 2rem 1rem;
+    text-align: center;
+}
+
+.admin-login-logo {
+    width: 90px;
+    height: 90px;
+    border-radius: 15px;
+    object-fit: cover;
+    margin-bottom: 1rem;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.admin-login-body {
+    padding: 1rem 2rem 3rem;
+}
+
+/* Ajuste nos inputs flutuantes para ficarem mais elegantes */
+.form-floating > .form-control {
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+}
+.form-floating > .form-control:focus {
+    border-color: var(--main-bg-color);
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+}
+
+/* Botão Google específico do Admin */
+.btn-google-admin {
+    border: 1px solid #e5e7eb;
+    background-color: #fff;
+    color: #374151;
+    font-weight: 500;
+    border-radius: 10px;
+    padding: 0.75rem;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+.btn-google-admin:hover {
+    background-color: #f9fafb;
+    border-color: #d1d5db;
+}
