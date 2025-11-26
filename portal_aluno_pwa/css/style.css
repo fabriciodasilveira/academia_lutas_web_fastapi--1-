@@ -276,13 +276,6 @@ body.login-active {
     position: relative;
 }
 
-/* Garantir que o body também ocupe toda a tela */
-body {
-    margin: 0;
-    padding: 0;
-    min-height: 100vh;
-}
-
 /* O Cartão de Login */
 .pwa-login-card {
     width: 100%;
