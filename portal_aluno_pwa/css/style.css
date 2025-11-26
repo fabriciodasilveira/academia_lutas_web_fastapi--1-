@@ -266,9 +266,6 @@ body.login-active {
 /* Wrapper que centraliza e dá o fundo gradiente */
 .pwa-login-wrapper {
     background:  #1e40af ; /* Fundo azul sólido */
-    display: flex;
-    justify-content: center;
-    align-items: center;
 }
 
 /* O Cartão de Login */
