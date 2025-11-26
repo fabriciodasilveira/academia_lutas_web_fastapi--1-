@@ -269,8 +269,6 @@ body.login-active {
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 100dvh; /* Usa Dynamic Viewport Height para melhor compatibilidade
-    padding: 20px;
 }
 
 /* O Cartão de Login */
