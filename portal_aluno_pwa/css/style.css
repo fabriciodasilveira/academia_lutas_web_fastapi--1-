@@ -260,3 +260,80 @@ body.login-active {
     width: auto;
     max-width: 80%;
 }
+
+/* --- ESTILOS DO LOGIN PWA (PROFISSIONAL) --- */
+
+/* Wrapper que centraliza e dá o fundo gradiente */
+.pwa-login-wrapper {
+    min-height: 100dvh; /* Usa a altura real da viewport do celular */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--primary-color) 0%, #1e40af 100%);
+    padding: 20px;
+}
+
+/* O Cartão de Login */
+.pwa-login-card {
+    width: 100%;
+    max-width: 400px; /* Não deixa ficar muito largo em tablets */
+    background-color: #ffffff;
+    border-radius: 20px; /* Bordas bem arredondadas (estilo iOS/Android moderno) */
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15); /* Sombra suave de elevação */
+    overflow: hidden;
+    border: none;
+}
+
+/* Cabeçalho do Card (Logo e Texto) */
+.pwa-login-header {
+    text-align: center;
+    padding: 2.5rem 1.5rem 1.5rem;
+}
+
+.pwa-login-logo {
+    width: 90px;
+    height: 90px;
+    border-radius: 18px;
+    object-fit: cover;
+    margin-bottom: 1rem;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+/* Corpo do Card (Formulário) */
+.pwa-login-body {
+    padding: 0 1.5rem 2.5rem;
+}
+
+/* Estilização dos Campos (Floating Labels) */
+.form-floating > .form-control {
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    background-color: #f9fafb;
+}
+
+.form-floating > .form-control:focus {
+    background-color: #fff;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+}
+
+.form-floating > label {
+    color: #6b7280;
+}
+
+/* Botão Principal */
+.btn-pwa-primary {
+    background: var(--primary-color);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    padding: 14px;
+    font-size: 1rem;
+    font-weight: 600;
+    width: 100%;
+    transition: transform 0.1s;
+}
+
+.btn-pwa-primary:active {
+    transform: scale(0.98); /* Efeito de clique */
+}
