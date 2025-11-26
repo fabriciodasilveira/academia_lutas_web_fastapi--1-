@@ -265,11 +265,11 @@ body.login-active {
 
 /* Wrapper que centraliza e dá o fundo gradiente */
 .pwa-login-wrapper {
-    min-height: 100dvh; /* Usa a altura real da viewport do celular */
+    background:  #1e40af ; /* Fundo azul sólido */
     display: flex;
-    align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, var(--primary-color) 0%, #1e40af 100%);
+    align-items: center;
+    min-height: 100dvh; /* Usa Dynamic Viewport Height para melhor compatibilidade
     padding: 20px;
 }
 
