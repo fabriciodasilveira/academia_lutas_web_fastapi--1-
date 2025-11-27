@@ -1,19 +1,20 @@
-/* Variaveis de Cores (AZE Studio) */
+/* --- 1. VARIÁVEIS E GLOBAIS --- */
 :root {
     --main-bg-color: #2563eb; /* Azul Principal */
     --main-text-color: #2563eb;
     --second-text-color: #bbbec5;
     --second-bg-color: #f3f4f6; /* Cinza bem claro para o fundo */
+    --accent-color: #f59e0b;    /* Amarelo para detalhes */
 }
 
-/* Fonte Inter */
 body {
-    font-family: 'Inter', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     background-color: var(--second-bg-color);
+    color: #374151;
     overflow-x: hidden;
 }
 
-/* --- SIDEBAR CSS --- */
+/* --- 2. SIDEBAR (MENU LATERAL) --- */
 #wrapper {
     overflow-x: hidden;
     min-height: 100vh;
@@ -27,69 +28,100 @@ body {
     -o-transition: margin .25s ease-out;
     transition: margin .25s ease-out;
     width: 15rem;
-    /* Gradiente do seu Admin */
+    /* Gradiente bonito para o menu */
     background: linear-gradient(180deg, var(--main-bg-color) 0%, #1e40af 100%) !important;
-    position: fixed; /* Fixa o menu */
+    position: fixed;
     z-index: 1000;
 }
 
 #sidebar-wrapper .sidebar-heading {
     padding: 0.875rem 1.25rem;
     font-size: 1.2rem;
+    color: #fff;
 }
 
 #sidebar-wrapper .list-group {
     width: 15rem;
 }
 
-#page-content-wrapper {
-    width: 100%;
-    margin-left: 0; /* Mobile: conteúdo ocupa tudo */
-    transition: margin .25s ease-out;
-}
-
-/* Estado "Aberto" (Toggled) */
-#wrapper.toggled #sidebar-wrapper {
-    margin-left: 0;
-}
-
-/* Links do Sidebar (CORRIGIDO: Agora afeta apenas o menu lateral) */
+/* Estilização dos itens DO MENU (Específico para o Sidebar) */
 #sidebar-wrapper .list-group-item {
     border: none;
     padding: 15px 30px;
     font-size: 0.95rem;
-    color: rgba(255,255,255,0.8) !important; /* Texto branco apenas no sidebar */
-    transition: all 0.3s;
+    background-color: transparent; /* Fundo transparente para ver o azul */
+    color: rgba(255,255,255,0.8) !important; /* Texto claro */
+    transition: all 0.3s ease-in-out;
 }
 
 #sidebar-wrapper .list-group-item:hover {
     background-color: rgba(255,255,255,0.1) !important;
     color: #fff !important;
-    padding-left: 35px;
+    padding-left: 35px; /* Efeito de deslizar */
+    text-decoration: none;
 }
 
 #sidebar-wrapper .list-group-item.active {
     background-color: rgba(255,255,255,0.2) !important;
     color: #fff !important;
-    border-left: 4px solid #f59e0b;
+    border-left: 4px solid var(--accent-color);
+    font-weight: 600;
 }
 
-/* Garantia para o Dropdown de Busca (Fundo branco, texto escuro) */
-#aluno_results .list-group-item {
+.sidebar-divider {
+    color: rgba(255,255,255,0.4);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 15px 30px 5px 30px;
+    margin-top: 10px;
+}
+
+/* --- 3. CONTEÚDO DA PÁGINA --- */
+#page-content-wrapper {
+    width: 100%;
+    margin-left: 0;
+    transition: margin .25s ease-out;
+}
+
+/* Estado "Aberto" (Desktop) vs "Fechado" (Mobile) */
+@media (min-width: 768px) {
+    #sidebar-wrapper {
+        margin-left: 0; 
+    }
+    #page-content-wrapper {
+        margin-left: 15rem;
+        width: calc(100% - 15rem);
+    }
+    #wrapper.toggled #sidebar-wrapper {
+        margin-left: -15rem;
+    }
+    #wrapper.toggled #page-content-wrapper {
+        margin-left: 0;
+        width: 100%;
+    }
+}
+
+/* --- 4. CORREÇÃO PARA LISTAS GERAIS (Busca de Alunos, etc) --- */
+/* Isso garante que drop-downs e listas fora do menu tenham fundo branco */
+
+.list-group-item {
     background-color: #fff;
-    color: #333 !important;
+    color: #212529 !important; /* Texto escuro */
+    border: 1px solid rgba(0,0,0,.125);
+}
+
+/* Ajuste específico para resultados de busca (Matrícula) */
+#aluno_results .list-group-item {
     cursor: pointer;
+    padding: 10px 15px;
 }
 #aluno_results .list-group-item:hover {
     background-color: #f8f9fa;
+    color: var(--main-bg-color) !important;
 }
 
-/* --- NAVBAR SUPERIOR --- */
-.navbar {
-    box-shadow: 0 2px 4px rgba(0,0,0,.04);
-}
-
-/* --- COMPONENTES GERAIS --- */
+/* --- 5. COMPONENTES DE UI (Cards, Botões) --- */
 .card {
     border: none;
     border-radius: 10px;
@@ -111,35 +143,13 @@ body {
     border-radius: 8px;
     padding: 0.5rem 1rem;
     font-weight: 500;
-    box-shadow: none !important; /* Remove sombras agressivas */
+    box-shadow: none !important;
 }
 .btn-primary {
     background-color: var(--main-bg-color);
     border-color: var(--main-bg-color);
 }
 
-/* Responsividade (Desktop) */
-@media (min-width: 768px) {
-    #sidebar-wrapper {
-        margin-left: 0; /* Sidebar visível por padrão no desktop */
-    }
-
-    #page-content-wrapper {
-        margin-left: 15rem; /* Empurra o conteúdo para a direita */
-        width: calc(100% - 15rem);
-    }
-
-    #wrapper.toggled #sidebar-wrapper {
-        margin-left: -15rem; /* Esconde sidebar quando toggled no desktop */
-    }
-    
-    #wrapper.toggled #page-content-wrapper {
-        margin-left: 0;
-        width: 100%;
-    }
-}
-
-/* Ajustes de Tabelas */
 .table thead th {
     border-bottom: 2px solid #f3f4f6;
     color: #6b7280;
@@ -148,14 +158,8 @@ body {
     letter-spacing: 0.05em;
     background-color: #fff;
 }
-.table td {
-    vertical-align: middle;
-    color: #374151;
-}
 
-/* --- ESTILOS DA TELA DE LOGIN (ADMIN) --- */
-
-/* Fundo gradiente que preenche a tela */
+/* --- 6. TELA DE LOGIN (ADMIN) --- */
 body.admin-login-page {
     background: linear-gradient(135deg, var(--main-bg-color) 0%, #1e40af 100%);
     min-height: 100vh;
@@ -165,14 +169,13 @@ body.admin-login-page {
     padding: 20px;
 }
 
-/* Cartão de Login */
 .admin-login-card {
     border: none;
     border-radius: 15px;
     box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
     background-color: #fff;
     width: 100%;
-    max-width: 400px; /* Largura ideal para login */
+    max-width: 400px;
     overflow: hidden;
 }
 
@@ -195,7 +198,6 @@ body.admin-login-page {
     padding: 1rem 2rem 3rem;
 }
 
-/* Ajuste nos inputs flutuantes para ficarem mais elegantes */
 .form-floating > .form-control {
     border-radius: 10px;
     border: 1px solid #e5e7eb;
@@ -205,7 +207,6 @@ body.admin-login-page {
     box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
 }
 
-/* Botão Google específico do Admin */
 .btn-google-admin {
     border: 1px solid #e5e7eb;
     background-color: #fff;
