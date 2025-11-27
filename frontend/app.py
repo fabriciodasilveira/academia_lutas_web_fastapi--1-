@@ -1524,14 +1524,18 @@ def usuarios_salvar():
     
     data = {
         "email": request.form.get("email"),
+        "username": request.form.get("username"), # Adicionado
         "nome": request.form.get("nome"),
         "role": request.form.get("role"),
     }
-    # Só adiciona a senha se ela foi preenchida (para não apagar a senha ao editar)
+    
     if password:
         data['password'] = password
 
     if user_id:
+        # Na edição, se não tiver senha, não envia o campo
+        if not password:
+             if 'password' in data: del data['password']
         response = api_request(f"/usuarios/{user_id}", method="PUT", json=data)
         msg = "Usuário atualizado com sucesso!"
     else:
@@ -1541,7 +1545,7 @@ def usuarios_salvar():
     if response and response.status_code in [200, 201]:
         flash(msg, "success")
     else:
-        error = response.json().get('detail') if response else 'desconhecido'
+        error = response.json().get('detail') if response else 'Erro desconhecido'
         flash(f"Erro ao salvar usuário: {error}", "error")
 
     return redirect(url_for("usuarios_list"))

@@ -28,7 +28,7 @@
                         <thead class="table-light">
                             <tr>
                                 <th>Nome</th>
-                                <th>Email</th>
+                                <th>Usuário</th> <th>Email</th>
                                 <th>Permissão</th>
                                 <th width="150">Ações</th>
                             </tr>
@@ -37,7 +37,7 @@
                             {% for usuario in usuarios %}
                             <tr>
                                 <td>{{ usuario.nome }}</td>
-                                <td>{{ usuario.email }}</td>
+                                <td>{{ usuario.username }}</td> <td>{{ usuario.email }}</td>
                                 <td>
                                     {% if usuario.role == 'administrador' %}
                                         <span class="badge bg-danger">{{ usuario.role|capitalize }}</span>
@@ -45,7 +45,9 @@
                                         <span class="badge bg-warning text-dark">{{ usuario.role|capitalize }}</span>
                                     {% elif usuario.role == 'atendente' %}
                                         <span class="badge bg-info">{{ usuario.role|capitalize }}</span>
-                                    {% elif usuario.role == 'pendente' %}
+                                    {% elif usuario.role == 'aluno' %}
+                                        <span class="badge bg-success">{{ usuario.role|capitalize }}</span>
+                                    {% else %}
                                         <span class="badge bg-secondary">{{ usuario.role|capitalize }}</span>
                                     {% endif %}
                                 </td>

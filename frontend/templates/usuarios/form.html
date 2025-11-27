@@ -11,19 +11,51 @@
             <div class="card-body">
                 <form action="{{ url_for('usuarios_salvar') }}" method="POST">
                     {% if usuario %}<input type="hidden" name="id" value="{{ usuario.id }}">{% endif %}
+                    
                     <div class="mb-3">
                         <label for="nome" class="form-label">Nome Completo *</label>
                         <input type="text" class="form-control" name="nome" value="{{ usuario.nome if usuario else '' }}" required>
                     </div>
+
                     <div class="mb-3">
-                        <label for="email" class="form-label">Email *</label>
-                        <input type="email" class="form-control" name="email" value="{{ usuario.email if usuario else '' }}" required>
+                        <label for="username" class="form-label">Nome de Usuário (Login) *</label>
+                        <input type="text" class="form-control" name="username" value="{{ usuario.username if usuario else '' }}" required>
                     </div>
+
                     <div class="mb-3">
-                        <label for="password" class="form-label">Senha {% if not usuario %}*{% endif %}</label>
-                        <input type="password" class="form-control" name="password" {% if not usuario %}required{% endif %}>
-                        {% if usuario %}<small class="form-text text-muted">Deixe em branco para não alterar a senha.</small>{% endif %}
-                    </div>
+                        <label for="email" class="form-label">
+                                <i class="fas fa-envelope me-1"></i>
+                                Email
+                            </label>
+                            <input type="email" class="form-control" id="email" name="email" 
+                                   value="{{ aluno.email if aluno else  ''}}">
+                            <div class="form-text">Usado para comunicações, não para login.</div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="username" class="form-label">
+                                <i class="fas fa-user-lock me-1"></i>
+                                Usuário de Acesso (Login) *
+                            </label>
+                            <input type="text" class="form-control" id="username" name="username" 
+                                   value="{{ aluno.usuario.username if (aluno and aluno.usuario) else '' }}" 
+                                   {% if aluno %}readonly style="background-color: #e9ecef;"{% else %}required{% endif %}
+                                   placeholder="Ex: nome.sobrenome">
+                            {% if not aluno %}
+                                <div class="form-text text-success"><i class="fas fa-key me-1"></i>A senha inicial será o CPF (apenas números).</div>
+                            {% else %}
+                                <div class="form-text">O nome de usuário não pode ser alterado.</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="cpf" class="form-label">
+                                <i class="fas fa-id-card me-1"></i>
+                                CPF *
+                            </label>
+                            <input type="text" class="form-control" id="cpf" name="cpf" data-mask="cpf"
+                                   value="{{ aluno.cpf if aluno else '' }}" placeholder="000.000.000-00" required>
+                        </div>
                     <div class="mb-3">
                         <label for="role" class="form-label">Permissão *</label>
                         <select class="form-select" name="role" required>
