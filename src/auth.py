@@ -1,4 +1,3 @@
-# Crie o arquivo: src/auth.py
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -10,11 +9,8 @@ from authlib.integrations.starlette_client import OAuth
 from starlette.config import Config
 import httpx
 
-# --- MODIFICAÇÕES AQUI ---
 from src import database
-from src.models import usuario as models_usuario # Importa o módulo 'usuario' e dá um apelido
-# --- FIM DAS MODIFICAÇÕES ---
-
+from src.models import usuario as models_usuario
 
 # --- CONFIGURAÇÃO DE SEGURANÇA ---
 SECRET_KEY = os.environ.get("SECRET_KEY", "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7")
@@ -24,25 +20,20 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 8 # Token expira em 8 horas
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token")
 
-config = Config('.env') # Lê as variáveis do arquivo .env
+config = Config('.env') 
 
-# --- CORREÇÃO APLICADA AQUI ---
-# 1. Inicializa o OAuth SEM o argumento 'client' (que causou o erro)
+# Inicializa o OAuth
 oauth = OAuth(config)
-
-# 2. Define o nosso cliente com timeout de 15 segundos
 timeout_client = httpx.AsyncClient(timeout=15.0)
 
-# 3. Passa o cliente com timeout para DENTRO do .register()
 oauth.register(
     name='google',
     server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
     client_kwargs={
         'scope': 'openid email profile'
     },
-    client=timeout_client # <-- Este é o local correto para o argumento
+    client=timeout_client
 )
-# --- FIM DA CORREÇÃO ---
 
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
@@ -57,16 +48,17 @@ def create_access_token(data: dict):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-# --- DEPENDÊNCIAS DE AUTENTICAÇÃO E AUTORIZAÇÃO ---
+# --- FUNÇÕES DE BUSCA DE USUÁRIO ---
+
 def get_user(db: Session, email: str):
-    # --- MODIFICAÇÃO AQUI ---
+    """Busca por email (usado no login do Google e Admin antigo)"""
     return db.query(models_usuario.Usuario).filter(models_usuario.Usuario.email == email).first()
 
-# --- ADICIONE ESTA NOVA FUNÇÃO ---
 def get_user_by_username(db: Session, username: str):
-    """Busca um usuário pelo seu nome de usuário (username)."""
+    """Busca por username (usado no novo login padrão)"""
     return db.query(models_usuario.Usuario).filter(models_usuario.Usuario.username == username).first()
-# --- FIM DA ADIÇÃO ---
+
+# --- DEPENDÊNCIA PRINCIPAL DE AUTENTICAÇÃO ---
 
 async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(database.get_db)):
     credentials_exception = HTTPException(
@@ -75,21 +67,25 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str = payload.get("sub")
-        if email is None:
+        # CORREÇÃO: O 'sub' do token agora contém o USERNAME, não o email
+        username: str = payload.get("sub")
+        if username is None:
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-    user = get_user(db, email=email)
+    
+    # CORREÇÃO: Busca pelo username, não pelo email
+    user = get_user_by_username(db, username=username)
+    
+    # Fallback: Se não achou por username, tenta por email (para compatibilidade com tokens antigos ou Google)
+    if user is None:
+         user = get_user(db, email=username)
+         
     if user is None:
         raise credentials_exception
     return user
 
-# --- MODIFICAÇÃO AQUI ---
 async def get_current_active_user(current_user: models_usuario.Usuario = Depends(get_current_user)):
-    """
-    Verifica se o usuário está ativo. Bloqueia se o papel for 'pendente'.
-    """
     if current_user.role == "pendente":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, 
@@ -97,18 +93,12 @@ async def get_current_active_user(current_user: models_usuario.Usuario = Depends
         )
     return current_user
 
-# --- MODIFICAÇÃO AQUI ---
 async def get_admin_or_gerente(current_user: models_usuario.Usuario = Depends(get_current_active_user)):
     if current_user.role not in ["administrador", "gerente"]:
         raise HTTPException(status_code=403, detail="Acesso restrito a Administradores ou Gerentes.")
     return current_user
 
-# --- MODIFICAÇÃO AQUI ---
 async def get_admin_user(current_user: models_usuario.Usuario = Depends(get_current_active_user)):
-    """
-    Verifica se o usuário atual tem o papel de 'administrador'.
-    Se não tiver, bloqueia a requisição.
-    """
     if current_user.role != "administrador":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, 
