@@ -1,9 +1,8 @@
 from src.database import SessionLocal
 from src.auth import get_password_hash
-
-# Importação de todos os modelos para garantir que o SQLAlchemy
-# conheça todas as tabelas e seus relacionamentos.
 from src.models.usuario import Usuario
+
+# Importação dos outros modelos para garantir que o SQLAlchemy registre tudo
 from src.models.aluno import Aluno
 from src.models.matricula import Matricula
 from src.models.turma import Turma
@@ -17,17 +16,18 @@ from src.models.produto import Produto
 from src.models.categoria import Categoria
 from src.models.financeiro import Financeiro
 
-
 def create_first_user():
     db = SessionLocal()
     try:
-        # Verifique se o usuário já existe
-        user = db.query(Usuario).filter(Usuario.email == "admin@suaacademia.com").first()
+        # Verifica se o usuário já existe (agora buscando por username)
+        user = db.query(Usuario).filter(Usuario.username == "admin").first()
+        
         if not user:
             print("Criando primeiro usuário administrador...")
             hashed_password = get_password_hash("admin") # Senha inicial: "admin"
             
             db_user = Usuario(
+                username="admin",  # <--- CAMPO NOVO E OBRIGATÓRIO
                 email="admin@suaacademia.com",
                 nome="Admin do Sistema",
                 hashed_password=hashed_password,
@@ -35,10 +35,15 @@ def create_first_user():
             )
             db.add(db_user)
             db.commit()
-            print("Usuário 'admin@suaacademia.com' criado com sucesso!")
-            print("Senha: admin")
+            print("✅ Usuário criado com sucesso!")
+            print("👤 Usuário: admin")
+            print("🔑 Senha: admin")
         else:
-            print("Usuário administrador já existe.")
+            print("ℹ️ Usuário administrador 'admin' já existe.")
+            
+    except Exception as e:
+        print(f"❌ Erro ao criar usuário: {e}")
+        db.rollback()
     finally:
         db.close()
 
