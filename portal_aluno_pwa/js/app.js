@@ -311,6 +311,8 @@ async function handleCarteirinhaPage() {
 
 async function handleEditProfilePage() {
     const form = document.getElementById('edit-profile-form');
+    
+    // Elementos do formulário de perfil
     const nomeInput = document.getElementById('nome');
     const emailInput = document.getElementById('email');
     const cpfInput = document.getElementById('cpf');
@@ -320,6 +322,8 @@ async function handleEditProfilePage() {
     const observacoesInput = document.getElementById('observacoes');
     const fotoInput = document.getElementById('foto');
     const fotoPreview = document.getElementById('foto-preview');
+    
+    // Elementos do responsável
     const dadosResponsavelDiv = document.getElementById('dados-responsavel');
     const nomeResponsavelInput = document.getElementById('nome_responsavel');
     const cpfResponsavelInput = document.getElementById('cpf_responsavel');
@@ -328,6 +332,7 @@ async function handleEditProfilePage() {
     const emailResponsavelInput = document.getElementById('email_responsavel');
     const camposResponsavel = dadosResponsavelDiv.querySelectorAll('input');
 
+    // --- LÓGICA DE RESPONSÁVEL (MENOR DE 18) ---
     function toggleResponsavelFields() {
         const dataNascimento = dataNascimentoInput.value;
         if (!dataNascimento) {
@@ -344,16 +349,18 @@ async function handleEditProfilePage() {
         }
         if (idade < 18) {
             dadosResponsavelDiv.style.display = 'flex';
-            nomeResponsavelInput.required = true;
-            cpfResponsavelInput.required = true;
-            parentescoResponsavelInput.required = true;
+            // Opcional: tornar obrigatório se for regra de negócio
+            // nomeResponsavelInput.required = true; 
         } else {
             dadosResponsavelDiv.style.display = 'none';
             camposResponsavel.forEach(input => input.required = false);
         }
     }
+
+    // --- CARREGAR DADOS DO PERFIL ---
     try {
         const profile = await api.getProfile();
+        
         nomeInput.value = profile.nome || '';
         emailInput.value = profile.email || '';
         cpfInput.value = profile.cpf || '';
@@ -361,19 +368,26 @@ async function handleEditProfilePage() {
         dataNascimentoInput.value = profile.data_nascimento || '';
         enderecoInput.value = profile.endereco || '';
         observacoesInput.value = profile.observacoes || '';
+        
         if (profile.foto) {
             fotoPreview.src = profile.foto;
         }
+        
+        // Dados do responsável
         nomeResponsavelInput.value = profile.nome_responsavel || '';
         cpfResponsavelInput.value = profile.cpf_responsavel || '';
         parentescoResponsavelInput.value = profile.parentesco_responsavel || '';
         telefoneResponsavelInput.value = profile.telefone_responsavel || '';
         emailResponsavelInput.value = profile.email_responsavel || '';
+        
         toggleResponsavelFields();
     } catch (error) {
         ui.showAlert('Erro ao carregar seus dados para edição.');
     }
+
+    // Eventos de mudança
     dataNascimentoInput.addEventListener('change', toggleResponsavelFields);
+    
     fotoInput.addEventListener('change', () => {
         const file = fotoInput.files[0];
         if (file) {
@@ -382,11 +396,15 @@ async function handleEditProfilePage() {
             reader.readAsDataURL(file);
         }
     });
+
+    // --- SALVAR PERFIL ---
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const button = form.querySelector('button[type="submit"]');
+        const button = document.getElementById('btn-save-profile');
+        
         button.disabled = true;
         button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+        
         const formData = new FormData();
         formData.append('nome', nomeInput.value);
         formData.append('cpf', cpfInput.value);
@@ -394,34 +412,58 @@ async function handleEditProfilePage() {
         formData.append('data_nascimento', dataNascimentoInput.value);
         formData.append('endereco', enderecoInput.value);
         formData.append('observacoes', observacoesInput.value);
+        
+        // Dados responsável
         formData.append('nome_responsavel', nomeResponsavelInput.value);
         formData.append('cpf_responsavel', cpfResponsavelInput.value);
         formData.append('parentesco_responsavel', parentescoResponsavelInput.value);
         formData.append('telefone_responsavel', telefoneResponsavelInput.value);
         formData.append('email_responsavel', emailResponsavelInput.value);
+        
         if (fotoInput.files[0]) {
             formData.append('foto', fotoInput.files[0]);
         }
+        
         try {
             await api.updateProfile(formData);
-            alert('Perfil atualizado com sucesso!');
-            window.location.hash = '/dashboard';
+            ui.showAlert('Perfil atualizado com sucesso!', 'success');
+            setTimeout(() => { window.location.hash = '/dashboard'; }, 1500);
         } catch (error) {
-            ui.showAlert(error.message || 'Não foi possível salvar as alterações.');
+            ui.showAlert(error.message || 'Não foi possível salvar as alterações.', 'danger');
             button.disabled = false;
-            button.innerHTML = '<i class="fas fa-save me-1"></i> Salvar Alterações';
+            button.innerHTML = 'Salvar Alterações';
         }
     });
+
+    // --- LÓGICA DE ALTERAR SENHA (TOGGLE) ---
+    const btnShowPassword = document.getElementById('btn-show-password-form');
+    const passwordSection = document.getElementById('password-section');
+    const btnCancelPassword = document.getElementById('btn-cancel-password');
+    const toggleContainer = document.getElementById('toggle-password-container');
+
+    btnShowPassword.addEventListener('click', () => {
+        passwordSection.style.display = 'block';
+        toggleContainer.style.display = 'none';
+    });
+
+    btnCancelPassword.addEventListener('click', () => {
+        passwordSection.style.display = 'none';
+        toggleContainer.style.display = 'block';
+        document.getElementById('update-password-form').reset(); // Limpa os campos
+    });
+
+    // --- SALVAR SENHA ---
     const passwordForm = document.getElementById('update-password-form');
     passwordForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const button = passwordForm.querySelector('button[type="submit"]');
+        
         const current_password = document.getElementById('current_password').value;
         const new_password = document.getElementById('new_password').value;
         const confirm_password = document.getElementById('confirm_password').value;
 
         if (new_password !== confirm_password) {
-            ui.showAlert('A nova senha e a confirmação não são iguais.', 'danger');
+            ui.showAlert('A nova senha e a confirmação não conferem.', 'danger');
             return;
         }
 
@@ -430,13 +472,16 @@ async function handleEditProfilePage() {
 
         try {
             await api.updatePassword(current_password, new_password);
-            alert('Senha atualizada com sucesso!');
-            passwordForm.reset(); // Limpa os campos de senha
+            ui.showAlert('Senha atualizada com sucesso!', 'success');
+            passwordForm.reset();
+            // Esconde o formulário após sucesso
+            passwordSection.style.display = 'none';
+            toggleContainer.style.display = 'block';
         } catch (error) {
-            ui.showAlert(error.message || 'Não foi possível atualizar a senha.', 'danger');
+            ui.showAlert(error.message || 'Erro ao atualizar senha.', 'danger');
         } finally {
             button.disabled = false;
-            button.innerHTML = '<i class="fas fa-key me-1"></i> Atualizar Senha';
+            button.innerHTML = 'Confirmar Alteração';
         }
     });
 }
