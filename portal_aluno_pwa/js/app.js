@@ -349,8 +349,6 @@ async function handleEditProfilePage() {
         }
         if (idade < 18) {
             dadosResponsavelDiv.style.display = 'flex';
-            // Opcional: tornar obrigatório se for regra de negócio
-            // nomeResponsavelInput.required = true; 
         } else {
             dadosResponsavelDiv.style.display = 'none';
             camposResponsavel.forEach(input => input.required = false);
@@ -435,55 +433,65 @@ async function handleEditProfilePage() {
         }
     });
 
-    // --- LÓGICA DE ALTERAR SENHA (TOGGLE) ---
+    // --- CÓDIGO QUE FALTAVA: LÓGICA DE ALTERAR SENHA (TOGGLE) ---
     const btnShowPassword = document.getElementById('btn-show-password-form');
     const passwordSection = document.getElementById('password-section');
     const btnCancelPassword = document.getElementById('btn-cancel-password');
     const toggleContainer = document.getElementById('toggle-password-container');
 
-    btnShowPassword.addEventListener('click', () => {
-        passwordSection.style.display = 'block';
-        toggleContainer.style.display = 'none';
-    });
+    if (btnShowPassword && passwordSection && toggleContainer) {
+        btnShowPassword.addEventListener('click', () => {
+            passwordSection.style.display = 'block';
+            toggleContainer.style.display = 'none';
+        });
 
-    btnCancelPassword.addEventListener('click', () => {
-        passwordSection.style.display = 'none';
-        toggleContainer.style.display = 'block';
-        document.getElementById('update-password-form').reset(); // Limpa os campos
-    });
+        if (btnCancelPassword) {
+            btnCancelPassword.addEventListener('click', () => {
+                passwordSection.style.display = 'none';
+                toggleContainer.style.display = 'block';
+                const pwdForm = document.getElementById('update-password-form');
+                if(pwdForm) pwdForm.reset(); 
+            });
+        }
+    }
 
     // --- SALVAR SENHA ---
     const passwordForm = document.getElementById('update-password-form');
-    passwordForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const button = passwordForm.querySelector('button[type="submit"]');
-        
-        const current_password = document.getElementById('current_password').value;
-        const new_password = document.getElementById('new_password').value;
-        const confirm_password = document.getElementById('confirm_password').value;
+    if (passwordForm) {
+        passwordForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            // Procura o botão de submit dentro deste formulário específico
+            const button = passwordForm.querySelector('button[type="submit"]');
+            
+            const current_password = document.getElementById('current_password').value;
+            const new_password = document.getElementById('new_password').value;
+            const confirm_password = document.getElementById('confirm_password').value;
 
-        if (new_password !== confirm_password) {
-            ui.showAlert('A nova senha e a confirmação não conferem.', 'danger');
-            return;
-        }
+            if (new_password !== confirm_password) {
+                ui.showAlert('A nova senha e a confirmação não conferem.', 'danger');
+                return;
+            }
 
-        button.disabled = true;
-        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Atualizando...';
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Atualizando...';
 
-        try {
-            await api.updatePassword(current_password, new_password);
-            ui.showAlert('Senha atualizada com sucesso!', 'success');
-            passwordForm.reset();
-            // Esconde o formulário após sucesso
-            passwordSection.style.display = 'none';
-            toggleContainer.style.display = 'block';
-        } catch (error) {
-            ui.showAlert(error.message || 'Erro ao atualizar senha.', 'danger');
-        } finally {
-            button.disabled = false;
-            button.innerHTML = 'Confirmar Alteração';
-        }
-    });
+            try {
+                await api.updatePassword(current_password, new_password);
+                ui.showAlert('Senha atualizada com sucesso!', 'success');
+                passwordForm.reset();
+                // Esconde o formulário após sucesso
+                if (passwordSection && toggleContainer) {
+                    passwordSection.style.display = 'none';
+                    toggleContainer.style.display = 'block';
+                }
+            } catch (error) {
+                ui.showAlert(error.message || 'Erro ao atualizar senha.', 'danger');
+            } finally {
+                button.disabled = false;
+                button.innerHTML = 'Confirmar Alteração';
+            }
+        });
+    }
 }
 
 async function handlePaymentsPage() {
