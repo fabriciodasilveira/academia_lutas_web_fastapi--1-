@@ -36,11 +36,19 @@ const api = {
         
         try {
             const response = await fetch(url, config);
+            
             if (response.status === 401) {
                 localStorage.removeItem('accessToken');
                 window.location.hash = '/login';
                 return;
             }
+
+            // --- CORREÇÃO: Tratamento para 204 No Content (Sucesso sem corpo) ---
+            if (response.status === 204) {
+                return null; // Retorna null e não tenta ler JSON
+            }
+            // --------------------------------------------------------------------
+
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.detail || 'Ocorreu um erro na API');

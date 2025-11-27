@@ -1,8 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Form, File, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, status, Form, File, UploadFile, Response
 from sqlalchemy.orm import Session
 from typing import Optional, List
 from datetime import datetime
-from requests import Response
 import shutil
 from pathlib import Path
 import logging
@@ -298,4 +297,5 @@ def update_current_aluno_password(
     db.add(current_user)
     db.commit()
     
+    # Agora retorna o Response correto do FastAPI
     return Response(status_code=status.HTTP_204_NO_CONTENT)
