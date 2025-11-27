@@ -53,34 +53,35 @@ body {
     margin-left: 0;
 }
 
-/* Links do Sidebar */
-.list-group-item {
+/* Links do Sidebar (CORRIGIDO: Agora afeta apenas o menu lateral) */
+#sidebar-wrapper .list-group-item {
     border: none;
     padding: 15px 30px;
     font-size: 0.95rem;
-    color: rgba(255,255,255,0.8) !important;
+    color: rgba(255,255,255,0.8) !important; /* Texto branco apenas no sidebar */
     transition: all 0.3s;
 }
 
-.list-group-item:hover {
+#sidebar-wrapper .list-group-item:hover {
     background-color: rgba(255,255,255,0.1) !important;
     color: #fff !important;
-    padding-left: 35px; /* Pequena animação ao passar o mouse */
+    padding-left: 35px;
 }
 
-.list-group-item.active {
+#sidebar-wrapper .list-group-item.active {
     background-color: rgba(255,255,255,0.2) !important;
     color: #fff !important;
-    border-left: 4px solid #f59e0b; /* Detalhe Amarelo (Accent) */
+    border-left: 4px solid #f59e0b;
 }
 
-.sidebar-divider {
-    color: rgba(255,255,255,0.4);
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    padding: 15px 30px 5px 30px;
-    margin-top: 10px;
+/* Garantia para o Dropdown de Busca (Fundo branco, texto escuro) */
+#aluno_results .list-group-item {
+    background-color: #fff;
+    color: #333 !important;
+    cursor: pointer;
+}
+#aluno_results .list-group-item:hover {
+    background-color: #f8f9fa;
 }
 
 /* --- NAVBAR SUPERIOR --- */
