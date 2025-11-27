@@ -33,7 +33,9 @@ const router = async () => {
     if (urlParams.has('payment')) {
         const paymentStatus = urlParams.get('payment');
         const cleanPath = currentHash.split('?')[0];
+        
         window.history.replaceState(null, null, window.location.pathname + cleanPath);
+        
         setTimeout(() => {
             if (paymentStatus === 'success') {
                 ui.showAlert('Pagamento realizado com sucesso!', 'success');
@@ -51,20 +53,31 @@ const router = async () => {
     const route = routes[path] || routes['/dashboard'];
     const token = localStorage.getItem('accessToken');
 
-    // --- LÓGICA DE LAYOUT CORRIGIDA ---
+    // --- LÓGICA DE LAYOUT CORRIGIDA (FULL SCREEN) ---
     const appRootEl = document.getElementById('app-root');
     const bodyEl = document.body;
 
-    if (path === '/login' || path === '/login/callback') {
-        // 1. ATIVA O MODO DE TELA CHEIA (LOGIN)
+    if (path === '/login' || path === '/login/callback' || path === '/register') {
+        // 1. ATIVA O MODO DE TELA CHEIA (LOGIN/REGISTER)
         bodyEl.classList.add('login-active');
         bodyEl.classList.remove('nav-active');
-        appRootEl.classList.remove('py-4'); // Remove padding superior
+        
+        // CORREÇÃO: Remove o container restritivo e paddings do Bootstrap
+        // Isso remove as "beiradas brancas" laterais
+        appRootEl.classList.remove('container', 'py-4'); 
+        
+        // Adiciona largura total e remove qualquer padding residual
+        appRootEl.classList.add('w-100', 'p-0'); 
+        
     } else {
         // 2. ATIVA O MODO DE NAVEGAÇÃO (INTERNO)
         bodyEl.classList.remove('login-active');
         bodyEl.classList.add('nav-active');
-        appRootEl.classList.add('py-4'); // Adiciona padding superior
+        
+        // Restaura o container e paddings para as telas internas
+        // Isso centraliza o conteúdo do dashboard corretamente
+        appRootEl.classList.remove('w-100', 'p-0');
+        appRootEl.classList.add('container', 'py-4'); 
     }
     // --- FIM DA LÓGICA DE LAYOUT ---
 
@@ -84,9 +97,9 @@ const router = async () => {
         ui.showLoading(appRoot);
         try {
             const response = await fetch(route.page);
-            appRootEl.innerHTML = await response.text();
+            appRoot.innerHTML = await response.text();
         } catch (error) {
-            appRootEl.innerHTML = `<p class="text-danger">Erro ao carregar a página.</p>`;
+            appRoot.innerHTML = `<p class="text-danger">Erro ao carregar a página.</p>`;
         }
     }
     
