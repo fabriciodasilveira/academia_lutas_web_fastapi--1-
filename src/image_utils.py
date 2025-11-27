@@ -1,9 +1,10 @@
 from PIL import Image
 import io
 
-def process_avatar_image(file_stream, max_size=(500, 500), quality=85):
+def process_avatar_image(file_stream, max_size=(250, 250), quality=70):
     """
     Redimensiona e comprime uma imagem para ser usada como avatar.
+    Otimizado para mobile: 250px e qualidade 70.
 
     :param file_stream: O stream de bytes do arquivo de imagem.
     :param max_size: Uma tupla (width, height) com o tamanho máximo.
@@ -23,6 +24,7 @@ def process_avatar_image(file_stream, max_size=(500, 500), quality=85):
 
         # Salva a imagem otimizada em um buffer de memória
         img_byte_arr = io.BytesIO()
+        # optimize=True faz uma passagem extra para reduzir o tamanho
         img.save(img_byte_arr, format='JPEG', quality=quality, optimize=True)
         
         # Move o "cursor" de volta para o início do buffer para que o boto3 possa lê-lo
