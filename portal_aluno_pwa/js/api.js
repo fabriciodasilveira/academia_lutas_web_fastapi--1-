@@ -1,15 +1,47 @@
-// const API_BASE_URL = 'http://localhost:8000/api/v1';
-
 const API_BASE_URL = '/api/v1';
 
-
 const api = {
+    // Funções auxiliares
     getMatriculas: () => api.request('/portal/matriculas'),
     
-    // --- ADICIONE ESTA NOVA FUNÇÃO ---
     updatePassword: (current_password, new_password) => {
         return api.request('/portal/me/update-password', 'PUT', { current_password, new_password });
     },
+
+    login: async (username, password) => {
+        const formData = new URLSearchParams();
+        formData.append('username', username);
+        formData.append('password', password);
+        
+        try {
+            const response = await fetch(`${API_BASE_URL}/auth/token`, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                let detail = 'Falha no login.';
+                try {
+                    const errorData = await response.json();
+                    detail = errorData.detail || detail;
+                } catch (e) {}
+                throw new Error(detail);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error("Erro na API de Login:", error);
+            throw error;
+        }
+    },
+    
+    register: (data) => api.request('/portal/register', 'POST', data, false, false),
+    getProfile: () => api.request('/portal/me'),
+    updateProfile: (formData) => api.request('/portal/me', 'PUT', formData, true, true),
+    getPayments: () => api.request('/portal/pendencias'),
+    getEvents: () => api.request('/portal/eventos'),
+    enrollInEvent: (eventoId) => api.request(`/portal/eventos/${eventoId}/inscrever`, 'POST'),
+
+    // --- FUNÇÃO PRINCIPAL DE REQUISIÇÃO (CORRIGIDA) ---
     async request(endpoint, method = 'GET', body = null, isFormData = false, requiresAuth = true) {
         const url = `${API_BASE_URL}${endpoint}`;
         const headers = new Headers();
@@ -37,63 +69,30 @@ const api = {
         try {
             const response = await fetch(url, config);
             
+            // Se não autorizado, desloga
             if (response.status === 401) {
                 localStorage.removeItem('accessToken');
                 window.location.hash = '/login';
                 return;
             }
 
-            // --- CORREÇÃO: Tratamento para 204 No Content (Sucesso sem corpo) ---
+            // --- A CORREÇÃO VITAL ESTÁ AQUI ---
+            // Se o status for 204 (Sucesso sem conteúdo), retorna null
+            // e NÃO tenta fazer .json(), evitando o erro.
             if (response.status === 204) {
-                return null; // Retorna null e não tenta ler JSON
+                return null;
             }
-            // --------------------------------------------------------------------
+            // ----------------------------------
 
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.detail || 'Ocorreu um erro na API');
             }
+            
             return await response.json();
         } catch (error) {
             console.error('API Error:', error);
             throw error;
         }
-    },
-
-    // --- FUNÇÃO DE LOGIN CORRIGIDA COM ASYNC/AWAIT ---
-    login: async (username, password) => { // Variável renomeada
-        const formData = new URLSearchParams();
-        formData.append('username', username); // Agora faz mais sentido
-        formData.append('password', password);
-        
-        try {
-            const response = await fetch(`${API_BASE_URL}/auth/token`, {
-                method: 'POST',
-                body: formData
-            });
-
-            if (!response.ok) {
-                let detail = 'Falha no login. Verifique seu email e senha.';
-                try {
-                    const errorData = await response.json();
-                    detail = errorData.detail || detail;
-                } catch (e) {
-                    // Ignora o erro se a resposta não for JSON
-                }
-                throw new Error(detail);
-            }
-            return await response.json(); // Garante que a resposta JSON seja retornada
-        } catch (error) {
-            console.error("Erro na API de Login:", error);
-            throw error; // Lança o erro para ser capturado pela interface
-        }
-    },
-    
-    register: (data) => api.request('/portal/register', 'POST', data, false, false),
-    getProfile: () => api.request('/portal/me'),
-    updateProfile: (formData) => api.request('/portal/me', 'PUT', formData, true, true),
-    getPayments: () => api.request('/portal/pendencias'),
-    getEvents: () => api.request('/portal/eventos'),
-    enrollInEvent: (eventoId) => api.request(`/portal/eventos/${eventoId}/inscrever`, 'POST'),
-    getMatriculas: () => api.request('/portal/matriculas'),
+    }
 };
