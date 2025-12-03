@@ -1,8 +1,20 @@
 import re
 import logging
+import os
 from src.database import SessionLocal
-from src.models.aluno import Aluno
+
+# --- IMPORTANTE: Importar TODOS os modelos para o SQLAlchemy registrá-los ---
+# Se não importarmos Matricula, Mensalidade, etc., o modelo Aluno vai dar erro
+# ao tentar criar suas relações (back_populates).
 from src.models.usuario import Usuario
+from src.models.aluno import Aluno
+from src.models.matricula import Matricula
+from src.models.mensalidade import Mensalidade
+from src.models.inscricao import Inscricao
+from src.models.turma import Turma
+from src.models.plano import Plano
+# ---------------------------------------------------------------------------
+
 from src.auth import get_password_hash
 
 # Configuração de log simples
@@ -46,7 +58,10 @@ def fix_missing_users():
                 username_tentativa = aluno.email
             else:
                 # Remove espaços e caracteres especiais do nome para criar um login
+                # Ex: João Silva -> joao.1234
                 primeiro_nome = aluno.nome.split()[0].lower()
+                # Remove acentos simples (opcional, mas recomendado)
+                primeiro_nome = primeiro_nome.replace('ã', 'a').replace('é', 'e').replace('í', 'i')
                 cpf_resumo = senha_raw[:4]
                 username_tentativa = f"{primeiro_nome}.{cpf_resumo}"
 
@@ -54,7 +69,7 @@ def fix_missing_users():
             usuario_existente = db.query(Usuario).filter(Usuario.username == username_tentativa).first()
             
             if usuario_existente:
-                # Se o usuário já existe (ex: Pai já cadastrado), apenas vinculamos!
+                # Se o usuário já existe (ex: Pai já cadastrado com esse email), apenas vinculamos!
                 logging.info(f"[VINCULADO] {aluno.nome} -> Usuário existente: {username_tentativa}")
                 aluno.usuario_id = usuario_existente.id
                 count_criados += 1
@@ -65,7 +80,7 @@ def fix_missing_users():
             
             new_user = Usuario(
                 username=username_tentativa,
-                email=aluno.email, # Pode ser None, o modelo aceita se não for único restrito
+                email=aluno.email, # Pode ser None se o banco permitir
                 nome=aluno.nome,
                 hashed_password=get_password_hash(senha_raw),
                 role="aluno"
@@ -80,12 +95,12 @@ def fix_missing_users():
         db.commit()
         print("-" * 30)
         print(f"RESUMO:")
-        print(f"Processados: {count_criados}")
+        print(f"Processados/Criados: {count_criados}")
         print(f"Pulados (Erros): {count_pulados}")
         print("Processo concluído com sucesso.")
 
     except Exception as e:
-        print(f"ERRO CRÍTICO: {e}")
+        print(f"ERRO CRÍTICO DURANTE O PROCESSO: {e}")
         db.rollback()
     finally:
         db.close()
