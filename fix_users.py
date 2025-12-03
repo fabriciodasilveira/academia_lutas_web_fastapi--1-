@@ -5,19 +5,16 @@ from src.database import SessionLocal
 from src.auth import get_password_hash
 
 # --- IMPORTANTE: Importar TODOS os modelos para o SQLAlchemy registrá-los ---
-# A ordem não importa muito, desde que todos estejam aqui.
-# Isso evita erros de "failed to locate name" nos relacionamentos.
-
 from src.models.usuario import Usuario
 from src.models.aluno import Aluno
-from src.models.professor import Professor  # <--- Faltava este!
+from src.models.professor import Professor
 from src.models.turma import Turma
 from src.models.matricula import Matricula
 from src.models.mensalidade import Mensalidade
 from src.models.plano import Plano
 from src.models.inscricao import Inscricao
-from src.models.evento import Evento          # <--- Bom ter este também
-from src.models.historico_matricula import HistoricoMatricula # <--- E este
+from src.models.evento import Evento
+from src.models.historico_matricula import HistoricoMatricula
 from src.models.produto import Produto
 from src.models.categoria import Categoria
 from src.models.financeiro import Financeiro
@@ -59,34 +56,49 @@ def fix_missing_users():
                 continue
 
             # 3. Gera o Username
-            # Tenta usar o email. Se não tiver email, cria um padrão nome.cpf
             if aluno.email:
                 username_tentativa = aluno.email
             else:
                 # Remove espaços e caracteres especiais do nome para criar um login
-                # Ex: João Silva -> joao.1234
                 primeiro_nome = aluno.nome.split()[0].lower()
                 # Remove acentos simples
-                primeiro_nome = primeiro_nome.replace('ã', 'a').replace('é', 'e').replace('í', 'i').replace('á', 'a').replace('ó', 'o')
+                primeiro_nome = primeiro_nome.replace('ã', 'a').replace('é', 'e').replace('í', 'i').replace('á', 'a').replace('ó', 'o').replace('ú', 'u').replace('ç', 'c')
                 cpf_resumo = senha_raw[:4]
                 username_tentativa = f"{primeiro_nome}.{cpf_resumo}"
 
-            # 4. Verifica se já existe um USUÁRIO com esse username (evita duplicidade)
+            # 4. Verifica se já existe um USUÁRIO com esse username (evita duplicidade de login)
             usuario_existente = db.query(Usuario).filter(Usuario.username == username_tentativa).first()
             
             if usuario_existente:
-                # Se o usuário já existe (ex: Pai já cadastrado com esse email), apenas vinculamos!
-                logging.info(f"[VINCULADO] {aluno.nome} -> Usuário existente: {username_tentativa}")
-                aluno.usuario_id = usuario_existente.id
-                count_criados += 1
-                continue
+                # Se tem o mesmo email, vincula
+                if aluno.email and usuario_existente.email == aluno.email:
+                     logging.info(f"[VINCULADO] {aluno.nome} -> Usuário existente: {username_tentativa}")
+                     aluno.usuario_id = usuario_existente.id
+                     count_criados += 1
+                     continue
+                else:
+                    # Se o username existe mas é outra pessoa (ex: homônimo sem email), 
+                    # adiciona mais números do CPF ao login para torná-lo único
+                    username_tentativa = f"{username_tentativa}.{senha_raw[-3:]}"
 
-            # 5. Se não existe, CRIA O NOVO USUÁRIO
+            # 5. CORREÇÃO DO ERRO DE EMAIL: Tratamento de Email vazio
+            email_final = aluno.email
+            if not email_final:
+                # Se não tem email, cria um fictício único para satisfazer o banco
+                # Ex: joao.1234@sememail.sistema
+                email_final = f"{username_tentativa}@sememail.sistema"
+
+            # Verificação extra de segurança para email único
+            if db.query(Usuario).filter(Usuario.email == email_final).first():
+                 # Se até o fictício existir, adiciona algo aleatório
+                 email_final = f"{username_tentativa}.{senha_raw[-2:]}@sememail.sistema"
+
+            # 6. Cria o Novo Usuário
             logging.info(f"[CRIANDO] Usuário para: {aluno.nome} | Login: {username_tentativa}")
             
             new_user = Usuario(
                 username=username_tentativa,
-                email=aluno.email, # Pode ser None se o banco permitir
+                email=email_final, # Usa o email tratado (original ou fictício)
                 nome=aluno.nome,
                 hashed_password=get_password_hash(senha_raw),
                 role="aluno"
@@ -94,7 +106,7 @@ def fix_missing_users():
             db.add(new_user)
             db.flush() # Garante que new_user ganhe um ID
             
-            # 6. Vincula ao aluno
+            # 7. Vincula ao aluno
             aluno.usuario_id = new_user.id
             count_criados += 1
         
