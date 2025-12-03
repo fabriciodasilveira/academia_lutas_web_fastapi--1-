@@ -25,7 +25,7 @@ logging.basicConfig(level=logging.INFO, format='%(message)s')
 # CONFIGURAÇÃO DO ARQUIVO
 # Ajuste o nome do arquivo conforme necessário. 
 # O pandas detecta automaticamente se é CSV ou Excel pela extensão.
-NOME_ARQUIVO = "alunos.xlsx - Planilha1.csv" 
+NOME_ARQUIVO = "alunos.xlsx" 
 
 # SENHA PADRÃO PARA TODOS
 SENHA_PADRAO = "123456"
