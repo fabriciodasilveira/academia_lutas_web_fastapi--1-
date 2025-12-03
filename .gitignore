@@ -39,7 +39,6 @@ env/
 docs/_build/
 *.pdf
 *.docx
-*.xlsx
 
 # Arquivos de mídia
 # *.jpg
