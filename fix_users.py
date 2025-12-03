@@ -2,20 +2,26 @@ import re
 import logging
 import os
 from src.database import SessionLocal
+from src.auth import get_password_hash
 
 # --- IMPORTANTE: Importar TODOS os modelos para o SQLAlchemy registrá-los ---
-# Se não importarmos Matricula, Mensalidade, etc., o modelo Aluno vai dar erro
-# ao tentar criar suas relações (back_populates).
+# A ordem não importa muito, desde que todos estejam aqui.
+# Isso evita erros de "failed to locate name" nos relacionamentos.
+
 from src.models.usuario import Usuario
 from src.models.aluno import Aluno
+from src.models.professor import Professor  # <--- Faltava este!
+from src.models.turma import Turma
 from src.models.matricula import Matricula
 from src.models.mensalidade import Mensalidade
-from src.models.inscricao import Inscricao
-from src.models.turma import Turma
 from src.models.plano import Plano
+from src.models.inscricao import Inscricao
+from src.models.evento import Evento          # <--- Bom ter este também
+from src.models.historico_matricula import HistoricoMatricula # <--- E este
+from src.models.produto import Produto
+from src.models.categoria import Categoria
+from src.models.financeiro import Financeiro
 # ---------------------------------------------------------------------------
-
-from src.auth import get_password_hash
 
 # Configuração de log simples
 logging.basicConfig(level=logging.INFO, format='%(message)s')
@@ -60,8 +66,8 @@ def fix_missing_users():
                 # Remove espaços e caracteres especiais do nome para criar um login
                 # Ex: João Silva -> joao.1234
                 primeiro_nome = aluno.nome.split()[0].lower()
-                # Remove acentos simples (opcional, mas recomendado)
-                primeiro_nome = primeiro_nome.replace('ã', 'a').replace('é', 'e').replace('í', 'i')
+                # Remove acentos simples
+                primeiro_nome = primeiro_nome.replace('ã', 'a').replace('é', 'e').replace('í', 'i').replace('á', 'a').replace('ó', 'o')
                 cpf_resumo = senha_raw[:4]
                 username_tentativa = f"{primeiro_nome}.{cpf_resumo}"
 
