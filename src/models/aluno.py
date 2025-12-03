@@ -13,7 +13,7 @@ class Aluno(Base):
     data_nascimento = Column(Date)
     cpf = Column(String(14), unique=True, index=True)
     telefone = Column(String(20))
-    email = Column(String(100), unique=True, index=True, nullable=True)
+    email = Column(String(100), unique=False, index=True, nullable=True)
     endereco = Column(String(255))
     observacoes = Column(String(255))
     foto = Column(String(255))
