@@ -38,20 +38,19 @@ def create_user(user: schemas.usuario.UsuarioCreate, db: Session = Depends(datab
     return db_user
 
 # --- ROTA DE LEITURA ATUALIZADA COM BUSCA ---
-@router.get("", response_model=List[schemas.usuario.UsuarioRead])
+@router.get("", response_model=schemas.usuario.UsuarioPaginated)
 def read_users(
     skip: int = 0, 
-    limit: int = 100, 
-    busca: Optional[str] = None, # Novo parâmetro
+    limit: int = 20, # Limite padrão ajustado para 20
+    busca: Optional[str] = None, 
     db: Session = Depends(database.get_db)
 ):
     """
-    Lista todos os usuários com filtro opcional de busca.
+    Lista usuários com paginação e busca.
     """
     query = db.query(models.usuario.Usuario)
 
     if busca:
-        # Filtra por Nome OU Email OU Username (case-insensitive)
         query = query.filter(
             or_(
                 models.usuario.Usuario.nome.ilike(f"%{busca}%"),
@@ -60,7 +59,14 @@ def read_users(
             )
         )
 
-    return query.order_by(models.usuario.Usuario.nome).offset(skip).limit(limit).all()
+    # 1. Conta o total de resultados (antes da paginação)
+    total = query.count()
+
+    # 2. Aplica a paginação
+    usuarios = query.order_by(models.usuario.Usuario.nome).offset(skip).limit(limit).all()
+
+    # 3. Retorna no formato do Schema Paginated
+    return {"total": total, "usuarios": usuarios}
 # --------------------------------------------
 
 @router.get("/{user_id}", response_model=schemas.usuario.UsuarioRead)

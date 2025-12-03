@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field
-from typing import Optional
+from typing import Optional, List
 
 class UsuarioBase(BaseModel):
     email: EmailStr
@@ -26,3 +26,7 @@ class Token(BaseModel):
     access_token: str
     token_type: str
     user_info: UsuarioRead
+    
+class UsuarioPaginated(BaseModel):
+    total: int
+    usuarios: List[UsuarioRead]

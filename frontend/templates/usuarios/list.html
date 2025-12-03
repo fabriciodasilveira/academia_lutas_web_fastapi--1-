@@ -8,7 +8,7 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1 class="h3 mb-0">
                 <i class="fas fa-users-cog me-2"></i>
-                Gestão de Usuários
+                Gestão de Usuários <span class="badge bg-secondary">{{ total_usuarios }}</span>
             </h1>
             <a href="{{ url_for('usuarios_novo') }}" class="btn btn-primary">
                 <i class="fas fa-user-plus me-1"></i>
@@ -24,7 +24,17 @@
             <div class="card-body">
                 <form method="GET" action="{{ url_for('usuarios_list') }}">
                     <div class="row g-3 align-items-center">
-                        <div class="col-md-8">
+                        
+                        <div class="col-md-auto">
+                            <label for="limit" class="form-label me-2 mb-0 d-inline-block">Mostrar:</label>
+                            <select class="form-select form-select-sm d-inline-block" name="limit" id="limit" onchange="this.form.submit()" style="width: auto;">
+                                <option value="20" {% if limit == 20 %}selected{% endif %}>20</option>
+                                <option value="50" {% if limit == 50 %}selected{% endif %}>50</option>
+                                <option value="100" {% if limit == 100 %}selected{% endif %}>100</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md">
                             <div class="input-group">
                                 <span class="input-group-text bg-light border-end-0">
                                     <i class="fas fa-search text-muted"></i>
@@ -36,10 +46,10 @@
                             </div>
                         </div>
                         
-                        <div class="col-md-4 text-end">
+                        <div class="col-md-auto">
                              {% if busca %}
                                  <a href="{{ url_for('usuarios_list') }}" class="btn btn-outline-secondary w-100">
-                                    <i class="fas fa-times me-1"></i> Limpar Filtros
+                                    <i class="fas fa-times me-1"></i> Limpar
                                 </a>
                              {% endif %}
                         </div>
@@ -60,7 +70,7 @@
                         <thead class="table-light">
                             <tr>
                                 <th>Nome</th>
-                                <th>Usuário (Login)</th>
+                                <th>Usuário</th>
                                 <th>Email</th>
                                 <th>Permissão</th>
                                 <th width="150">Ações</th>
@@ -112,6 +122,33 @@
                         </tbody>
                     </table>
                 </div>
+                
+                {% if total_pages > 1 %}
+                <div class="card-footer bg-transparent py-3">
+                    <nav>
+                        <ul class="pagination justify-content-center mb-0">
+                            <li class="page-item {% if page == 1 %}disabled{% endif %}">
+                                <a class="page-link" href="{{ url_for('usuarios_list', page=page-1, limit=limit, busca=busca) }}">
+                                    <i class="fas fa-chevron-left"></i>
+                                </a>
+                            </li>
+
+                            {% for p in range(1, total_pages + 1) %}
+                                <li class="page-item {% if p == page %}active{% endif %}">
+                                    <a class="page-link" href="{{ url_for('usuarios_list', page=p, limit=limit, busca=busca) }}">{{ p }}</a>
+                                </li>
+                            {% endfor %}
+
+                            <li class="page-item {% if page == total_pages %}disabled{% endif %}">
+                                <a class="page-link" href="{{ url_for('usuarios_list', page=page+1, limit=limit, busca=busca) }}">
+                                    <i class="fas fa-chevron-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+                
                 {% else %}
                 <div class="text-center py-5">
                     <i class="fas fa-search fa-3x text-muted mb-3"></i>

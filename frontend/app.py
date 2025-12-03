@@ -1489,28 +1489,52 @@ def inscricao_cancelar(id):
 
 # === ROTAS PARA USUÁRIOS (Acesso Restrito a Admins) ===
 
+# Em: frontend/app.py
+
 @app.route("/usuarios")
 @login_required
 @admin_required
 def usuarios_list():
-    # Pega o termo de busca da URL
+    # Parâmetros de Paginação
+    page = request.args.get('page', 1, type=int)
+    limit = request.args.get('limit', 20, type=int)
     busca = request.args.get('busca', '')
+    
+    skip = (page - 1) * limit
     
     # Define parâmetros para a API
     params = {
         "busca": busca,
-        "limit": 5000 # Aumentamos o limite para 5000 para evitar sumiço de usuários
+        "skip": skip,
+        "limit": limit
     }
-    # Remove parâmetros vazios
-    params = {k: v for k, v in params.items() if v}
+    params = {k: v for k, v in params.items() if v is not None and v != ''}
 
-    # Chama a API com os filtros
+    # Chama a API
     response = api_request("/usuarios", params=params)
     
-    usuarios = response.json() if response and response.status_code == 200 else []
+    usuarios = []
+    total_usuarios = 0
+    total_pages = 0
     
-    # Passa 'busca' de volta para o template para manter o campo preenchido
-    return render_template("usuarios/list.html", usuarios=usuarios, busca=busca)
+    if response and response.status_code == 200:
+        data = response.json()
+        # Agora a API retorna um dicionário com 'total' e 'usuarios'
+        usuarios = data.get("usuarios", [])
+        total_usuarios = data.get("total", 0)
+        
+        if total_usuarios > 0 and limit > 0:
+            total_pages = math.ceil(total_usuarios / limit)
+    
+    return render_template(
+        "usuarios/list.html", 
+        usuarios=usuarios, 
+        busca=busca,
+        page=page,
+        limit=limit,
+        total_pages=total_pages,
+        total_usuarios=total_usuarios
+    )
 
 @app.route("/usuarios/novo")
 @login_required
