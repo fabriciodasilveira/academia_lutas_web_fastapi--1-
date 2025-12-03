@@ -19,7 +19,6 @@ from src.routes import pagamentos_mercadopago
 
 router = APIRouter(
     tags=["Pagamentos"],
-    prefix="/api/v1/pagamentos" # Prefixo explícito para evitar confusão
 )
 
 # Configuração Stripe (mantida para quando o modo for 'stripe')
