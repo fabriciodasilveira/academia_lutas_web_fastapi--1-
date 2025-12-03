@@ -18,17 +18,50 @@
     </div>
 </div>
 
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <form method="GET" action="{{ url_for('usuarios_list') }}">
+                    <div class="row g-3 align-items-center">
+                        <div class="col-md-8">
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0">
+                                    <i class="fas fa-search text-muted"></i>
+                                </span>
+                                <input type="text" class="form-control border-start-0 ps-0" 
+                                       placeholder="Buscar por nome, usuário ou email..." 
+                                       name="busca" value="{{ busca }}">
+                                <button class="btn btn-primary" type="submit">Buscar</button>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 text-end">
+                             {% if busca %}
+                                 <a href="{{ url_for('usuarios_list') }}" class="btn btn-outline-secondary w-100">
+                                    <i class="fas fa-times me-1"></i> Limpar Filtros
+                                </a>
+                             {% endif %}
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="row">
     <div class="col-12">
         <div class="card border-0 shadow-sm">
             <div class="card-body p-0">
                 {% if usuarios %}
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0">
+                    <table class="table table-hover mb-0 align-middle">
                         <thead class="table-light">
                             <tr>
                                 <th>Nome</th>
-                                <th>Usuário</th> <th>Email</th>
+                                <th>Usuário (Login)</th>
+                                <th>Email</th>
                                 <th>Permissão</th>
                                 <th width="150">Ações</th>
                             </tr>
@@ -36,8 +69,18 @@
                         <tbody>
                             {% for usuario in usuarios %}
                             <tr>
-                                <td>{{ usuario.nome }}</td>
-                                <td>{{ usuario.username }}</td> <td>{{ usuario.email }}</td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="bg-light rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px;">
+                                            <i class="fas fa-user text-secondary"></i>
+                                        </div>
+                                        {{ usuario.nome }}
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="fw-bold text-primary">{{ usuario.username }}</span>
+                                </td>
+                                <td>{{ usuario.email }}</td>
                                 <td>
                                     {% if usuario.role == 'administrador' %}
                                         <span class="badge bg-danger">{{ usuario.role|capitalize }}</span>
@@ -71,7 +114,11 @@
                 </div>
                 {% else %}
                 <div class="text-center py-5">
+                    <i class="fas fa-search fa-3x text-muted mb-3"></i>
                     <h5 class="text-muted">Nenhum usuário encontrado.</h5>
+                    {% if busca %}
+                        <p class="text-muted">Tente buscar por outro termo.</p>
+                    {% endif %}
                 </div>
                 {% endif %}
             </div>

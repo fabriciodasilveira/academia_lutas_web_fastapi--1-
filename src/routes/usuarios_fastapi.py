@@ -1,13 +1,17 @@
-from typing import List
+# Crie o arquivo: src/routes/usuarios_fastapi.py
+
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import or_ # <--- IMPORTANTE: Import para a busca
+
 from src import database, models, schemas
 from src.auth import get_password_hash, get_admin_user
 
 router = APIRouter(
     prefix="/api/v1/usuarios",
     tags=["Usuarios"],
-    dependencies=[Depends(get_admin_user)]
+    dependencies=[Depends(get_admin_user)] # Protege TODAS as rotas neste arquivo
 )
 
 @router.post("", response_model=schemas.usuario.UsuarioRead, status_code=status.HTTP_201_CREATED)
@@ -23,7 +27,7 @@ def create_user(user: schemas.usuario.UsuarioCreate, db: Session = Depends(datab
     hashed_password = get_password_hash(user.password)
     db_user = models.usuario.Usuario(
         email=user.email,
-        username=user.username, # Salva o username
+        username=user.username,
         nome=user.nome,
         hashed_password=hashed_password,
         role=user.role
@@ -33,9 +37,31 @@ def create_user(user: schemas.usuario.UsuarioCreate, db: Session = Depends(datab
     db.refresh(db_user)
     return db_user
 
+# --- ROTA DE LEITURA ATUALIZADA COM BUSCA ---
 @router.get("", response_model=List[schemas.usuario.UsuarioRead])
-def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(database.get_db)):
-    return db.query(models.usuario.Usuario).offset(skip).limit(limit).all()
+def read_users(
+    skip: int = 0, 
+    limit: int = 100, 
+    busca: Optional[str] = None, # Novo parâmetro
+    db: Session = Depends(database.get_db)
+):
+    """
+    Lista todos os usuários com filtro opcional de busca.
+    """
+    query = db.query(models.usuario.Usuario)
+
+    if busca:
+        # Filtra por Nome OU Email OU Username (case-insensitive)
+        query = query.filter(
+            or_(
+                models.usuario.Usuario.nome.ilike(f"%{busca}%"),
+                models.usuario.Usuario.email.ilike(f"%{busca}%"),
+                models.usuario.Usuario.username.ilike(f"%{busca}%")
+            )
+        )
+
+    return query.order_by(models.usuario.Usuario.nome).offset(skip).limit(limit).all()
+# --------------------------------------------
 
 @router.get("/{user_id}", response_model=schemas.usuario.UsuarioRead)
 def read_user(user_id: int, db: Session = Depends(database.get_db)):
@@ -52,7 +78,6 @@ def update_user(user_id: int, user: schemas.usuario.UsuarioUpdate, db: Session =
 
     update_data = user.dict(exclude_unset=True)
     
-    # Verifica conflito se estiver atualizando username
     if "username" in update_data and update_data["username"] != db_user.username:
          if db.query(models.usuario.Usuario).filter(models.usuario.Usuario.username == update_data["username"]).first():
             raise HTTPException(status_code=400, detail="Nome de usuário já está em uso.")

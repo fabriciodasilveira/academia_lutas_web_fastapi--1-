@@ -1493,9 +1493,24 @@ def inscricao_cancelar(id):
 @login_required
 @admin_required
 def usuarios_list():
-    response = api_request("/usuarios")
+    # Pega o termo de busca da URL
+    busca = request.args.get('busca', '')
+    
+    # Define parâmetros para a API
+    params = {
+        "busca": busca,
+        "limit": 5000 # Aumentamos o limite para 5000 para evitar sumiço de usuários
+    }
+    # Remove parâmetros vazios
+    params = {k: v for k, v in params.items() if v}
+
+    # Chama a API com os filtros
+    response = api_request("/usuarios", params=params)
+    
     usuarios = response.json() if response and response.status_code == 200 else []
-    return render_template("usuarios/list.html", usuarios=usuarios)
+    
+    # Passa 'busca' de volta para o template para manter o campo preenchido
+    return render_template("usuarios/list.html", usuarios=usuarios, busca=busca)
 
 @app.route("/usuarios/novo")
 @login_required
