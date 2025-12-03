@@ -29,7 +29,7 @@ stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 @router.get("/config")
 def get_payment_config():
     """
-    Informa ao frontend qual provedor de pagamento está ativo.
+    Informa ao frontend qual provedor de pagamento está ativo (stripe ou mercadopago).
     """
     provider = os.getenv("PAYMENT_PROVIDER", "stripe").lower()
     return {
