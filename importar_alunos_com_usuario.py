@@ -27,7 +27,7 @@ logging.basicConfig(level=logging.INFO, format='%(message)s')
 # CONFIGURAÇÃO DO ARQUIVO
 # Certifique-se de que o nome aqui corresponde exatamente ao arquivo que você subiu
 # Se o arquivo se chama "alunos.xlsx", mude abaixo. Se for o csv, mantenha.
-NOME_ARQUIVO = "alunos.xlsx - Planilha1.csv" 
+NOME_ARQUIVO = "alunos.xlsx" 
 
 # SENHA PADRÃO PARA TODOS
 SENHA_PADRAO = "123456"
