@@ -111,6 +111,31 @@ const router = async () => {
 // ... (todas as outras funções do app.js permanecem exatamente iguais) ...
 
 let stripe;
+let currentPaymentProvider = 'stripe';
+
+// 1. Função Unificada de Inicialização
+async function initializePaymentSystem() {
+    try {
+        // Pergunta ao backend qual a configuração atual
+        const config = await api.request('/pagamentos/config', 'GET', null, false, false);
+        
+        currentPaymentProvider = config.provider; // 'stripe' ou 'mercadopago'
+        console.log(`Sistema de pagamento inicializado: ${currentPaymentProvider.toUpperCase()}`);
+
+        // Se for Stripe, precisamos inicializar o SDK com a chave pública
+        if (currentPaymentProvider === 'stripe' && config.stripePublicKey) {
+             stripe = Stripe(config.stripePublicKey);
+        }
+        
+        // Se for Mercado Pago, não precisa de inicialização prévia complexa no frontend
+        // (O redirecionamento é gerado pelo backend)
+
+    } catch (error) {
+        console.error("Falha ao inicializar pagamentos:", error);
+        // Não mostramos alerta aqui para não assustar o usuário ao abrir o app,
+        // mas o botão de pagar vai falhar se ele tentar.
+    }
+}
 
 async function initializeStripe() {
     try {
@@ -127,49 +152,88 @@ async function initializeStripe() {
     }
 }
 
+// 2. Função Genérica para Pagar (Mensalidade)
 async function pagarMensalidadeOnline(event, mensalidadeId) {
-    if (!stripe) {
-        ui.showAlert("O sistema de pagamento não está pronto. Tente novamente em alguns segundos.");
-        return;
-    }
     const button = event.currentTarget;
+    const originalText = button.innerHTML;
+    
     button.disabled = true;
-    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Abrindo...';
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+
     try {
-        const sessionData = await api.request(`/pagamentos/stripe/mensalidade/${mensalidadeId}`, 'POST');
-        if (sessionData.sessionId) {
-            const { error } = await stripe.redirectToCheckout({ sessionId: sessionData.sessionId });
-            if (error) throw new Error(error.message);
+        // DECISÃO: Qual caminho seguir?
+        if (currentPaymentProvider === 'mercadopago') {
+            // --- ROTA MERCADO PAGO ---
+            // Chama o backend para gerar o link do Checkout Pro
+            const response = await api.request(`/pagamentos/gerar/mensalidade/${mensalidadeId}`, 'POST');
+            
+            if (response.init_point) {
+                // Redireciona o usuário para o Mercado Pago
+                window.location.href = response.init_point;
+            } else {
+                throw new Error("Não foi possível gerar o link de pagamento do Mercado Pago.");
+            }
+
         } else {
-            throw new Error('Não foi possível iniciar a sessão de pagamento.');
+            // --- ROTA STRIPE (Lógica Antiga) ---
+            if (!stripe) {
+                throw new Error("O sistema de pagamento (Stripe) não está disponível.");
+            }
+            const sessionData = await api.request(`/pagamentos/gerar/mensalidade/${mensalidadeId}`, 'POST');
+            if (sessionData.sessionId) {
+                const { error } = await stripe.redirectToCheckout({ sessionId: sessionData.sessionId });
+                if (error) throw error;
+            } else {
+                throw new Error("Não foi possível iniciar a sessão da Stripe.");
+            }
         }
+
     } catch (error) {
-        ui.showAlert(error.message || 'Não foi possível iniciar o pagamento.');
+        console.error(error);
+        ui.showAlert(error.message || 'Erro ao processar pagamento.', 'danger');
         button.disabled = false;
-        button.innerHTML = '<i class="fas fa-credit-card me-1"></i>Pagar Online';
+        button.innerHTML = originalText;
     }
 }
 
+// 3. Função Genérica para Pagar (Evento)
 async function pagarEventoOnline(event, inscricaoId) {
-    if (!stripe) {
-        ui.showAlert("O sistema de pagamento não está pronto. Tente novamente em alguns segundos.");
-        return;
-    }
     const button = event.currentTarget;
+    const originalText = button.innerHTML;
+    
     button.disabled = true;
-    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Abrindo...';
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+
     try {
-        const sessionData = await api.request(`/pagamentos/stripe/evento/${inscricaoId}`, 'POST');
-        if (sessionData.sessionId) {
-            const { error } = await stripe.redirectToCheckout({ sessionId: sessionData.sessionId });
-            if (error) throw new Error(error.message);
+        if (currentPaymentProvider === 'mercadopago') {
+            // --- ROTA MERCADO PAGO ---
+            const response = await api.request(`/pagamentos/gerar/evento/${inscricaoId}`, 'POST');
+            
+            if (response.init_point) {
+                window.location.href = response.init_point;
+            } else {
+                throw new Error("Não foi possível gerar o link de pagamento.");
+            }
+
         } else {
-            throw new Error('Não foi possível iniciar a sessão de pagamento.');
+             // --- ROTA STRIPE ---
+            if (!stripe) {
+                throw new Error("O sistema de pagamento (Stripe) não está disponível.");
+            }
+            const sessionData = await api.request(`/pagamentos/gerar/evento/${inscricaoId}`, 'POST');
+            if (sessionData.sessionId) {
+                const { error } = await stripe.redirectToCheckout({ sessionId: sessionData.sessionId });
+                if (error) throw error;
+            } else {
+                throw new Error("Não foi possível iniciar a sessão da Stripe.");
+            }
         }
+
     } catch (error) {
-        ui.showAlert(error.message || 'Não foi possível iniciar o pagamento.');
+        console.error(error);
+        ui.showAlert(error.message || 'Erro ao processar pagamento.', 'danger');
         button.disabled = false;
-        button.innerHTML = '<i class="fas fa-credit-card me-1"></i>Pagar Online';
+        button.innerHTML = originalText;
     }
 }
 
@@ -657,9 +721,13 @@ async function handleBeneficiosPage() {
 
 window.addEventListener('hashchange', router);
 window.addEventListener('load', () => {
-    initializeStripe();
+    // Substituímos initializeStripe() por initializePaymentSystem()
+    initializePaymentSystem();
+    
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/portal/sw.js').then(() => console.log('Service Worker registrado com sucesso.')).catch(err => console.error('Erro no registro do Service Worker:', err));
+        navigator.serviceWorker.register('/portal/sw.js')
+            .then(() => console.log('Service Worker registrado.'))
+            .catch(err => console.error('Erro SW:', err));
     }
     document.getElementById('logout-button').addEventListener('click', () => {
         localStorage.removeItem('accessToken');
