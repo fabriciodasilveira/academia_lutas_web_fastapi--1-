@@ -2,13 +2,14 @@ import pandas as pd
 import logging
 import re
 import os
+from sqlalchemy import or_
 from src.database import SessionLocal
 from src.auth import get_password_hash
 
-# --- IMPORTAÇÃO DE TODOS OS MODELOS (NECESSÁRIO PARA O SQLALCHEMY) ---
+# --- IMPORTAÇÃO DE TODOS OS MODELOS ---
 from src.models.usuario import Usuario
 from src.models.aluno import Aluno
-from src.models.professor import Professor  # <--- Faltava este e outros
+from src.models.professor import Professor
 from src.models.turma import Turma
 from src.models.matricula import Matricula
 from src.models.mensalidade import Mensalidade
@@ -19,79 +20,105 @@ from src.models.historico_matricula import HistoricoMatricula
 from src.models.produto import Produto
 from src.models.categoria import Categoria
 from src.models.financeiro import Financeiro
-# ---------------------------------------------------------------------
+# --------------------------------------
 
 # Configuração de Logs
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 
-# CONFIGURAÇÃO DO ARQUIVO
-# Certifique-se de que o nome aqui corresponde exatamente ao arquivo que você subiu
-# Se o arquivo se chama "alunos.xlsx", mude abaixo. Se for o csv, mantenha.
-NOME_ARQUIVO = "alunos.xlsx" 
+# NOME DO ARQUIVO (Verifique se está correto)
+NOME_ARQUIVO = "alunos.xlsx"
 
-# SENHA PADRÃO PARA TODOS
+# SENHA PADRÃO
 SENHA_PADRAO = "123456"
 
 def limpar_cpf(cpf_raw):
     if pd.isna(cpf_raw):
         return None
-    # Converte para string e remove tudo que não é número
     return re.sub(r'[^0-9]', '', str(cpf_raw))
 
-def gerar_username_sem_email(nome, cpf_limpo):
-    """Gera um username formato nome.sobrenome ou nome.cpf_final se não tiver email."""
-    if not nome:
-        return None
-    parts = nome.lower().split()
-    base = parts[0]
+def gerar_username_base(nome, email):
+    """
+    Define uma base para o username. 
+    Se tiver email, usa o email. Se não, usa nome.primeiro_nome.
+    """
+    if email and isinstance(email, str) and '@' in email:
+        return email.strip()
     
-    # Remove caracteres especiais básicos do nome
-    base = base.replace('á', 'a').replace('ã', 'a').replace('é', 'e').replace('í', 'i').replace('ó', 'o').replace('ú', 'u').replace('ç', 'c')
+    if nome:
+        # Limpa o nome para criar um login (ex: Joao Silva -> joao.silva)
+        parts = nome.lower().split()
+        base = parts[0]
+        
+        # Remove acentos
+        base = base.replace('á', 'a').replace('ã', 'a').replace('é', 'e').replace('í', 'i').replace('ó', 'o').replace('ú', 'u').replace('ç', 'c')
+        
+        if len(parts) > 1:
+            sobrenome = parts[-1].replace('á', 'a').replace('ã', 'a').replace('é', 'e').replace('í', 'i').replace('ó', 'o').replace('ú', 'u').replace('ç', 'c')
+            base += f".{sobrenome}"
+        else:
+            base += ".aluno"
+        return base
+        
+    return "usuario.desconhecido"
 
-    if len(parts) > 1:
-        sobrenome = parts[-1].replace('á', 'a').replace('ã', 'a').replace('é', 'e').replace('í', 'i').replace('ó', 'o').replace('ú', 'u').replace('ç', 'c')
-        base += f".{sobrenome}"
-    else:
-        # Se só tem um nome, usa os 4 primeiros do CPF para garantir unicidade
-        sufixo = cpf_limpo[:4] if cpf_limpo else "0000"
-        base += f".{sufixo}"
+def encontrar_credenciais_unicas(db, base_username):
+    """
+    Gera um username e email únicos, incrementando um contador se necessário.
+    Ex: joao@gmail.com -> joao@gmail.com.1 -> joao@gmail.com.2
+    """
+    contador = 0
+    username_tentativa = base_username
     
-    return base
+    while True:
+        # Se contador > 0, anexa o sufixo (ex: .1)
+        if contador > 0:
+            username_tentativa = f"{base_username}.{contador}"
+        
+        # Define o email do usuário
+        # Se o username parece um email e é a primeira tentativa, tenta usar ele mesmo
+        if '@' in username_tentativa and contador == 0:
+            email_tentativa = username_tentativa
+        else:
+            # Se não parece email ou já teve colisão, gera um email interno único
+            email_tentativa = f"{username_tentativa}@sememail.sistema"
+
+        # Verifica colisão na tabela USUARIOS (username E email devem ser únicos)
+        # Verifica também na tabela ALUNOS (email deve ser único)
+        
+        # 1. Checa tabela Usuario
+        colisao_usuario = db.query(Usuario).filter(
+            or_(Usuario.username == username_tentativa, Usuario.email == email_tentativa)
+        ).first()
+        
+        # 2. Checa tabela Aluno (apenas se formos usar esse email no campo email do aluno)
+        # Mas aqui faremos diferente: se o email já existe no Aluno, nós apenas limpamos o campo email do Aluno
+        # e mantemos o email do Usuário (que é obrigatório e único).
+        # Portanto, só precisamos garantir unicidade na tabela USUARIO para gerar o login.
+        
+        if not colisao_usuario:
+            return username_tentativa, email_tentativa
+        
+        contador += 1
 
 def importar_em_massa():
-    print(f"--- INICIANDO IMPORTAÇÃO DE ALUNOS E USUÁRIOS ---")
-    print(f"Arquivo alvo: {NOME_ARQUIVO}")
-    print(f"Senha padrão definida: {SENHA_PADRAO}")
+    print(f"--- INICIANDO IMPORTAÇÃO ---")
+    print(f"Lendo arquivo: {NOME_ARQUIVO}")
     
     db = SessionLocal()
     
     try:
-        # Carrega o arquivo
         if NOME_ARQUIVO.endswith('.csv'):
             df = pd.read_csv(NOME_ARQUIVO)
         else:
-            # Tenta ler excel
             try:
                 df = pd.read_excel(NOME_ARQUIVO)
-            except Exception:
-                # Se falhar (ex: é um csv renomeado), tenta ler como csv
-                 df = pd.read_csv(NOME_ARQUIVO)
+            except:
+                df = pd.read_csv(NOME_ARQUIVO)
             
-        # Normaliza nomes das colunas (remove espaços e coloca em maiúsculo para facilitar)
         df.columns = [c.strip().upper() for c in df.columns]
         
-        # Verifica colunas obrigatórias
-        colunas_esperadas = ['NOME', 'CPF', 'EMAIL', 'TELEFONE']
-        for col in colunas_esperadas:
-            if col not in df.columns:
-                print(f"ERRO: Coluna '{col}' não encontrada no arquivo. Colunas disponíveis: {list(df.columns)}")
-                return
-
         count_sucesso = 0
-        count_erro = 0
         count_pulado = 0
-
-        # Prepara o Hash da senha padrão (faz uma vez só para otimizar)
         senha_hash = get_password_hash(SENHA_PADRAO)
 
         for index, row in df.iterrows():
@@ -102,72 +129,54 @@ def importar_em_massa():
             cpf_limpo = limpar_cpf(cpf_raw)
 
             if not nome:
-                logging.warning(f"Linha {index + 2}: Nome vazio. Pulando.")
-                count_erro += 1
                 continue
 
-            # 1. Verificar se Aluno (CPF) já existe
+            # 1. Verifica se Aluno (CPF) já existe para não duplicar cadastro
             if cpf_limpo:
-                aluno_existente = db.query(Aluno).filter(Aluno.cpf == cpf_limpo).first()
-                if aluno_existente:
-                    logging.info(f"Pulando {nome}: CPF {cpf_limpo} já cadastrado.")
+                if db.query(Aluno).filter(Aluno.cpf == cpf_limpo).first():
+                    logging.warning(f"Pulando {nome}: CPF {cpf_limpo} já cadastrado.")
                     count_pulado += 1
                     continue
 
-            # 2. Definir Username e Email do Usuário
-            username_final = email_raw
-            email_final = email_raw
+            # 2. Gera Username e Email Únicos para o Login
+            base_user = gerar_username_base(nome, email_raw)
+            username_final, email_user_final = encontrar_credenciais_unicas(db, base_user)
+            
+            # 3. Cria o Usuário
+            novo_usuario = Usuario(
+                username=username_final,
+                email=email_user_final,
+                nome=nome,
+                hashed_password=senha_hash,
+                role="aluno"
+            )
+            db.add(novo_usuario)
+            db.flush() # Gera o ID
 
-            if not email_final or email_final.lower() == 'nan':
-                # Se não tem email, gera username fictício e email fictício
-                username_final = gerar_username_sem_email(nome, cpf_limpo)
-                email_final = f"{username_final}@sememail.sistema"
-                # Garante que o email seja None no objeto Aluno se não veio na planilha
-                # Mas no Usuário precisa ter algo (o fictício)
-                email_aluno = None 
-            else:
-                email_aluno = email_final
+            # 4. Define o email do Aluno (cadastro)
+            # Se o email original já estiver em uso por OUTRO aluno, deixamos None
+            email_aluno_final = None
+            if email_raw and '@' in email_raw:
+                if not db.query(Aluno).filter(Aluno.email == email_raw).first():
+                    email_aluno_final = email_raw
 
-            # 3. Verificar se Usuário (Username/Email) já existe
-            usuario_existente = db.query(Usuario).filter(
-                (Usuario.username == username_final) | (Usuario.email == email_final)
-            ).first()
-
-            if usuario_existente:
-                # Se o usuário já existe (ex: pai já cadastrado), vamos USAR esse usuário
-                # para criar o novo aluno (vínculo familiar)
-                logging.info(f"--> Vinculando {nome} ao usuário existente: {usuario_existente.username}")
-                novo_usuario = usuario_existente
-            else:
-                # Cria NOVO Usuário
-                novo_usuario = Usuario(
-                    username=username_final,
-                    email=email_final,
-                    nome=nome,
-                    hashed_password=senha_hash, # Senha Fixa 123456
-                    role="aluno"
-                )
-                db.add(novo_usuario)
-                db.flush() # Gera o ID
-
-            # 4. Criar o Aluno
+            # 5. Cria o Aluno vinculado ao Usuário
             novo_aluno = Aluno(
                 nome=nome,
                 cpf=cpf_limpo,
-                email=email_aluno,
+                email=email_aluno_final, # Pode ser None se repetido
                 telefone=telefone,
-                usuario_id=novo_usuario.id # Vincula ao usuário (novo ou existente)
+                usuario_id=novo_usuario.id # Vínculo 1-para-1
             )
             db.add(novo_aluno)
+            
             count_sucesso += 1
-            logging.info(f"Cadastrado: {nome} (Login: {novo_usuario.username})")
+            logging.info(f"[OK] {nome} -> Login: {username_final} | Senha: {SENHA_PADRAO}")
 
         db.commit()
         print("-" * 30)
-        print(f"IMPORTAÇÃO CONCLUÍDA")
-        print(f"Novos Alunos: {count_sucesso}")
-        print(f"Já Existentes: {count_pulado}")
-        print(f"Erros: {count_erro}")
+        print(f"Processados com sucesso: {count_sucesso}")
+        print(f"Já existentes (pulados): {count_pulado}")
 
     except FileNotFoundError:
         print(f"ERRO: Arquivo '{NOME_ARQUIVO}' não encontrado.")
