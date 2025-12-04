@@ -124,6 +124,43 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         
     return {"status": "success"}
 
+# src/routes/pagamentos_fastapi.py
+
+# ... imports ...
+
+@router.post("/pix/{item_type}/{item_id}")
+def gerar_pix_transparente(
+    item_type: str, 
+    item_id: int, 
+    db: Session = Depends(get_db), 
+    current_user: models_usuario.Usuario = Depends(auth.get_current_active_user)
+):
+    """
+    Gera um QR Code PIX para o item especificado.
+    """
+    # Busca dados do aluno para preencher o pagador
+    # O ideal é que o aluno tenha CPF cadastrado
+    if not current_user.aluno:
+         raise HTTPException(status_code=400, detail="Usuário não vinculado a um aluno.")
+    
+    # Tratamento simples do CPF (remove caracteres não numéricos se houver)
+    import re
+    cpf_limpo = re.sub(r'[^0-9]', '', current_user.aluno.cpf or "")
+    
+    if not cpf_limpo:
+        # Se não tiver CPF, usamos um genérico ou retornamos erro (O MP exige documento para PIX)
+        # Para teste pode tentar passar sem, mas produção exige.
+        raise HTTPException(status_code=400, detail="CPF do aluno é necessário para gerar o PIX.")
+
+    return pagamentos_mercadopago.create_pix_payment(
+        db=db,
+        item_id=item_id,
+        item_type=item_type,
+        payer_email=current_user.email,
+        payer_first_name=current_user.nome.split()[0], # Pega o primeiro nome
+        doc_number=cpf_limpo
+    )
+
 
 # Webhook Mercado Pago (Novo)
 @router.post("/mercadopago/webhook")

@@ -111,8 +111,76 @@ const router = async () => {
 // ... (todas as outras funções do app.js permanecem exatamente iguais) ...
 
 // --- VARIÁVEIS GLOBAIS DE PAGAMENTO ---
+
 let stripe;
 let currentPaymentProvider = 'stripe'; // Valor padrão de segurança
+
+
+// Função unificada para abrir o Modal do PIX
+async function exibirModalPix(endpoint) {
+    // 1. Cria o HTML do Modal dinamicamente (se não existir)
+    if (!document.getElementById('pixModal')) {
+        const modalHtml = `
+        <div class="modal fade" id="pixModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><i class="brands fa-pix text-success me-2"></i>Pagamento via PIX</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body text-center" id="pixModalBody">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="mt-2">Gerando QR Code...</p>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
+
+    // 2. Abre o Modal
+    const pixModal = new bootstrap.Modal(document.getElementById('pixModal'));
+    pixModal.show();
+    
+    const modalBody = document.getElementById('pixModalBody');
+    modalBody.innerHTML = '<div class="spinner-border text-primary" role="status"></div><p class="mt-2">Gerando QR Code...</p>';
+
+    try {
+        // 3. Chama a API
+        const data = await api.request(endpoint, 'POST');
+
+        // 4. Renderiza o QR Code e o Copia e Cola
+        modalBody.innerHTML = `
+            <p class="text-muted mb-3">Escaneie o QR Code ou use o Copia e Cola:</p>
+            
+            <img src="data:image/jpeg;base64,${data.qr_code_base64}" class="img-fluid border rounded mb-3" style="max-width: 250px;">
+            
+            <div class="input-group mb-3">
+                <input type="text" class="form-control" value="${data.qr_code}" id="pixCopiaCola" readonly>
+                <button class="btn btn-outline-secondary" type="button" onclick="copiarPix()">
+                    <i class="fas fa-copy"></i>
+                </button>
+            </div>
+            
+            <div class="alert alert-info small">
+                <i class="fas fa-info-circle"></i> Após pagar no seu banco, aguarde alguns instantes e atualize a página.
+            </div>
+        `;
+
+    } catch (error) {
+        console.error(error);
+        modalBody.innerHTML = `<div class="alert alert-danger">Erro ao gerar PIX: ${error.message}</div>`;
+    }
+}
+
+// Função auxiliar para copiar
+window.copiarPix = function() {
+    const copyText = document.getElementById("pixCopiaCola");
+    copyText.select();
+    copyText.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(copyText.value);
+    alert("Código PIX copiado!");
+}
 
 // 1. NOVA FUNÇÃO DE INICIALIZAÇÃO (Substitui a initializeStripe)
 async function initializePaymentSystem() {
@@ -137,89 +205,13 @@ async function initializePaymentSystem() {
 
 // 2. FUNÇÃO DE PAGAR MENSALIDADE (Híbrida)
 async function pagarMensalidadeOnline(event, mensalidadeId) {
-    const button = event.currentTarget;
-    const originalHtml = button.innerHTML;
-    
-    button.disabled = true;
-    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
-
-    try {
-        if (currentPaymentProvider === 'mercadopago') {
-            // --- CAMINHO MERCADO PAGO ---
-            // Chama a rota unificada do backend. Ele vai devolver o link do Checkout Pro.
-            const response = await api.request(`/pagamentos/gerar/mensalidade/${mensalidadeId}`, 'POST');
-            
-            if (response.init_point) {
-                // Redireciona o usuário para a tela segura do Mercado Pago
-                window.location.href = response.init_point;
-            } else {
-                throw new Error("Não foi possível gerar o link do Mercado Pago.");
-            }
-
-        } else {
-            // --- CAMINHO STRIPE (Lógica Original) ---
-            if (!stripe) {
-                throw new Error("O sistema de pagamento (Stripe) não está inicializado.");
-            }
-            // Chama a rota unificada. Se o backend estiver configurado para Stripe, devolve sessionId.
-            const sessionData = await api.request(`/pagamentos/gerar/mensalidade/${mensalidadeId}`, 'POST');
-            
-            if (sessionData.sessionId) {
-                const { error } = await stripe.redirectToCheckout({ sessionId: sessionData.sessionId });
-                if (error) throw error;
-            } else {
-                throw new Error("Não foi possível iniciar a sessão da Stripe.");
-            }
-        }
-
-    } catch (error) {
-        console.error(error);
-        ui.showAlert(error.message || 'Erro ao iniciar pagamento.', 'danger');
-        button.disabled = false;
-        button.innerHTML = originalHtml;
-    }
+    // Usamos a nova rota de PIX Transparente
+    await exibirModalPix(`/pagamentos/pix/mensalidade/${mensalidadeId}`);
 }
 
-// 3. FUNÇÃO DE PAGAR EVENTO (Híbrida)
 async function pagarEventoOnline(event, inscricaoId) {
-    const button = event.currentTarget;
-    const originalHtml = button.innerHTML;
-    
-    button.disabled = true;
-    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
-
-    try {
-        if (currentPaymentProvider === 'mercadopago') {
-            // --- CAMINHO MERCADO PAGO ---
-            const response = await api.request(`/pagamentos/gerar/evento/${inscricaoId}`, 'POST');
-            
-            if (response.init_point) {
-                window.location.href = response.init_point;
-            } else {
-                throw new Error("Não foi possível gerar o link do Mercado Pago.");
-            }
-
-        } else {
-             // --- CAMINHO STRIPE ---
-            if (!stripe) {
-                throw new Error("O sistema de pagamento (Stripe) não está inicializado.");
-            }
-            const sessionData = await api.request(`/pagamentos/gerar/evento/${inscricaoId}`, 'POST');
-            
-            if (sessionData.sessionId) {
-                const { error } = await stripe.redirectToCheckout({ sessionId: sessionData.sessionId });
-                if (error) throw error;
-            } else {
-                throw new Error("Não foi possível iniciar a sessão da Stripe.");
-            }
-        }
-
-    } catch (error) {
-        console.error(error);
-        ui.showAlert(error.message || 'Erro ao iniciar pagamento.', 'danger');
-        button.disabled = false;
-        button.innerHTML = originalHtml;
-    }
+    // Usamos a nova rota de PIX Transparente
+    await exibirModalPix(`/pagamentos/pix/inscricao/${inscricaoId}`);
 }
 
 async function initializeStripe() {

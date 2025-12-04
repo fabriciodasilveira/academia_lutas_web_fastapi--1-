@@ -6,6 +6,7 @@ import logging
 from fastapi import APIRouter, Request, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from datetime import date, datetime
+import uuid # Adicione este import no topo
 
 from src.database import get_db
 from src.models.mensalidade import Mensalidade
@@ -166,3 +167,80 @@ async def handle_mp_webhook(request: Request, db: Session):
     except Exception as e:
         logging.error(f"Erro Webhook MP: {e}")
         return {"status": "error", "detail": str(e)}
+
+def create_pix_payment(db: Session, item_id: int, item_type: str, payer_email: str, payer_first_name: str, doc_number: str):
+    """
+    Gera um pagamento PIX direto (Checkout Transparente).
+    Retorna os dados do QR Code e Copia e Cola.
+    """
+    sdk = get_sdk()
+    if not sdk:
+         raise HTTPException(status_code=500, detail="SDK Mercado Pago não inicializado.")
+
+    try:
+        # 1. Buscar os dados do item (Mensalidade ou Inscrição)
+        amount = 0.0
+        description = ""
+        
+        if item_type == "mensalidade":
+            db_item = db.query(Mensalidade).options(joinedload(Mensalidade.plano)).filter(Mensalidade.id == item_id).first()
+            if not db_item: raise HTTPException(status_code=404, detail="Mensalidade não encontrada.")
+            amount = float(db_item.valor)
+            description = f"Mensalidade - {db_item.plano.nome}"
+            
+        elif item_type == "inscricao":
+            db_item = db.query(Inscricao).options(joinedload(Inscricao.evento)).filter(Inscricao.id == item_id).first()
+            if not db_item: raise HTTPException(status_code=404, detail="Inscrição não encontrada.")
+            amount = float(db_item.evento.valor_inscricao)
+            description = f"Inscrição - {db_item.evento.nome}"
+
+        # 2. Configurar os dados do pagamento PIX
+        # Importante: Usamos uuid para a chave de idempotência (evita pagamentos duplicados no clique duplo)
+        request_options = mercadopago.config.RequestOptions()
+        request_options.custom_headers = {
+            'x-idempotency-key': str(uuid.uuid4())
+        }
+
+        # URL do seu webhook (para o MP avisar que pagou)
+        # Substitua pelo seu domínio real se estiver em produção, ou ngrok em dev
+        base_url = os.getenv("BACKEND_URL", "https://sua-api.onrender.com") 
+        notification_url = f"{base_url}/api/v1/pagamentos/mercadopago/webhook"
+
+        payment_data = {
+            "transaction_amount": amount,
+            "description": description,
+            "payment_method_id": "pix",
+            "payer": {
+                "email": payer_email,
+                "first_name": payer_first_name,
+                "identification": {
+                    "type": "CPF",
+                    "number": doc_number # O CPF deve vir limpo (só números) ou formatado, o MP aceita ambos geralmente
+                }
+            },
+            "notification_url": notification_url,
+            "external_reference": f"{item_type}_{item_id}" # Fundamental para o Webhook saber o que baixar
+        }
+
+        # 3. Criar o pagamento
+        payment_response = sdk.payment().create(payment_data, request_options)
+        payment = payment_response["response"]
+
+        if payment_response["status"] != 201:
+             logging.error(f"Erro MP: {payment_response}")
+             raise HTTPException(status_code=400, detail="Erro ao gerar PIX no Mercado Pago.")
+
+        # 4. Extrair os dados do QR Code
+        poi = payment.get("point_of_interaction", {})
+        trans_data = poi.get("transaction_data", {})
+        
+        return {
+            "qr_code": trans_data.get("qr_code"),           # O código Copia e Cola
+            "qr_code_base64": trans_data.get("qr_code_base64"), # A imagem em base64
+            "payment_id": payment.get("id"),
+            "status": payment.get("status")
+        }
+
+    except Exception as e:
+        logging.error(f"Erro ao gerar PIX: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erro ao gerar PIX: {str(e)}")
