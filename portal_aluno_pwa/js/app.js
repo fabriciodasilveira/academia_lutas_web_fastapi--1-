@@ -228,7 +228,7 @@ async function handleDashboardPage() {
         const profile = await api.getProfile();
         document.getElementById('aluno-nome').innerText = profile.nome;
         document.getElementById('aluno-email').innerText = profile.email;
-        document.getElementById('profile-picture').src = profile.foto || '/portal/images/default-avatar.png';
+        document.getElementById('profile-picture').src = profile.foto || '/portal/images/icone.png';
         document.getElementById('aluno-telefone').innerText = profile.telefone || '-';
         document.getElementById('aluno-nascimento').innerText = profile.data_nascimento || '-';
 
