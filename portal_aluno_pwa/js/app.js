@@ -14,21 +14,25 @@ const routes = {
     '/beneficios': { page: '/portal/pages/beneficios.html', handler: handleBeneficiosPage }
 };
 
-// --- FUNÇÃO PARA GERENCIAR O MODAL DO PIX ---
+// --- FUNÇÕES DO MODAL PIX (NOVO) ---
+
 async function exibirModalPix(endpoint) {
-    // 1. Cria o HTML do Modal dinamicamente (se não existir)
+    // 1. Injeta o HTML do Modal se ainda não existir
     if (!document.getElementById('pixModal')) {
         const modalHtml = `
-        <div class="modal fade" id="pixModal" tabindex="-1" aria-hidden="true">
+        <div class="modal fade" id="pixModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title"><i class="fas fa-qrcode text-success me-2"></i>Pagamento via PIX</h5>
+                        <h5 class="modal-title"><i class="fas fa-qrcode text-success me-2"></i>Pagamento via Pix</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body text-center" id="pixModalBody">
                         <div class="spinner-border text-primary" role="status"></div>
-                        <p class="mt-2">Gerando QR Code...</p>
+                        <p class="mt-2">Gerando código Pix...</p>
+                    </div>
+                    <div class="modal-footer justify-content-center">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Fechar</button>
                     </div>
                 </div>
             </div>
@@ -36,66 +40,82 @@ async function exibirModalPix(endpoint) {
         document.body.insertAdjacentHTML('beforeend', modalHtml);
     }
 
-    // 2. Abre o Modal
-    const pixModal = new bootstrap.Modal(document.getElementById('pixModal'));
-    pixModal.show();
-    
+    // 2. Exibe o Modal
+    const pixModalElement = document.getElementById('pixModal');
+    const pixModal = new bootstrap.Modal(pixModalElement);
     const modalBody = document.getElementById('pixModalBody');
-    modalBody.innerHTML = '<div class="spinner-border text-primary" role="status"></div><p class="mt-2">Gerando QR Code...</p>';
+    
+    // Reseta o conteúdo para loading
+    modalBody.innerHTML = '<div class="spinner-border text-primary" role="status"></div><p class="mt-2">Gerando código Pix...</p>';
+    pixModal.show();
 
     try {
         // 3. Chama a API
         const data = await api.request(endpoint, 'POST');
 
-        // 4. Renderiza o QR Code e o Copia e Cola
+        // 4. Preenche com o QR Code
         modalBody.innerHTML = `
-            <p class="text-muted mb-3">Escaneie o QR Code ou use o Copia e Cola:</p>
+            <p class="text-muted mb-3 small">Abra o app do seu banco e escaneie o QR Code:</p>
             
-            <img src="data:image/jpeg;base64,${data.qr_code_base64}" class="img-fluid border rounded mb-3" style="max-width: 250px;">
+            <img src="data:image/jpeg;base64,${data.qr_code_base64}" class="img-fluid border rounded mb-3" style="max-width: 220px;">
             
-            <div class="input-group mb-3">
-                <input type="text" class="form-control" value="${data.qr_code}" id="pixCopiaCola" readonly>
-                <button class="btn btn-outline-secondary" type="button" onclick="copiarPix()">
-                    <i class="fas fa-copy"></i>
-                </button>
+            <div class="d-grid gap-2">
+                <label class="small text-start text-muted mb-0">Ou copie e cole o código:</label>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control form-control-sm" value="${data.qr_code}" id="pixCopiaCola" readonly style="font-size: 0.8rem;">
+                    <button class="btn btn-primary btn-sm" type="button" onclick="copiarPix()">
+                        <i class="fas fa-copy"></i> Copiar
+                    </button>
+                </div>
             </div>
             
-            <div class="alert alert-info small">
-                <i class="fas fa-info-circle"></i> Após pagar no seu banco, aguarde alguns instantes e atualize a página.
+            <div class="alert alert-success small mb-0">
+                <i class="fas fa-check-circle"></i> Após o pagamento, a baixa será automática em instantes.
             </div>
         `;
 
     } catch (error) {
-        console.error(error);
-        let msg = error.message || "Erro desconhecido";
-        if(msg.includes("400")) msg = "Erro: Verifique se seu CPF está cadastrado no perfil.";
-        modalBody.innerHTML = `<div class="alert alert-danger">${msg}</div>`;
+        console.error("Erro Pix:", error);
+        let msg = error.message || "Erro desconhecido ao gerar Pix.";
+        if(msg.includes("400")) msg = "Falha: Verifique se seu CPF está preenchido no perfil.";
+        
+        modalBody.innerHTML = `
+            <div class="text-center text-danger">
+                <i class="fas fa-exclamation-circle fa-3x mb-3"></i>
+                <p>${msg}</p>
+            </div>
+        `;
     }
 }
 
-// Função global auxiliar para copiar
 window.copiarPix = function() {
     const copyText = document.getElementById("pixCopiaCola");
     copyText.select();
-    copyText.setSelectionRange(0, 99999); // Para mobile
-    navigator.clipboard.writeText(copyText.value);
-    alert("Código PIX copiado!");
+    copyText.setSelectionRange(0, 99999); // Mobile
+    navigator.clipboard.writeText(copyText.value).then(() => {
+        const btn = document.querySelector('#pixModal .input-group button');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check"></i> Copiado!';
+        btn.classList.replace('btn-primary', 'btn-success');
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.classList.replace('btn-success', 'btn-primary');
+        }, 2000);
+    });
 }
 
-// --- FUNÇÕES DE PAGAMENTO LIMPAS ---
+// --- FUNÇÕES DE PAGAMENTO (Chamadas pelos botões) ---
 
 async function pagarMensalidadeOnline(event, mensalidadeId) {
-    // Chama o modal diretamente para a rota de PIX de mensalidade
     await exibirModalPix(`/pagamentos/pix/mensalidade/${mensalidadeId}`);
 }
 
 async function pagarEventoOnline(event, inscricaoId) {
-    // Chama o modal diretamente para a rota de PIX de evento
     await exibirModalPix(`/pagamentos/pix/inscricao/${inscricaoId}`);
 }
 
 
-// --- RESTO DO CÓDIGO DO APP.JS (Router, Navegação, etc) ---
+// --- INICIALIZAÇÃO E ROTAS (Router) ---
 
 function updateActiveNav(path) {
     const navLinks = document.querySelectorAll('.nav__link');
@@ -156,6 +176,8 @@ const router = async () => {
     }
 };
 
+// --- HANDLERS DE PÁGINAS ---
+
 function handleLoginCallback() {
     ui.toggleNav(false);
     appRoot.innerHTML = '<p class="text-center mt-5">Autenticando...</p>';
@@ -206,16 +228,19 @@ async function handleDashboardPage() {
         const profile = await api.getProfile();
         document.getElementById('aluno-nome').innerText = profile.nome;
         document.getElementById('aluno-email').innerText = profile.email;
-        
+        document.getElementById('profile-picture').src = profile.foto || '/portal/images/default-avatar.png';
+        document.getElementById('aluno-telefone').innerText = profile.telefone || '-';
+        document.getElementById('aluno-nascimento').innerText = profile.data_nascimento || '-';
+
         const matriculasContainer = document.getElementById('matriculas-container');
         try {
             const matriculas = await api.getMatriculas();
             if (matriculas.length > 0) {
                 matriculasContainer.innerHTML = `<ul class="list-group list-group-flush">${matriculas.map(m => `<li class="list-group-item"><span>${m.turma.nome}</span></li>`).join('')}</ul>`;
             } else {
-                matriculasContainer.innerHTML = '<p class="text-muted">Sem matrículas ativas.</p>';
+                matriculasContainer.innerHTML = '<p class="text-muted small p-2">Sem matrículas ativas.</p>';
             }
-        } catch (e) {}
+        } catch (e) { matriculasContainer.innerHTML = '<p class="text-danger small">Erro ao carregar.</p>'; }
     } catch (error) {
         ui.showAlert('Erro ao carregar perfil.');
     }
@@ -225,27 +250,69 @@ async function handleCarteirinhaPage() {
     try {
         const profile = await api.getProfile();
         document.getElementById('aluno-nome').innerText = profile.nome;
+        document.getElementById('aluno-foto').src = profile.foto || '/portal/images/default-avatar.png';
         document.getElementById('aluno-matricula').innerText = 1000 + profile.id;
-        document.getElementById('aluno-status').innerText = profile.status_geral === "Ativo" ? "Aluno Ativo" : "Inativo";
-        document.getElementById('aluno-status').className = profile.status_geral === "Ativo" ? "badge bg-success" : "badge bg-secondary";
+        document.getElementById('aluno-email').innerText = profile.email || '-';
+        document.getElementById('aluno-telefone').innerText = profile.telefone || '-';
+        document.getElementById('aluno-nascimento').innerText = profile.data_nascimento || '-';
+        const statusEl = document.getElementById('aluno-status');
+        statusEl.innerText = profile.status_geral === "Ativo" ? "Aluno Ativo" : "Inativo";
+        statusEl.className = profile.status_geral === "Ativo" ? "badge bg-success" : "badge bg-secondary";
     } catch (error) {}
 }
 
 async function handleEditProfilePage() {
-    // ... (código de edição de perfil mantido igual, apenas certifique-se de que está lá) ...
-    // Se precisar do código completo dessa função, avise.
-    // Por brevidade, assumo que você manterá a lógica de preenchimento de formulário.
-    console.log("Carregando edição de perfil...");
-    const profile = await api.getProfile();
-    document.getElementById('nome').value = profile.nome;
-    // ... etc ...
+    try {
+        const profile = await api.getProfile();
+        document.getElementById('nome').value = profile.nome || '';
+        document.getElementById('email').value = profile.email || '';
+        document.getElementById('cpf').value = profile.cpf || '';
+        document.getElementById('telefone').value = profile.telefone || '';
+        document.getElementById('data_nascimento').value = profile.data_nascimento || '';
+        document.getElementById('endereco').value = profile.endereco || '';
+        document.getElementById('observacoes').value = profile.observacoes || '';
+        document.getElementById('foto-preview').src = profile.foto || '/portal/images/default-avatar.png';
+
+        const form = document.getElementById('edit-profile-form');
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-save-profile');
+            btn.disabled = true; btn.innerHTML = 'Salvando...';
+            
+            const formData = new FormData(form);
+            // Adicione o arquivo manualmente se selecionado, pois FormData às vezes falha com input file vazio
+            const fileInput = document.getElementById('foto');
+            if (fileInput.files.length > 0) {
+                formData.set('foto', fileInput.files[0]);
+            }
+
+            try {
+                await api.updateProfile(formData);
+                ui.showAlert('Perfil atualizado!', 'success');
+            } catch (err) {
+                ui.showAlert('Erro ao atualizar: ' + err.message);
+            } finally {
+                btn.disabled = false; btn.innerHTML = 'Salvar Alterações';
+            }
+        };
+        
+        // Preview de imagem
+        document.getElementById('foto').onchange = (e) => {
+            if(e.target.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(ev) { document.getElementById('foto-preview').src = ev.target.result; };
+                reader.readAsDataURL(e.target.files[0]);
+            }
+        };
+        
+    } catch (e) { console.error(e); }
 }
 
 async function handlePaymentsPage() {
     const list = document.getElementById('payments-list');
     try {
         const pendencias = await api.getPayments();
-        if (pendencias.length === 0) {
+        if (!pendencias || pendencias.length === 0) {
             list.innerHTML = '<p class="text-muted text-center mt-4">Nenhuma pendência.</p>';
             return;
         }
@@ -253,17 +320,18 @@ async function handlePaymentsPage() {
             const vencimento = new Date(p.data_vencimento + 'T00:00:00').toLocaleDateString('pt-BR');
             const isPendente = p.status === 'pendente';
             let payFunction = p.tipo === 'inscricao' ? `pagarEventoOnline(event, ${p.id})` : `pagarMensalidadeOnline(event, ${p.id})`;
-            
+            let icon = p.tipo === 'inscricao' ? 'fa-calendar-check' : 'fa-file-invoice-dollar';
+
             return `
-            <div class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+            <div class="list-group-item d-flex justify-content-between align-items-center flex-wrap py-3">
                 <div class="me-auto">
-                    <h6 class="mb-1">${p.descricao}</h6>
-                    <small class="text-muted">Venc: ${vencimento} | R$ ${p.valor.toFixed(2)}</small>
+                    <div class="fw-bold"><i class="fas ${icon} me-2 text-muted"></i>${p.descricao}</div>
+                    <div class="small text-muted">Venc: ${vencimento} • Valor: <strong>R$ ${p.valor.toFixed(2)}</strong></div>
                 </div>
                 <div class="mt-2 mt-md-0">
                     ${isPendente && p.valor > 0 ? 
-                        `<button class="btn btn-sm btn-primary" onclick="${payFunction}"><i class="fas fa-qrcode me-1"></i>Pagar PIX</button>` : 
-                        `<span class="badge bg-${p.status === 'pago' ? 'success' : 'secondary'}">${p.status}</span>`
+                        `<button class="btn btn-sm btn-primary shadow-sm" onclick="${payFunction}"><i class="fas fa-qrcode me-1"></i> Pagar Pix</button>` : 
+                        `<span class="badge bg-${p.status === 'pago' ? 'success' : 'secondary'} rounded-pill">${p.status}</span>`
                     }
                 </div>
             </div>`;
@@ -277,42 +345,76 @@ async function handleEventsPage() {
     const list = document.getElementById('events-list');
     try {
         const events = await api.getEvents();
-        if (events.length === 0) {
-            list.innerHTML = '<p class="text-muted text-center mt-4">Nenhum evento.</p>';
+        if (!events || events.length === 0) {
+            list.innerHTML = '<p class="text-muted text-center mt-4">Nenhum evento disponível.</p>';
             return;
         }
-        list.innerHTML = events.map(e => `
-            <div class="card mb-3">
+        list.innerHTML = events.map(e => {
+             const data = new Date(e.data_evento).toLocaleDateString('pt-BR');
+             const hora = new Date(e.data_evento).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+             
+             return `
+            <div class="card mb-3 shadow-sm border-0">
                 <div class="card-body">
-                    <h5 class="card-title">${e.nome}</h5>
-                    <p>${e.descricao || ''}</p>
-                    ${!e.is_inscrito && e.status === 'Ativo' ? 
-                        `<button class="btn btn-sm btn-primary" onclick="inscreverEmEvento(event, ${e.id})">Inscrever-se</button>` : 
-                        `<button class="btn btn-sm btn-secondary" disabled>${e.is_inscrito ? 'Inscrito' : e.status}</button>`
-                    }
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h5 class="card-title fw-bold text-primary mb-1">${e.nome}</h5>
+                            <small class="text-muted"><i class="far fa-calendar me-1"></i>${data} às ${hora}</small>
+                        </div>
+                        <div>
+                             ${e.is_inscrito ? 
+                                `<span class="badge bg-success"><i class="fas fa-check me-1"></i>Inscrito</span>` : 
+                                (e.status === 'Ativo' ? `<button class="btn btn-sm btn-primary" onclick="inscreverEmEvento(event, ${e.id})">Inscrever</button>` : `<span class="badge bg-secondary">${e.status}</span>`)
+                             }
+                        </div>
+                    </div>
+                    <p class="card-text mt-2 small text-secondary">${e.descricao || 'Sem descrição.'}</p>
+                    <div class="small text-muted">Valor: <strong>R$ ${e.valor_inscricao.toFixed(2)}</strong></div>
                 </div>
-            </div>
-        `).join('');
-    } catch (error) {}
+            </div>`;
+        }).join('');
+    } catch (error) { console.error(error); }
 }
 
 async function inscreverEmEvento(event, eventoId) {
+    const btn = event.currentTarget;
+    btn.disabled = true; btn.innerHTML = '...';
     try {
         await api.enrollInEvent(eventoId);
-        ui.showAlert('Inscrição realizada!', 'success');
-        handleEventsPage(); // Recarrega a lista
+        ui.showAlert('Inscrição realizada! Verifique a aba Pagamentos.', 'success');
+        handleEventsPage(); // Recarrega
     } catch (error) {
         ui.showAlert(error.message || 'Erro ao inscrever.');
+        btn.disabled = false; btn.innerHTML = 'Inscrever';
     }
 }
 
 async function handleBeneficiosPage() {
-    // ... (código de benefícios existente) ...
+    const list = document.getElementById('partners-list');
+    // Mantém a lista de parceiros que você já tinha
+    const partners = [
+         { logo: '/portal/images/iron.png', nome: 'Centro de Treinamento Iron Gym', desconto: '20% de desconto na Mensalidade.', whatsapp: '5532985062330' },
+         { logo: '/portal/images/bull.png', nome: 'Arthur Carvalho Duarte - ARQUITETURA', desconto: 'Desconto de 20% em seu projeto.', whatsapp: '5532988810989' },
+         { logo: '/portal/images/alexandria.png', nome: 'Alexandria Hamburgueria', desconto: '20% de desconto em todos os Rodízios.', whatsapp: '5532933003620' },
+         { logo: '/portal/images/lucasStarck.png', nome: 'Lucas Starck - Nutricionista', desconto: 'Consulta com 50% de desconto.', whatsapp: '5532998180941' }
+    ];
+
+    list.innerHTML = partners.map(p => `
+        <div class="col-6 col-md-4 mb-4">
+            <div class="card h-100 text-center shadow-sm border-0 p-2">
+                <img src="${p.logo}" class="card-img-top mx-auto mt-2" alt="${p.nome}" style="max-height: 60px; width: auto; max-width: 100%; object-fit: contain;">
+                <div class="card-body d-flex flex-column p-2">
+                    <h6 class="card-title small fw-bold mb-1">${p.nome}</h6>
+                    <p class="card-text x-small text-muted mb-2" style="font-size: 0.75rem;">${p.desconto}</p>
+                    ${p.whatsapp ? `<a href="https://wa.me/${p.whatsapp}?text=Sou%20aluno%20da%20Academia..." target="_blank" class="btn btn-success btn-sm mt-auto py-0" style="font-size: 0.75rem;"><i class="fab fa-whatsapp"></i> Contato</a>` : ''}
+                </div>
+            </div>
+        </div>
+    `).join('');
 }
 
 window.addEventListener('hashchange', router);
 window.addEventListener('load', () => {
-    // Inicialização simplificada (removemos initializePaymentSystem pois não precisamos configurar Stripe)
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/portal/sw.js').catch(err => console.error('Erro SW:', err));
     }
