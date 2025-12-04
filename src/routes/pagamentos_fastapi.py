@@ -1,132 +1,47 @@
-# src/routes/pagamentos_fastapi.py
+# Arquivo: src/routes/pagamentos_fastapi.py
+# -*- coding: utf-8 -*-
 
 import os
-import stripe
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy.orm import Session, joinedload
-from datetime import date, datetime
+from sqlalchemy.orm import Session
+from typing import Optional
 
 from src.database import get_db
-from src.models.mensalidade import Mensalidade
-from src.models.inscricao import Inscricao
-from src.models.financeiro import Financeiro
 from src import auth
 from src.models import usuario as models_usuario
 
-# Importa a nova lógica do Mercado Pago
+# Importa a lógica do Mercado Pago
 from src.routes import pagamentos_mercadopago
 
+# Cria o roteador sem prefixo duplicado (o prefixo já vem do main.py)
 router = APIRouter(
     tags=["Pagamentos"],
 )
 
-# Configuração Stripe (mantida para quando o modo for 'stripe')
-stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-
-# --- ROTA DE CONFIGURAÇÃO (NOVA) ---
+# --- ROTA DE CONFIGURAÇÃO ---
 @router.get("/config")
 def get_payment_config():
     """
-    Informa ao frontend qual provedor de pagamento está ativo (stripe ou mercadopago).
+    Informa ao frontend que o provedor ativo é o Mercado Pago.
     """
-    provider = os.getenv("PAYMENT_PROVIDER", "stripe").lower()
     return {
-        "provider": provider,
-        "stripePublicKey": os.getenv("STRIPE_PUBLIC_KEY") if provider == 'stripe' else None
+        "provider": "mercadopago",
+        "stripePublicKey": None 
     }
-# -----------------------------------
 
-# --- FUNÇÕES AUXILIARES (STRIPE ANTIGO) ---
-# (Mantemos sua lógica antiga aqui, encapsulada)
-def create_checkout_session_stripe(db: Session, current_user: models_usuario.Usuario, item_id: int, item_type: str):
-    if not stripe.api_key:
-        raise HTTPException(status_code=500, detail="Chave de API da Stripe não configurada.")
-    
-    frontend_pwa_url = os.getenv("FRONTEND_PWA_URL", "http://localhost:8000/portal")
-    line_item = {}
-    
-    if item_type == "mensalidade":
-        db_item = db.query(Mensalidade).options(joinedload(Mensalidade.aluno), joinedload(Mensalidade.plano)).filter(Mensalidade.id == item_id).first()
-        if not db_item or db_item.aluno.usuario_id != current_user.id:
-            raise HTTPException(status_code=404, detail="Mensalidade não encontrada.")
-        line_item = { "price_data": { "currency": "brl", "product_data": { "name": f"Mensalidade - {db_item.plano.nome}" }, "unit_amount": int(db_item.valor * 100), }, "quantity": 1, }
-        success_path = "#/payments?payment=success"
-    
-    elif item_type == "inscricao":
-        db_item = db.query(Inscricao).options(joinedload(Inscricao.aluno), joinedload(Inscricao.evento)).filter(Inscricao.id == item_id).first()
-        if not db_item or db_item.aluno.usuario_id != current_user.id:
-            raise HTTPException(status_code=404, detail="Inscrição não encontrada.")
-        line_item = { "price_data": { "currency": "brl", "product_data": { "name": f"Inscrição - {db_item.evento.nome}" }, "unit_amount": int(db_item.evento.valor_inscricao * 100), }, "quantity": 1, }
-        success_path = "#/events?payment=success"
-
-    try:
-        success_url = f"{frontend_pwa_url.rstrip('/')}{success_path}"
-        cancel_url = f"{frontend_pwa_url.rstrip('/')}/#/payments?payment=canceled"
-
-        checkout_session = stripe.checkout.Session.create(
-            payment_method_types=['card', 'boleto'],
-            line_items=[line_item],
-            mode='payment',
-            success_url=success_url,
-            cancel_url=cancel_url,
-            metadata={ 'item_id': item_id, 'item_type': item_type }
-        )
-        return {"sessionId": checkout_session.id} # Retorna session ID para Stripe
-    except Exception as e:
-        logging.error(f"Erro Stripe: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-# --- ROTAS UNIFICADAS (O "CÉREBRO") ---
+# --- ROTAS DE CHECKOUT PRO (Link de Pagamento) ---
+# Úteis se você quiser manter a opção de boleto/cartão via redirecionamento
 
 @router.post("/gerar/mensalidade/{mensalidade_id}")
 def gerar_pagamento_mensalidade(mensalidade_id: int, db: Session = Depends(get_db), current_user: models_usuario.Usuario = Depends(auth.get_current_active_user)):
-    provider = os.getenv("PAYMENT_PROVIDER", "stripe").lower()
-    
-    if provider == 'mercadopago':
-        # Chama a nova lógica
-        return pagamentos_mercadopago.create_preference_mp(db, mensalidade_id, "mensalidade")
-    else:
-        # Chama a lógica antiga (Stripe)
-        return create_checkout_session_stripe(db, current_user, mensalidade_id, "mensalidade")
+    return pagamentos_mercadopago.create_preference_mp(db, mensalidade_id, "mensalidade")
 
 @router.post("/gerar/evento/{inscricao_id}")
 def gerar_pagamento_evento(inscricao_id: int, db: Session = Depends(get_db), current_user: models_usuario.Usuario = Depends(auth.get_current_active_user)):
-    provider = os.getenv("PAYMENT_PROVIDER", "stripe").lower()
-    
-    if provider == 'mercadopago':
-        return pagamentos_mercadopago.create_preference_mp(db, inscricao_id, "inscricao")
-    else:
-        return create_checkout_session_stripe(db, current_user, inscricao_id, "inscricao")
+    return pagamentos_mercadopago.create_preference_mp(db, inscricao_id, "inscricao")
 
-# --- WEBHOOKS SEPARADOS ---
-
-# Webhook Stripe (Antigo)
-@router.post("/stripe/webhook")
-async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
-    # ... (Mantenha o código do webhook da Stripe aqui, inalterado) ...
-    # ... (Vou resumir para caber na resposta, mas copie o original que já funcionava) ...
-    payload = await request.body()
-    sig_header = request.headers.get('stripe-signature')
-    webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
-    
-    try:
-        event = stripe.Webhook.construct_event(payload=payload, sig_header=sig_header, secret=webhook_secret)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail="Erro Stripe Webhook")
-        
-    if event['type'] == 'checkout.session.completed':
-        session = event['data']['object']
-        # ... (lógica de confirmação do stripe) ...
-        # RECOMENDO COPIAR A LÓGICA QUE VOCÊ JÁ TINHA NO ARQUIVO ORIGINAL PARA ESTE BLOCO
-        pass 
-        
-    return {"status": "success"}
-
-# src/routes/pagamentos_fastapi.py
-
-# ... imports ...
+# --- NOVA ROTA DE PIX TRANSPARENTE (QR Code na Tela) ---
 
 @router.post("/pix/{item_type}/{item_id}")
 def gerar_pix_transparente(
@@ -136,33 +51,30 @@ def gerar_pix_transparente(
     current_user: models_usuario.Usuario = Depends(auth.get_current_active_user)
 ):
     """
-    Gera um QR Code PIX para o item especificado.
+    Gera um QR Code PIX direto para o item especificado.
     """
-    # Busca dados do aluno para preencher o pagador
-    # O ideal é que o aluno tenha CPF cadastrado
     if not current_user.aluno:
          raise HTTPException(status_code=400, detail="Usuário não vinculado a um aluno.")
     
-    # Tratamento simples do CPF (remove caracteres não numéricos se houver)
+    # Limpa o CPF (remove pontos e traços)
     import re
     cpf_limpo = re.sub(r'[^0-9]', '', current_user.aluno.cpf or "")
     
     if not cpf_limpo:
-        # Se não tiver CPF, usamos um genérico ou retornamos erro (O MP exige documento para PIX)
-        # Para teste pode tentar passar sem, mas produção exige.
-        raise HTTPException(status_code=400, detail="CPF do aluno é necessário para gerar o PIX.")
+        raise HTTPException(status_code=400, detail="CPF do aluno é obrigatório para gerar o PIX.")
 
+    # Chama a função de PIX no arquivo de lógica
     return pagamentos_mercadopago.create_pix_payment(
         db=db,
         item_id=item_id,
         item_type=item_type,
         payer_email=current_user.email,
-        payer_first_name=current_user.nome.split()[0], # Pega o primeiro nome
+        payer_first_name=current_user.nome.split()[0], # Primeiro nome
         doc_number=cpf_limpo
     )
 
+# --- WEBHOOK (Notificações do Mercado Pago) ---
 
-# Webhook Mercado Pago (Novo)
 @router.post("/mercadopago/webhook")
 async def mercadopago_webhook(request: Request, db: Session = Depends(get_db)):
     return await pagamentos_mercadopago.handle_mp_webhook(request, db)
