@@ -11,7 +11,72 @@ const routes = {
     '/edit-profile': { page: '/portal/pages/edit_profile.html', handler: handleEditProfilePage },
     '/payments': { page: '/portal/pages/payments.html', handler: handlePaymentsPage },
     '/events': { page: '/portal/pages/events.html', handler: handleEventsPage },
-    '/beneficios': { page: '/portal/pages/beneficios.html', handler: handleBeneficiosPage }
+    '/beneficios': { page: '/portal/pages/beneficios.html', handler: handleBeneficiosPage },
+    '/prof/dashboard': { page: '/portal/pages/prof_dashboard.html', handler: handleProfDashboard },
+    '/prof/alunos/novo': { page: '/portal/pages/prof_aluno_novo.html', handler: handleProfAlunoNovo },
+    '/prof/matricula': { page: '/portal/pages/prof_matricula.html', handler: handleProfMatricula },
+    '/prof/financeiro': { page: '/portal/pages/prof_financeiro.html', handler: handleProfFinanceiro },
+};
+
+async function handleProfFinanceiro() {
+    const inputBusca = document.getElementById('busca-aluno');
+    const btnBuscar = document.getElementById('btn-buscar');
+    const lista = document.getElementById('lista-mensalidades');
+
+    const carregar = async (termo = '') => {
+        lista.innerHTML = '<div class="text-center py-3"><div class="spinner-border text-primary"></div></div>';
+        try {
+            const contas = await api.request(`/portal-professor/mensalidades-pendentes?busca=${termo}`);
+            
+            if (contas.length === 0) {
+                lista.innerHTML = '<p class="text-muted text-center">Nenhuma mensalidade pendente encontrada.</p>';
+                return;
+            }
+
+            lista.innerHTML = contas.map(c => `
+                <div class="list-group-item p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="mb-0 fw-bold">${c.aluno.nome}</h6>
+                        <span class="badge bg-warning text-dark">Pendente</span>
+                    </div>
+                    <div class="small text-muted mb-2">
+                        Venc: ${new Date(c.data_vencimento).toLocaleDateString('pt-BR')} <br>
+                        Plano: ${c.plano.nome}
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 text-primary">R$ ${c.valor.toFixed(2)}</h5>
+                        <button class="btn btn-success btn-sm" onclick="receberDinheiro(${c.id}, '${c.aluno.nome}', ${c.valor})">
+                            <i class="fas fa-hand-holding-usd me-1"></i> Receber
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        } catch (err) {
+            lista.innerHTML = '<p class="text-danger text-center">Erro ao carregar.</p>';
+        }
+    };
+
+    btnBuscar.onclick = () => carregar(inputBusca.value);
+    // Carrega inicial
+    carregar();
+}
+
+// Função global para o onclick
+window.receberDinheiro = async (id, nome, valor) => {
+    if(!confirm(`Confirmar recebimento de R$ ${valor.toFixed(2)} de ${nome} em DINHEIRO?`)) return;
+
+    try {
+        await api.request(`/portal-professor/mensalidades/${id}/receber-dinheiro`, 'POST');
+        ui.showAlert('Pagamento recebido com sucesso!', 'success');
+        // Recarrega a lista
+        const inputBusca = document.getElementById('busca-aluno');
+        if(inputBusca) {
+             // Simula clique para buscar novamente
+             document.getElementById('btn-buscar').click();
+        }
+    } catch (err) {
+        ui.showAlert(err.message, 'danger');
+    }
 };
 
 // --- FUNÇÕES DO MODAL PIX (NOVO) ---
@@ -261,17 +326,35 @@ function handleLoginCallback() {
     }
 }
 
+// Substitua a função handleLoginPage existente por esta:
 function handleLoginPage() {
     const form = document.getElementById('login-form');
-    form.addEventListener('submit', async (e) => {
+    // Remove listeners antigos para evitar duplicação
+    const newForm = form.cloneNode(true);
+    form.parentNode.replaceChild(newForm, form);
+
+    newForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const username = e.target.username.value; 
         const password = e.target.password.value;
         try {
             const data = await api.login(username, password);
-            if (data.user_info.role !== 'aluno') throw new Error("Acesso permitido somente a alunos.");
+            
+            // Permite Aluno, Professor ou Atendente
+            const allowedRoles = ['aluno', 'professor', 'atendente', 'administrador'];
+            if (!allowedRoles.includes(data.user_info.role)) {
+                throw new Error("Tipo de usuário não suportado no Portal.");
+            }
+
             localStorage.setItem('accessToken', data.access_token);
-            window.location.hash = '/dashboard';
+            localStorage.setItem('userRole', data.user_info.role); // Salva a role
+            
+            // Redirecionamento baseado na role
+            if (data.user_info.role === 'aluno') {
+                window.location.hash = '/dashboard';
+            } else {
+                window.location.hash = '/prof/dashboard'; // Nova rota para professor
+            }
         } catch (error) {
             ui.showAlert(error.message || 'Email ou senha inválidos.');
         }
@@ -466,7 +549,9 @@ async function handleBeneficiosPage() {
          { logo: '/portal/images/iron.png', nome: 'Centro de Treinamento Iron Gym', desconto: '20% de desconto na Mensalidade.', whatsapp: '5532985062330' },
          { logo: '/portal/images/bull.png', nome: 'Arthur Carvalho Duarte - ARQUITETURA', desconto: 'Desconto de 20% em seu projeto.', whatsapp: '5532988810989' },
          { logo: '/portal/images/alexandria.png', nome: 'Alexandria Hamburgueria', desconto: '20% de desconto em todos os Rodízios.', whatsapp: '5532933003620' },
-         { logo: '/portal/images/lucasStarck.png', nome: 'Lucas Starck - Nutricionista', desconto: 'Consulta com 50% de desconto.', whatsapp: '5532998180941' }
+         { logo: '/portal/images/lucasStarck.png', nome: 'Lucas Starck - Nutricionista', desconto: 'Consulta com 50% de desconto.', whatsapp: '5532998180941' },
+         { logo: '/portal/images/mamaefazaFesta.png', nome: 'Mamãe Faz a Festa', desconto: '20% de desconto.', whatsapp: '5532988992094' },
+         { logo: '/portal/images/casadoanimal.png', nome: 'Casa do Animal Porto', desconto: 'Animais em geral 25%, Acessórios pet 20%.', whatsapp: '5532998641939' },
     ];
 
     list.innerHTML = partners.map(p => `
@@ -481,6 +566,30 @@ async function handleBeneficiosPage() {
             </div>
         </div>
     `).join('');
+}
+
+function handleProfAlunoNovo() {
+    const form = document.getElementById('form-novo-aluno');
+    form.onsubmit = async (e) => {
+        e.preventDefault();
+        const btn = form.querySelector('button');
+        ui.showLoading(btn); // Supondo que vc adapte seu ui.showLoading para não substituir o root, ou use um spinner simples
+
+        const formData = new FormData(form);
+        // O endpoint de alunos espera form data normal
+        
+        try {
+            // Chamada direta à API de gestão de alunos
+            await api.request('/alunos', 'POST', formData, true); 
+            ui.showAlert('Aluno cadastrado com sucesso!', 'success');
+            form.reset();
+        } catch (err) {
+            ui.showAlert(err.message, 'danger');
+        } finally {
+            btn.innerHTML = 'Cadastrar';
+            btn.disabled = false;
+        }
+    };
 }
 
 window.addEventListener('hashchange', router);

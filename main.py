@@ -22,13 +22,12 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import create_first_user
 
-
 from src.models import aluno, professor, turma, evento, financeiro, matricula, plano, mensalidade, produto, categoria, historico_matricula, inscricao
 
 from src.routes import (alunos_fastapi, professores_fastapi, turmas_fastapi, eventos_fastapi, 
                         financeiro_fastapi, matriculas_fastapi, planos_fastapi, mensalidades_fastapi, 
                         produtos_fastapi, categorias_fastapi, 
-                        dashboard_fastapi, inscricoes_fastapi,portal_aluno_fastapi
+                        dashboard_fastapi, inscricoes_fastapi,portal_aluno_fastapi,portal_professor_fastapi
 )
 
 from src.database import engine, Base
@@ -118,6 +117,7 @@ app.include_router(inscricoes_fastapi.router, prefix="/api/v1/inscricoes")
 app.include_router(auth_fastapi.router)
 app.include_router(usuarios_fastapi.router)
 app.include_router(portal_aluno_fastapi.router)
+app.include_router(portal_professor_fastapi.router)
 
 
 
