@@ -455,7 +455,7 @@ async function handleProfMatricula() {
     const selectPlano = document.getElementById('select-plano');
     const form = document.getElementById('form-matricula');
 
-    // 1. Carrega Turmas e Planos (apenas isso no início)
+    // 1. Carrega apenas Turmas e Planos (removemos o carregamento de Alunos aqui)
     try {
         const [turmas, planos] = await Promise.all([
             api.request('/turmas'),
@@ -465,30 +465,29 @@ async function handleProfMatricula() {
         selectTurma.innerHTML += turmas.map(t => `<option value="${t.id}">${t.nome} (${t.modalidade})</option>`).join('');
         selectPlano.innerHTML += planos.map(p => `<option value="${p.id}">${p.nome} - R$ ${p.valor}</option>`).join('');
     } catch (e) {
-        ui.showAlert('Erro ao carregar listas.', 'danger');
+        ui.showAlert('Erro ao carregar listas de Turmas/Planos.', 'danger');
     }
 
-    // 2. Lógica de Busca de Aluno (Typeahead)
+    // 2. Lógica de Busca de Aluno (Ao digitar)
     let debounceTimer;
     searchInput.addEventListener('input', (e) => {
         const termo = e.target.value;
         
-        // Limpa busca anterior
         clearTimeout(debounceTimer);
-        hiddenIdInput.value = ''; // Reseta o ID se o usuário mudou o texto
+        hiddenIdInput.value = ''; // Reseta o ID se mudar o texto
         
         if (termo.length < 3) {
             resultsContainer.style.display = 'none';
             return;
         }
 
-        // Aguarda 300ms após parar de digitar para chamar a API (Performance)
+        // Aguarda 300ms para não chamar a API a cada letra
         debounceTimer = setTimeout(async () => {
             resultsContainer.innerHTML = '<div class="list-group-item text-muted"><small>Buscando...</small></div>';
             resultsContainer.style.display = 'block';
 
             try {
-                // Chama a API filtrando por nome
+                // Busca na API filtrando por nome
                 const data = await api.request(`/alunos?nome=${termo}&limit=5`);
                 const alunos = data.alunos || [];
 
@@ -508,18 +507,17 @@ async function handleProfMatricula() {
         }, 300);
     });
 
-    // Função auxiliar para selecionar (precisa estar no escopo ou global)
+    // Função global para selecionar o aluno da lista
     window.selecionarAluno = (id, nome) => {
-        searchInput.value = nome;       // Preenche o campo visual
-        hiddenIdInput.value = id;       // Preenche o campo oculto (importante!)
+        searchInput.value = nome;       // Mostra o nome
+        hiddenIdInput.value = id;       // Guarda o ID
         resultsContainer.style.display = 'none'; // Esconde a lista
-        // Previne o comportamento padrão do link
         if(event) event.preventDefault();
     };
 
     // Fecha a lista se clicar fora
     document.addEventListener('click', (e) => {
-        if (!searchInput.contains(e.target) && !resultsContainer.contains(e.target)) {
+        if (searchInput && resultsContainer && !searchInput.contains(e.target) && !resultsContainer.contains(e.target)) {
             resultsContainer.style.display = 'none';
         }
     });
@@ -528,7 +526,6 @@ async function handleProfMatricula() {
     form.onsubmit = async (e) => {
         e.preventDefault();
         
-        // Validação manual do ID do aluno
         if (!hiddenIdInput.value) {
             ui.showAlert('Por favor, pesquise e selecione um aluno da lista.', 'warning');
             searchInput.focus();
@@ -539,7 +536,7 @@ async function handleProfMatricula() {
         btn.disabled = true; btn.innerHTML = 'Matriculando...';
 
         const data = {
-            aluno_id: parseInt(hiddenIdInput.value), // Usa o ID oculto
+            aluno_id: parseInt(hiddenIdInput.value),
             turma_id: parseInt(selectTurma.value),
             plano_id: parseInt(selectPlano.value)
         };
@@ -547,11 +544,8 @@ async function handleProfMatricula() {
         try {
             await api.request('/matriculas', 'POST', data);
             ui.showAlert('Matrícula realizada com sucesso!', 'success');
-            
-            // Reseta o formulário
             form.reset();
             hiddenIdInput.value = '';
-            
         } catch (err) {
             ui.showAlert(err.message, 'danger');
         } finally {
