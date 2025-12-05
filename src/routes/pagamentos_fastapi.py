@@ -11,6 +11,8 @@ import re
 from src.database import get_db
 from src import auth
 from src.models import usuario as models_usuario
+from src.models.mensalidade import Mensalidade
+from src.models.inscricao import Inscricao
 
 # Importa a lógica do Mercado Pago
 from src.routes import pagamentos_mercadopago
@@ -62,6 +64,30 @@ def gerar_pix_transparente(
         payer_first_name=current_user.nome.split()[0], # Pega o primeiro nome
         doc_number=cpf_limpo
     )
+
+@router.get("/status/{item_type}/{item_id}")
+def check_payment_status(
+    item_type: str, 
+    item_id: int, 
+    db: Session = Depends(get_db),
+    current_user: models_usuario.Usuario = Depends(auth.get_current_active_user)
+):
+    """
+    Verifica o status de um pagamento (usado pelo polling do frontend).
+    """
+    status_pagamento = "pendente"
+    
+    if item_type == "mensalidade":
+        item = db.query(Mensalidade).filter(Mensalidade.id == item_id).first()
+        if item:
+            status_pagamento = item.status
+            
+    elif item_type == "inscricao":
+        item = db.query(Inscricao).filter(Inscricao.id == item_id).first()
+        if item:
+            status_pagamento = item.status
+    
+    return {"status": status_pagamento}
 
 # --- WEBHOOK (Para confirmar o pagamento automaticamente) ---
 @router.post("/mercadopago/webhook")

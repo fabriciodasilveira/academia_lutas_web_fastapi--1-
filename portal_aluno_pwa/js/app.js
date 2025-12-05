@@ -16,8 +16,15 @@ const routes = {
 
 // --- FUNÇÕES DO MODAL PIX (NOVO) ---
 
-async function exibirModalPix(endpoint) {
-    // 1. Injeta o HTML do Modal se ainda não existir
+// Em portal_aluno_pwa/js/app.js
+
+let pixPollingInterval = null; // Variável global para controlar o intervalo
+
+async function exibirModalPix(endpoint, itemType, itemId) {
+    // 1. Limpa intervalo anterior se existir
+    if (pixPollingInterval) clearInterval(pixPollingInterval);
+
+    // 2. Injeta o HTML do Modal se ainda não existir
     if (!document.getElementById('pixModal')) {
         const modalHtml = `
         <div class="modal fade" id="pixModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
@@ -28,9 +35,7 @@ async function exibirModalPix(endpoint) {
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body text-center" id="pixModalBody">
-                        <div class="spinner-border text-primary" role="status"></div>
-                        <p class="mt-2">Gerando código Pix...</p>
-                    </div>
+                        </div>
                     <div class="modal-footer justify-content-center">
                         <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Fechar</button>
                     </div>
@@ -38,41 +43,104 @@ async function exibirModalPix(endpoint) {
             </div>
         </div>`;
         document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        // Adiciona evento para parar o polling se o usuário fechar o modal manualmente
+        const pixModalEl = document.getElementById('pixModal');
+        pixModalEl.addEventListener('hidden.bs.modal', () => {
+            if (pixPollingInterval) clearInterval(pixPollingInterval);
+        });
     }
 
-    // 2. Exibe o Modal
+    // 3. Exibe o Modal com Loading inicial
     const pixModalElement = document.getElementById('pixModal');
     const pixModal = new bootstrap.Modal(pixModalElement);
     const modalBody = document.getElementById('pixModalBody');
     
-    // Reseta o conteúdo para loading
-    modalBody.innerHTML = '<div class="spinner-border text-primary" role="status"></div><p class="mt-2">Gerando código Pix...</p>';
+    modalBody.innerHTML = `
+        <div class="py-4">
+            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+            <p class="mt-3 text-muted">Gerando código Pix...</p>
+        </div>`;
+    
     pixModal.show();
 
     try {
-        // 3. Chama a API
+        // 4. Chama a API para gerar o Pix
         const data = await api.request(endpoint, 'POST');
 
-        // 4. Preenche com o QR Code
+        // 5. Preenche com o QR Code
         modalBody.innerHTML = `
-            <p class="text-muted mb-3 small">Abra o app do seu banco e escaneie o QR Code:</p>
+            <p class="text-muted mb-3 small">Escaneie o QR Code abaixo:</p>
             
-            <img src="data:image/jpeg;base64,${data.qr_code_base64}" class="img-fluid border rounded mb-3" style="max-width: 220px;">
+            <img src="data:image/jpeg;base64,${data.qr_code_base64}" class="img-fluid border rounded mb-3 shadow-sm" style="max-width: 220px;">
             
-            <div class="d-grid gap-2">
-                <label class="small text-start text-muted mb-0">Ou copie e cole o código:</label>
-                <div class="input-group mb-3">
-                    <input type="text" class="form-control form-control-sm" value="${data.qr_code}" id="pixCopiaCola" readonly style="font-size: 0.8rem;">
-                    <button class="btn btn-primary btn-sm" type="button" onclick="copiarPix()">
-                        <i class="fas fa-copy"></i> Copiar
+            <div class="d-grid gap-2 mb-3">
+                <div class="input-group">
+                    <input type="text" class="form-control form-control-sm" value="${data.qr_code}" id="pixCopiaCola" readonly>
+                    <button class="btn btn-outline-primary btn-sm" type="button" onclick="copiarPix()">
+                        <i class="fas fa-copy"></i>
                     </button>
                 </div>
+                <small class="text-muted" style="font-size: 0.75rem;">Ou copie o código acima</small>
             </div>
             
-            <div class="alert alert-success small mb-0">
-                <i class="fas fa-check-circle"></i> Após o pagamento, a baixa será automática em instantes.
+            <div class="alert alert-light border d-flex align-items-center justify-content-center gap-2" role="alert">
+                <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
+                <span class="small text-muted">Aguardando pagamento...</span>
             </div>
         `;
+
+        // 6. INICIA O POLLING (Verifica status a cada 3 segundos)
+        if (itemType && itemId) {
+            pixPollingInterval = setInterval(async () => {
+                try {
+                    // Chama a rota de status que criamos no Passo 1
+                    const statusRes = await api.request(`/pagamentos/status/${itemType}/${itemId}`);
+                    
+                    if (statusRes.status === 'pago') {
+                        clearInterval(pixPollingInterval); // Para o loop
+                        
+                        // 7. EFEITO DE SUCESSO NO MODAL
+                        modalBody.innerHTML = `
+                            <div class="py-5 animate-success">
+                                <div class="mb-3">
+                                    <i class="fas fa-check-circle text-success" style="font-size: 5rem;"></i>
+                                </div>
+                                <h4 class="text-success fw-bold">Pagamento Confirmado!</h4>
+                                <p class="text-muted">Seu pagamento foi processado com sucesso.</p>
+                            </div>
+                        `;
+                        
+                        // Remove o botão de fechar para forçar a experiência visual
+                        const modalFooter = pixModalElement.querySelector('.modal-footer');
+                        if(modalFooter) modalFooter.style.display = 'none';
+
+                        // 8. Fecha o modal e recarrega a lista após 2.5 segundos
+                        setTimeout(() => {
+                            pixModal.hide();
+                            if(modalFooter) modalFooter.style.display = 'flex'; // Restaura footer para proxima vez
+                            
+                            // Recarrega a página atual (Pagamentos ou Eventos)
+                            const currentHash = window.location.hash;
+                            if (currentHash.includes('payments')) {
+                                handlePaymentsPage();
+                            } else if (currentHash.includes('events')) {
+                                handleEventsPage(); // Se tiver lógica de status na tela de eventos
+                            } else {
+                                // Fallback genérico
+                                window.location.reload(); 
+                            }
+                            
+                            ui.showAlert('Pagamento realizado com sucesso!', 'success');
+                        }, 2500);
+                    }
+                } catch (err) {
+                    console.error("Erro no polling:", err);
+                    // Não paramos o intervalo em caso de erro de rede momentâneo, 
+                    // mas em produção pode ser bom limitar tentativas.
+                }
+            }, 3000); // 3 segundos
+        }
 
     } catch (error) {
         console.error("Erro Pix:", error);
@@ -80,7 +148,7 @@ async function exibirModalPix(endpoint) {
         if(msg.includes("400")) msg = "Falha: Verifique se seu CPF está preenchido no perfil.";
         
         modalBody.innerHTML = `
-            <div class="text-center text-danger">
+            <div class="py-4 text-center text-danger">
                 <i class="fas fa-exclamation-circle fa-3x mb-3"></i>
                 <p>${msg}</p>
             </div>
@@ -107,11 +175,13 @@ window.copiarPix = function() {
 // --- FUNÇÕES DE PAGAMENTO (Chamadas pelos botões) ---
 
 async function pagarMensalidadeOnline(event, mensalidadeId) {
-    await exibirModalPix(`/pagamentos/pix/mensalidade/${mensalidadeId}`);
+    // Passamos os parâmetros extras: tipo e id
+    await exibirModalPix(`/pagamentos/pix/mensalidade/${mensalidadeId}`, 'mensalidade', mensalidadeId);
 }
 
 async function pagarEventoOnline(event, inscricaoId) {
-    await exibirModalPix(`/pagamentos/pix/inscricao/${inscricaoId}`);
+    // Passamos os parâmetros extras: tipo e id
+    await exibirModalPix(`/pagamentos/pix/inscricao/${inscricaoId}`, 'inscricao', inscricaoId);
 }
 
 
