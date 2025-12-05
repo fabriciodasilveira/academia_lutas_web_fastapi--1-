@@ -80,7 +80,7 @@ def create_pix_payment(db: Session, item_id: int, item_type: str, payer_email: s
             "notification_url": notification_url,
             "external_reference": external_ref,
             # Validade do código PIX: 30 minutos
-            "date_of_expiration": (datetime.utcnow() + timedelta(minutes=30)).replace(microsecond=0).isoformat() + "Z"
+            "date_of_expiration": (datetime.now().astimezone() + timedelta(minutes=30)).isoformat(timespec='seconds')
         }
 
         # 4. Envia para o Mercado Pago
