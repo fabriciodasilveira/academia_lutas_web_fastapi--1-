@@ -1,258 +1,54 @@
-// Arquivo: portal_aluno_pwa/js/app.js
-
 const appRoot = document.getElementById('app-root');
 
+// --- CONFIGURAÇÃO DE ROTAS ---
 const routes = {
+    // Rotas Públicas
     '/login': { page: '/portal/pages/login.html', handler: handleLoginPage, public: true },
     '/login/callback': { handler: handleLoginCallback, public: true },
     '/register': { page: '/portal/pages/register.html', handler: handleRegisterPage, public: true },
+    
+    // Rotas do Aluno
     '/dashboard': { page: '/portal/pages/dashboard.html', handler: handleDashboardPage },
     '/carteirinha': { page: '/portal/pages/carteirinha.html', handler: handleCarteirinhaPage },
     '/edit-profile': { page: '/portal/pages/edit_profile.html', handler: handleEditProfilePage },
     '/payments': { page: '/portal/pages/payments.html', handler: handlePaymentsPage },
     '/events': { page: '/portal/pages/events.html', handler: handleEventsPage },
     '/beneficios': { page: '/portal/pages/beneficios.html', handler: handleBeneficiosPage },
+
+    // Rotas do Professor (NOVAS)
     '/prof/dashboard': { page: '/portal/pages/prof_dashboard.html', handler: handleProfDashboard },
     '/prof/alunos/novo': { page: '/portal/pages/prof_aluno_novo.html', handler: handleProfAlunoNovo },
     '/prof/matricula': { page: '/portal/pages/prof_matricula.html', handler: handleProfMatricula },
-    '/prof/financeiro': { page: '/portal/pages/prof_financeiro.html', handler: handleProfFinanceiro }
+    '/prof/financeiro': { page: '/portal/pages/prof_financeiro.html', handler: handleProfFinanceiro },
 };
 
-async function handleProfFinanceiro() {
-    const inputBusca = document.getElementById('busca-aluno');
-    const btnBuscar = document.getElementById('btn-buscar');
-    const lista = document.getElementById('lista-mensalidades');
-
-    const carregar = async (termo = '') => {
-        lista.innerHTML = '<div class="text-center py-3"><div class="spinner-border text-primary"></div></div>';
-        try {
-            const contas = await api.request(`/portal-professor/mensalidades-pendentes?busca=${termo}`);
-            
-            if (contas.length === 0) {
-                lista.innerHTML = '<p class="text-muted text-center">Nenhuma mensalidade pendente encontrada.</p>';
-                return;
-            }
-
-            lista.innerHTML = contas.map(c => `
-                <div class="list-group-item p-3">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h6 class="mb-0 fw-bold">${c.aluno.nome}</h6>
-                        <span class="badge bg-warning text-dark">Pendente</span>
-                    </div>
-                    <div class="small text-muted mb-2">
-                        Venc: ${new Date(c.data_vencimento).toLocaleDateString('pt-BR')} <br>
-                        Plano: ${c.plano.nome}
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0 text-primary">R$ ${c.valor.toFixed(2)}</h5>
-                        <button class="btn btn-success btn-sm" onclick="receberDinheiro(${c.id}, '${c.aluno.nome}', ${c.valor})">
-                            <i class="fas fa-hand-holding-usd me-1"></i> Receber
-                        </button>
-                    </div>
-                </div>
-            `).join('');
-        } catch (err) {
-            lista.innerHTML = '<p class="text-danger text-center">Erro ao carregar.</p>';
-        }
-    };
-
-    btnBuscar.onclick = () => carregar(inputBusca.value);
-    // Carrega inicial
-    carregar();
-}
-
-// Função global para o onclick
-window.receberDinheiro = async (id, nome, valor) => {
-    if(!confirm(`Confirmar recebimento de R$ ${valor.toFixed(2)} de ${nome} em DINHEIRO?`)) return;
-
-    try {
-        await api.request(`/portal-professor/mensalidades/${id}/receber-dinheiro`, 'POST');
-        ui.showAlert('Pagamento recebido com sucesso!', 'success');
-        // Recarrega a lista
-        const inputBusca = document.getElementById('busca-aluno');
-        if(inputBusca) {
-             // Simula clique para buscar novamente
-             document.getElementById('btn-buscar').click();
-        }
-    } catch (err) {
-        ui.showAlert(err.message, 'danger');
-    }
-};
-
-// --- FUNÇÕES DO MODAL PIX (NOVO) ---
-
-// Em portal_aluno_pwa/js/app.js
-
-let pixPollingInterval = null; // Variável global para controlar o intervalo
-
-async function exibirModalPix(endpoint, itemType, itemId) {
-    // 1. Limpa intervalo anterior se existir
-    if (pixPollingInterval) clearInterval(pixPollingInterval);
-
-    // 2. Injeta o HTML do Modal se ainda não existir
-    if (!document.getElementById('pixModal')) {
-        const modalHtml = `
-        <div class="modal fade" id="pixModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title"><i class="fas fa-qrcode text-success me-2"></i>Pagamento via Pix</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body text-center" id="pixModalBody">
-                        </div>
-                    <div class="modal-footer justify-content-center">
-                        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Fechar</button>
-                    </div>
-                </div>
-            </div>
-        </div>`;
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-        
-        // Adiciona evento para parar o polling se o usuário fechar o modal manualmente
-        const pixModalEl = document.getElementById('pixModal');
-        pixModalEl.addEventListener('hidden.bs.modal', () => {
-            if (pixPollingInterval) clearInterval(pixPollingInterval);
-        });
-    }
-
-    // 3. Exibe o Modal com Loading inicial
-    const pixModalElement = document.getElementById('pixModal');
-    const pixModal = new bootstrap.Modal(pixModalElement);
-    const modalBody = document.getElementById('pixModalBody');
-    
-    modalBody.innerHTML = `
-        <div class="py-4">
-            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
-            <p class="mt-3 text-muted">Gerando código Pix...</p>
-        </div>`;
-    
-    pixModal.show();
-
-    try {
-        // 4. Chama a API para gerar o Pix
-        const data = await api.request(endpoint, 'POST');
-
-        // 5. Preenche com o QR Code
-        modalBody.innerHTML = `
-            <p class="text-muted mb-3 small">Escaneie o QR Code abaixo:</p>
-            
-            <img src="data:image/jpeg;base64,${data.qr_code_base64}" class="img-fluid border rounded mb-3 shadow-sm" style="max-width: 220px;">
-            
-            <div class="d-grid gap-2 mb-3">
-                <div class="input-group">
-                    <input type="text" class="form-control form-control-sm" value="${data.qr_code}" id="pixCopiaCola" readonly>
-                    <button class="btn btn-outline-primary btn-sm" type="button" onclick="copiarPix()">
-                        <i class="fas fa-copy"></i>
-                    </button>
-                </div>
-                <small class="text-muted" style="font-size: 0.75rem;">Ou copie o código acima</small>
-            </div>
-            
-            <div class="alert alert-light border d-flex align-items-center justify-content-center gap-2" role="alert">
-                <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
-                <span class="small text-muted">Aguardando pagamento...</span>
-            </div>
-        `;
-
-        // 6. INICIA O POLLING (Verifica status a cada 3 segundos)
-        if (itemType && itemId) {
-            pixPollingInterval = setInterval(async () => {
-                try {
-                    // Chama a rota de status que criamos no Passo 1
-                    const statusRes = await api.request(`/pagamentos/status/${itemType}/${itemId}`);
-                    
-                    if (statusRes.status === 'pago') {
-                        clearInterval(pixPollingInterval); // Para o loop
-                        
-                        // 7. EFEITO DE SUCESSO NO MODAL
-                        modalBody.innerHTML = `
-                            <div class="py-5 animate-success">
-                                <div class="mb-3">
-                                    <i class="fas fa-check-circle text-success" style="font-size: 5rem;"></i>
-                                </div>
-                                <h4 class="text-success fw-bold">Pagamento Confirmado!</h4>
-                                <p class="text-muted">Seu pagamento foi processado com sucesso.</p>
-                            </div>
-                        `;
-                        
-                        // Remove o botão de fechar para forçar a experiência visual
-                        const modalFooter = pixModalElement.querySelector('.modal-footer');
-                        if(modalFooter) modalFooter.style.display = 'none';
-
-                        // 8. Fecha o modal e recarrega a lista após 2.5 segundos
-                        setTimeout(() => {
-                            pixModal.hide();
-                            if(modalFooter) modalFooter.style.display = 'flex'; // Restaura footer para proxima vez
-                            
-                            // Recarrega a página atual (Pagamentos ou Eventos)
-                            const currentHash = window.location.hash;
-                            if (currentHash.includes('payments')) {
-                                handlePaymentsPage();
-                            } else if (currentHash.includes('events')) {
-                                handleEventsPage(); // Se tiver lógica de status na tela de eventos
-                            } else {
-                                // Fallback genérico
-                                window.location.reload(); 
-                            }
-                            
-                            ui.showAlert('Pagamento realizado com sucesso!', 'success');
-                        }, 2500);
-                    }
-                } catch (err) {
-                    console.error("Erro no polling:", err);
-                    // Não paramos o intervalo em caso de erro de rede momentâneo, 
-                    // mas em produção pode ser bom limitar tentativas.
-                }
-            }, 3000); // 3 segundos
-        }
-
-    } catch (error) {
-        console.error("Erro Pix:", error);
-        let msg = error.message || "Erro desconhecido ao gerar Pix.";
-        if(msg.includes("400")) msg = "Falha: Verifique se seu CPF está preenchido no perfil.";
-        
-        modalBody.innerHTML = `
-            <div class="py-4 text-center text-danger">
-                <i class="fas fa-exclamation-circle fa-3x mb-3"></i>
-                <p>${msg}</p>
-            </div>
-        `;
-    }
-}
-
-window.copiarPix = function() {
-    const copyText = document.getElementById("pixCopiaCola");
-    copyText.select();
-    copyText.setSelectionRange(0, 99999); // Mobile
-    navigator.clipboard.writeText(copyText.value).then(() => {
-        const btn = document.querySelector('#pixModal .input-group button');
-        const originalText = btn.innerHTML;
-        btn.innerHTML = '<i class="fas fa-check"></i> Copiado!';
-        btn.classList.replace('btn-primary', 'btn-success');
-        setTimeout(() => {
-            btn.innerHTML = originalText;
-            btn.classList.replace('btn-success', 'btn-primary');
-        }, 2000);
-    });
-}
-
-// --- FUNÇÕES DE PAGAMENTO (Chamadas pelos botões) ---
-
-async function pagarMensalidadeOnline(event, mensalidadeId) {
-    // Passamos os parâmetros extras: tipo e id
-    await exibirModalPix(`/pagamentos/pix/mensalidade/${mensalidadeId}`, 'mensalidade', mensalidadeId);
-}
-
-async function pagarEventoOnline(event, inscricaoId) {
-    // Passamos os parâmetros extras: tipo e id
-    await exibirModalPix(`/pagamentos/pix/inscricao/${inscricaoId}`, 'inscricao', inscricaoId);
-}
-
-
-// --- INICIALIZAÇÃO E ROTAS (Router) ---
+// --- FUNÇÕES DE NAVEGAÇÃO ---
 
 function updateActiveNav(path) {
+    const role = localStorage.getItem('userRole');
+    const navContainer = document.getElementById('main-nav');
+    
+    if (!navContainer) return; // Proteção caso a nav não exista no DOM
+
+    if (role === 'aluno') {
+        // Menu do Aluno
+        navContainer.innerHTML = `
+            <a href="#/dashboard" class="nav__link"><i class="fas fa-user nav__icon"></i><span class="nav__text">Perfil</span></a>
+            <a href="#/payments" class="nav__link"><i class="fas fa-file-invoice-dollar nav__icon"></i><span class="nav__text">Pagamentos</span></a>
+            <a href="#/events" class="nav__link"><i class="fas fa-calendar-alt nav__icon"></i><span class="nav__text">Eventos</span></a>
+            <a href="#/carteirinha" class="nav__link"><i class="fas fa-id-card nav__icon"></i><span class="nav__text">Carteirinha</span></a>
+            <a href="#/beneficios" class="nav__link"><i class="fas fa-handshake nav__icon"></i><span class="nav__text">Benefícios</span></a>
+        `;
+    } else {
+        // Menu do Professor/Staff
+        navContainer.innerHTML = `
+            <a href="#/prof/dashboard" class="nav__link"><i class="fas fa-home nav__icon"></i><span class="nav__text">Início</span></a>
+            <a href="#/prof/financeiro" class="nav__link"><i class="fas fa-cash-register nav__icon"></i><span class="nav__text">Caixa</span></a>
+            <a href="#/prof/alunos/novo" class="nav__link"><i class="fas fa-user-plus nav__icon"></i><span class="nav__text">Cadastro</span></a>
+            <a href="#/prof/matricula" class="nav__link"><i class="fas fa-clipboard-list nav__icon"></i><span class="nav__text">Matrícula</span></a>
+        `;
+    }
+
     const navLinks = document.querySelectorAll('.nav__link');
     navLinks.forEach(link => {
         link.classList.remove('nav__link--active');
@@ -263,16 +59,23 @@ function updateActiveNav(path) {
 }
 
 const router = async () => {
-    const path = (window.location.hash.slice(1).split('?')[0] || '/dashboard');
-    updateActiveNav(path); 
+    // Determina a rota inicial baseada na role se estiver na raiz
+    let currentHash = window.location.hash.slice(1).split('?')[0];
+    if (!currentHash) {
+        const role = localStorage.getItem('userRole');
+        currentHash = (role === 'aluno') ? '/dashboard' : (role ? '/prof/dashboard' : '/login');
+    }
+
+    updateActiveNav(currentHash);
     
-    const route = routes[path] || routes['/dashboard'];
+    const route = routes[currentHash] || routes['/login'];
     const token = localStorage.getItem('accessToken');
 
     const appRootEl = document.getElementById('app-root');
     const bodyEl = document.body;
 
-    if (path === '/login' || path === '/login/callback' || path === '/register') {
+    // Ajustes de layout para Login vs App
+    if (route.public) {
         bodyEl.classList.add('login-active');
         bodyEl.classList.remove('nav-active');
         appRootEl.classList.remove('container', 'py-4'); 
@@ -284,13 +87,16 @@ const router = async () => {
         appRootEl.classList.add('container', 'py-4'); 
     }
 
+    // Proteção de rotas
     if (!route.public && !token) {
         window.location.hash = '/login';
         return;
     }
     
-    if (route.public && token && path !== '/login/callback') {
-        window.location.hash = '/dashboard';
+    // Se logado e tentar acessar login, manda pra home
+    if (route.public && token && currentHash !== '/login/callback') {
+        const role = localStorage.getItem('userRole');
+        window.location.hash = (role === 'aluno') ? '/dashboard' : '/prof/dashboard';
         return;
     }
 
@@ -300,9 +106,11 @@ const router = async () => {
         ui.showLoading(appRoot);
         try {
             const response = await fetch(route.page);
+            if (!response.ok) throw new Error("Página não encontrada");
             appRoot.innerHTML = await response.text();
         } catch (error) {
-            appRoot.innerHTML = `<p class="text-danger">Erro ao carregar a página.</p>`;
+            console.error(error);
+            appRoot.innerHTML = `<div class="alert alert-danger m-3">Erro ao carregar a página: ${error.message}. <br>Verifique se o arquivo HTML existe em <b>${route.page}</b></div>`;
         }
     }
     
@@ -311,25 +119,11 @@ const router = async () => {
     }
 };
 
-// --- HANDLERS DE PÁGINAS ---
+// --- HANDLERS COMUNS ---
 
-function handleLoginCallback() {
-    ui.toggleNav(false);
-    appRoot.innerHTML = '<p class="text-center mt-5">Autenticando...</p>';
-    const params = new URLSearchParams(window.location.hash.split('?')[1]);
-    const token = params.get('token');
-    if (token) {
-        localStorage.setItem('accessToken', token);
-        window.location.hash = '/dashboard';
-    } else {
-        window.location.hash = '/login';
-    }
-}
-
-// Substitua a função handleLoginPage existente por esta:
 function handleLoginPage() {
     const form = document.getElementById('login-form');
-    // Remove listeners antigos para evitar duplicação
+    // Clona para remover listeners antigos
     const newForm = form.cloneNode(true);
     form.parentNode.replaceChild(newForm, form);
 
@@ -337,6 +131,10 @@ function handleLoginPage() {
         e.preventDefault();
         const username = e.target.username.value; 
         const password = e.target.password.value;
+        const btn = newForm.querySelector('button');
+        
+        btn.disabled = true; btn.innerText = "Entrando...";
+
         try {
             const data = await api.login(username, password);
             
@@ -347,18 +145,39 @@ function handleLoginPage() {
             }
 
             localStorage.setItem('accessToken', data.access_token);
-            localStorage.setItem('userRole', data.user_info.role); // Salva a role
+            localStorage.setItem('userRole', data.user_info.role);
             
             // Redirecionamento baseado na role
             if (data.user_info.role === 'aluno') {
                 window.location.hash = '/dashboard';
             } else {
-                window.location.hash = '/prof/dashboard'; // Nova rota para professor
+                window.location.hash = '/prof/dashboard';
             }
         } catch (error) {
             ui.showAlert(error.message || 'Email ou senha inválidos.');
+        } finally {
+            btn.disabled = false; btn.innerText = "Entrar";
         }
     });
+}
+
+function handleLoginCallback() {
+    ui.toggleNav(false);
+    appRoot.innerHTML = '<p class="text-center mt-5">Autenticando...</p>';
+    const params = new URLSearchParams(window.location.hash.split('?')[1]);
+    const token = params.get('token');
+    if (token) {
+        // Precisaríamos decodificar o token ou chamar /me para saber a role
+        // Por simplificação, vamos chamar /me
+        localStorage.setItem('accessToken', token);
+        api.getProfile().then(user => {
+             localStorage.setItem('userRole', user.role); // Assumindo que getProfile retorna a role
+             if (user.role === 'aluno') window.location.hash = '/dashboard';
+             else window.location.hash = '/prof/dashboard';
+        }).catch(() => window.location.hash = '/login');
+    } else {
+        window.location.hash = '/login';
+    }
 }
 
 function handleRegisterPage() {
@@ -375,6 +194,8 @@ function handleRegisterPage() {
         }
     });
 }
+
+// --- HANDLERS DO ALUNO ---
 
 async function handleDashboardPage() {
     try {
@@ -433,7 +254,6 @@ async function handleEditProfilePage() {
             btn.disabled = true; btn.innerHTML = 'Salvando...';
             
             const formData = new FormData(form);
-            // Adicione o arquivo manualmente se selecionado, pois FormData às vezes falha com input file vazio
             const fileInput = document.getElementById('foto');
             if (fileInput.files.length > 0) {
                 formData.set('foto', fileInput.files[0]);
@@ -449,7 +269,6 @@ async function handleEditProfilePage() {
             }
         };
         
-        // Preview de imagem
         document.getElementById('foto').onchange = (e) => {
             if(e.target.files[0]) {
                 const reader = new FileReader();
@@ -529,29 +348,13 @@ async function handleEventsPage() {
     } catch (error) { console.error(error); }
 }
 
-async function inscreverEmEvento(event, eventoId) {
-    const btn = event.currentTarget;
-    btn.disabled = true; btn.innerHTML = '...';
-    try {
-        await api.enrollInEvent(eventoId);
-        ui.showAlert('Inscrição realizada! Verifique a aba Pagamentos.', 'success');
-        handleEventsPage(); // Recarrega
-    } catch (error) {
-        ui.showAlert(error.message || 'Erro ao inscrever.');
-        btn.disabled = false; btn.innerHTML = 'Inscrever';
-    }
-}
-
 async function handleBeneficiosPage() {
     const list = document.getElementById('partners-list');
-    // Mantém a lista de parceiros que você já tinha
     const partners = [
          { logo: '/portal/images/iron.png', nome: 'Centro de Treinamento Iron Gym', desconto: '20% de desconto na Mensalidade.', whatsapp: '5532985062330' },
          { logo: '/portal/images/bull.png', nome: 'Arthur Carvalho Duarte - ARQUITETURA', desconto: 'Desconto de 20% em seu projeto.', whatsapp: '5532988810989' },
          { logo: '/portal/images/alexandria.png', nome: 'Alexandria Hamburgueria', desconto: '20% de desconto em todos os Rodízios.', whatsapp: '5532933003620' },
-         { logo: '/portal/images/lucasStarck.png', nome: 'Lucas Starck - Nutricionista', desconto: 'Consulta com 50% de desconto.', whatsapp: '5532998180941' },
-         { logo: '/portal/images/mamaefazaFesta.png', nome: 'Mamãe Faz a Festa', desconto: '20% de desconto.', whatsapp: '5532988992094' },
-         { logo: '/portal/images/casadoanimal.png', nome: 'Casa do Animal Porto', desconto: 'Animais em geral 25%, Acessórios pet 20%.', whatsapp: '5532998641939' }
+         { logo: '/portal/images/lucasStarck.png', nome: 'Lucas Starck - Nutricionista', desconto: 'Consulta com 50% de desconto.', whatsapp: '5532998180941' }
     ];
 
     list.innerHTML = partners.map(p => `
@@ -568,38 +371,260 @@ async function handleBeneficiosPage() {
     `).join('');
 }
 
-function handleProfAlunoNovo() {
+// --- HANDLERS DO PROFESSOR (NOVOS) ---
+
+async function handleProfDashboard() {
+    // A página HTML já tem os links estáticos, não precisa carregar dados
+    console.log("Dashboard do Professor carregado.");
+}
+
+async function handleProfAlunoNovo() {
     const form = document.getElementById('form-novo-aluno');
     form.onsubmit = async (e) => {
         e.preventDefault();
         const btn = form.querySelector('button');
-        ui.showLoading(btn); // Supondo que vc adapte seu ui.showLoading para não substituir o root, ou use um spinner simples
+        const originalText = btn.innerHTML;
+        btn.disabled = true; btn.innerHTML = 'Salvando...';
 
         const formData = new FormData(form);
-        // O endpoint de alunos espera form data normal
         
         try {
-            // Chamada direta à API de gestão de alunos
+            // Usa a rota principal de alunos (reutilização)
             await api.request('/alunos', 'POST', formData, true); 
             ui.showAlert('Aluno cadastrado com sucesso!', 'success');
             form.reset();
         } catch (err) {
             ui.showAlert(err.message, 'danger');
         } finally {
-            btn.innerHTML = 'Cadastrar';
+            btn.innerHTML = originalText;
             btn.disabled = false;
         }
     };
 }
 
+async function handleProfFinanceiro() {
+    const inputBusca = document.getElementById('busca-aluno');
+    const btnBuscar = document.getElementById('btn-buscar');
+    const lista = document.getElementById('lista-mensalidades');
+
+    const carregar = async (termo = '') => {
+        lista.innerHTML = '<div class="text-center py-3"><div class="spinner-border text-primary"></div></div>';
+        try {
+            const contas = await api.request(`/portal-professor/mensalidades-pendentes?busca=${termo}`);
+            
+            if (contas.length === 0) {
+                lista.innerHTML = '<p class="text-muted text-center">Nenhuma mensalidade pendente encontrada.</p>';
+                return;
+            }
+
+            lista.innerHTML = contas.map(c => `
+                <div class="list-group-item p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="mb-0 fw-bold">${c.aluno.nome}</h6>
+                        <span class="badge bg-warning text-dark">Pendente</span>
+                    </div>
+                    <div class="small text-muted mb-2">
+                        Venc: ${new Date(c.data_vencimento).toLocaleDateString('pt-BR')} <br>
+                        Plano: ${c.plano.nome}
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 text-primary">R$ ${c.valor.toFixed(2)}</h5>
+                        <button class="btn btn-success btn-sm" onclick="receberDinheiro(${c.id}, '${c.aluno.nome}', ${c.valor})">
+                            <i class="fas fa-hand-holding-usd me-1"></i> Receber
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        } catch (err) {
+            lista.innerHTML = '<p class="text-danger text-center">Erro ao carregar.</p>';
+        }
+    };
+
+    btnBuscar.onclick = () => carregar(inputBusca.value);
+    // Carrega inicial
+    carregar();
+}
+
+async function handleProfMatricula() {
+    const selectAluno = document.getElementById('select-aluno');
+    const selectTurma = document.getElementById('select-turma');
+    const selectPlano = document.getElementById('select-plano');
+    const form = document.getElementById('form-matricula');
+
+    // Carrega dados para os selects
+    try {
+        const [alunosData, turmas, planos] = await Promise.all([
+            api.request('/alunos?limit=1000'), // Pega lista grande
+            api.request('/turmas'),
+            api.request('/planos')
+        ]);
+
+        selectAluno.innerHTML += alunosData.alunos.map(a => `<option value="${a.id}">${a.nome}</option>`).join('');
+        selectTurma.innerHTML += turmas.map(t => `<option value="${t.id}">${t.nome} (${t.modalidade})</option>`).join('');
+        selectPlano.innerHTML += planos.map(p => `<option value="${p.id}">${p.nome} - R$ ${p.valor}</option>`).join('');
+
+    } catch (e) {
+        ui.showAlert('Erro ao carregar listas de cadastro.', 'danger');
+    }
+
+    form.onsubmit = async (e) => {
+        e.preventDefault();
+        const btn = form.querySelector('button');
+        btn.disabled = true; btn.innerHTML = 'Matriculando...';
+
+        const data = {
+            aluno_id: parseInt(selectAluno.value),
+            turma_id: parseInt(selectTurma.value),
+            plano_id: parseInt(selectPlano.value)
+        };
+
+        try {
+            await api.request('/matriculas', 'POST', data);
+            ui.showAlert('Matrícula realizada com sucesso!', 'success');
+            form.reset();
+        } catch (err) {
+            ui.showAlert(err.message, 'danger');
+        } finally {
+            btn.disabled = false; btn.innerHTML = 'Matricular';
+        }
+    };
+}
+
+// --- FUNÇÕES GLOBAIS DE AÇÃO ---
+
+window.receberDinheiro = async (id, nome, valor) => {
+    if(!confirm(`Confirmar recebimento de R$ ${valor.toFixed(2)} de ${nome} em DINHEIRO?`)) return;
+
+    try {
+        await api.request(`/portal-professor/mensalidades/${id}/receber-dinheiro`, 'POST');
+        alert('Pagamento recebido com sucesso!'); // Alert simples para confirmação
+        // Recarrega a lista chamando o handler novamente se o elemento existir
+        const btnBuscar = document.getElementById('btn-buscar');
+        if(btnBuscar) btnBuscar.click();
+    } catch (err) {
+        alert('Erro: ' + err.message);
+    }
+};
+
+async function inscreverEmEvento(event, eventoId) {
+    const btn = event.currentTarget;
+    btn.disabled = true; btn.innerHTML = '...';
+    try {
+        await api.enrollInEvent(eventoId);
+        ui.showAlert('Inscrição realizada! Verifique a aba Pagamentos.', 'success');
+        handleEventsPage(); // Recarrega
+    } catch (error) {
+        ui.showAlert(error.message || 'Erro ao inscrever.');
+        btn.disabled = false; btn.innerHTML = 'Inscrever';
+    }
+}
+
+// Lógica de Pix (Modal e Polling)
+let pixPollingInterval = null;
+
+async function exibirModalPix(endpoint, itemType, itemId) {
+    if (pixPollingInterval) clearInterval(pixPollingInterval);
+
+    if (!document.getElementById('pixModal')) {
+        const modalHtml = `
+        <div class="modal fade" id="pixModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><i class="fas fa-qrcode text-success me-2"></i>Pagamento via Pix</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body text-center" id="pixModalBody"></div>
+                    <div class="modal-footer justify-content-center">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Fechar</button>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        document.getElementById('pixModal').addEventListener('hidden.bs.modal', () => {
+            if (pixPollingInterval) clearInterval(pixPollingInterval);
+        });
+    }
+
+    const pixModalElement = document.getElementById('pixModal');
+    const pixModal = new bootstrap.Modal(pixModalElement);
+    const modalBody = document.getElementById('pixModalBody');
+    
+    modalBody.innerHTML = `<div class="spinner-border text-primary" role="status"></div><p class="mt-2">Gerando código Pix...</p>`;
+    pixModal.show();
+
+    try {
+        const data = await api.request(endpoint, 'POST');
+
+        modalBody.innerHTML = `
+            <p class="text-muted mb-3 small">Escaneie o QR Code abaixo:</p>
+            <img src="data:image/jpeg;base64,${data.qr_code_base64}" class="img-fluid border rounded mb-3 shadow-sm" style="max-width: 220px;">
+            <div class="d-grid gap-2 mb-3">
+                <div class="input-group">
+                    <input type="text" class="form-control form-control-sm" value="${data.qr_code}" id="pixCopiaCola" readonly>
+                    <button class="btn btn-primary btn-sm" type="button" onclick="copiarPix()">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+                <small class="text-muted" style="font-size: 0.75rem;">Ou copie o código acima</small>
+            </div>
+            <div class="alert alert-light border d-flex align-items-center justify-content-center gap-2" role="alert">
+                <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
+                <span class="small text-muted">Aguardando pagamento...</span>
+            </div>
+        `;
+
+        if (itemType && itemId) {
+            pixPollingInterval = setInterval(async () => {
+                try {
+                    const statusRes = await api.request(`/pagamentos/status/${itemType}/${itemId}`);
+                    if (statusRes.status === 'pago') {
+                        clearInterval(pixPollingInterval);
+                        modalBody.innerHTML = `
+                            <div class="py-5 animate-success">
+                                <div class="mb-3"><i class="fas fa-check-circle text-success" style="font-size: 5rem;"></i></div>
+                                <h4 class="text-success fw-bold">Pagamento Confirmado!</h4>
+                            </div>
+                        `;
+                        setTimeout(() => {
+                            pixModal.hide();
+                            if (window.location.hash.includes('payments')) handlePaymentsPage();
+                            else if (window.location.hash.includes('events')) handleEventsPage();
+                            ui.showAlert('Pagamento realizado!', 'success');
+                        }, 2500);
+                    }
+                } catch (err) { console.error(err); }
+            }, 3000);
+        }
+
+    } catch (error) {
+        modalBody.innerHTML = `<div class="text-danger"><i class="fas fa-exclamation-circle fa-2x"></i><p>${error.message}</p></div>`;
+    }
+}
+
+window.copiarPix = function() {
+    const copyText = document.getElementById("pixCopiaCola");
+    copyText.select();
+    copyText.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(copyText.value);
+    alert("Código copiado!");
+}
+
+async function pagarMensalidadeOnline(event, id) { await exibirModalPix(`/pagamentos/pix/mensalidade/${id}`, 'mensalidade', id); }
+async function pagarEventoOnline(event, id) { await exibirModalPix(`/pagamentos/pix/inscricao/${id}`, 'inscricao', id); }
+
+// Inicialização
 window.addEventListener('hashchange', router);
 window.addEventListener('load', () => {
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/portal/sw.js').catch(err => console.error('Erro SW:', err));
-    }
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/portal/sw.js').catch(console.error);
+    
     document.getElementById('logout-button').addEventListener('click', () => {
         localStorage.removeItem('accessToken');
+        localStorage.removeItem('userRole');
         window.location.hash = '/login';
     });
+    
     router();
 });
