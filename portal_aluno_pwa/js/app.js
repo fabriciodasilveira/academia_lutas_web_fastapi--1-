@@ -15,7 +15,7 @@ const routes = {
     '/prof/dashboard': { page: '/portal/pages/prof_dashboard.html', handler: handleProfDashboard },
     '/prof/alunos/novo': { page: '/portal/pages/prof_aluno_novo.html', handler: handleProfAlunoNovo },
     '/prof/matricula': { page: '/portal/pages/prof_matricula.html', handler: handleProfMatricula },
-    '/prof/financeiro': { page: '/portal/pages/prof_financeiro.html', handler: handleProfFinanceiro },
+    '/prof/financeiro': { page: '/portal/pages/prof_financeiro.html', handler: handleProfFinanceiro }
 };
 
 async function handleProfFinanceiro() {
@@ -551,7 +551,7 @@ async function handleBeneficiosPage() {
          { logo: '/portal/images/alexandria.png', nome: 'Alexandria Hamburgueria', desconto: '20% de desconto em todos os Rodízios.', whatsapp: '5532933003620' },
          { logo: '/portal/images/lucasStarck.png', nome: 'Lucas Starck - Nutricionista', desconto: 'Consulta com 50% de desconto.', whatsapp: '5532998180941' },
          { logo: '/portal/images/mamaefazaFesta.png', nome: 'Mamãe Faz a Festa', desconto: '20% de desconto.', whatsapp: '5532988992094' },
-         { logo: '/portal/images/casadoanimal.png', nome: 'Casa do Animal Porto', desconto: 'Animais em geral 25%, Acessórios pet 20%.', whatsapp: '5532998641939' },
+         { logo: '/portal/images/casadoanimal.png', nome: 'Casa do Animal Porto', desconto: 'Animais em geral 25%, Acessórios pet 20%.', whatsapp: '5532998641939' }
     ];
 
     list.innerHTML = partners.map(p => `
