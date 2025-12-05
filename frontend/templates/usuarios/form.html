@@ -50,6 +50,7 @@
                                 <option value="administrador" {% if usuario and usuario.role == 'administrador' %}selected{% endif %}>Administrador (Acesso Total)</option>
                                 <option value="gerente" {% if usuario and usuario.role == 'gerente' %}selected{% endif %}>Gerente</option>
                                 <option value="atendente" {% if usuario and usuario.role == 'atendente' %}selected{% endif %}>Atendente</option>
+                                <option value="professor" {% if usuario and usuario.role == 'professor' %}selected{% endif %}>Professor (Acesso ao Portal)</option>
                                 <option value="aluno" {% if usuario and usuario.role == 'aluno' %}selected{% endif %}>Aluno</option>
                                 <option value="pendente" {% if usuario and usuario.role == 'pendente' %}selected{% endif %}>Pendente (Sem Acesso)</option>
                             </select>
