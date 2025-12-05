@@ -446,34 +446,100 @@ async function handleProfFinanceiro() {
 }
 
 async function handleProfMatricula() {
-    const selectAluno = document.getElementById('select-aluno');
+    // Referências aos elementos
+    const searchInput = document.getElementById('search-aluno');
+    const hiddenIdInput = document.getElementById('selected-aluno-id');
+    const resultsContainer = document.getElementById('results-aluno');
+    
     const selectTurma = document.getElementById('select-turma');
     const selectPlano = document.getElementById('select-plano');
     const form = document.getElementById('form-matricula');
 
-    // Carrega dados para os selects
+    // 1. Carrega Turmas e Planos (apenas isso no início)
     try {
-        const [alunosData, turmas, planos] = await Promise.all([
-            api.request('/alunos?limit=1000'), // Pega lista grande
+        const [turmas, planos] = await Promise.all([
             api.request('/turmas'),
             api.request('/planos')
         ]);
 
-        selectAluno.innerHTML += alunosData.alunos.map(a => `<option value="${a.id}">${a.nome}</option>`).join('');
         selectTurma.innerHTML += turmas.map(t => `<option value="${t.id}">${t.nome} (${t.modalidade})</option>`).join('');
         selectPlano.innerHTML += planos.map(p => `<option value="${p.id}">${p.nome} - R$ ${p.valor}</option>`).join('');
-
     } catch (e) {
-        ui.showAlert('Erro ao carregar listas de cadastro.', 'danger');
+        ui.showAlert('Erro ao carregar listas.', 'danger');
     }
 
+    // 2. Lógica de Busca de Aluno (Typeahead)
+    let debounceTimer;
+    searchInput.addEventListener('input', (e) => {
+        const termo = e.target.value;
+        
+        // Limpa busca anterior
+        clearTimeout(debounceTimer);
+        hiddenIdInput.value = ''; // Reseta o ID se o usuário mudou o texto
+        
+        if (termo.length < 3) {
+            resultsContainer.style.display = 'none';
+            return;
+        }
+
+        // Aguarda 300ms após parar de digitar para chamar a API (Performance)
+        debounceTimer = setTimeout(async () => {
+            resultsContainer.innerHTML = '<div class="list-group-item text-muted"><small>Buscando...</small></div>';
+            resultsContainer.style.display = 'block';
+
+            try {
+                // Chama a API filtrando por nome
+                const data = await api.request(`/alunos?nome=${termo}&limit=5`);
+                const alunos = data.alunos || [];
+
+                if (alunos.length === 0) {
+                    resultsContainer.innerHTML = '<div class="list-group-item text-muted"><small>Nenhum aluno encontrado.</small></div>';
+                } else {
+                    resultsContainer.innerHTML = alunos.map(a => `
+                        <a href="#" class="list-group-item list-group-item-action" onclick="selecionarAluno(${a.id}, '${a.nome}')">
+                            <div class="fw-bold">${a.nome}</div>
+                            <small class="text-muted">CPF: ${a.cpf || '---'}</small>
+                        </a>
+                    `).join('');
+                }
+            } catch (err) {
+                resultsContainer.style.display = 'none';
+            }
+        }, 300);
+    });
+
+    // Função auxiliar para selecionar (precisa estar no escopo ou global)
+    window.selecionarAluno = (id, nome) => {
+        searchInput.value = nome;       // Preenche o campo visual
+        hiddenIdInput.value = id;       // Preenche o campo oculto (importante!)
+        resultsContainer.style.display = 'none'; // Esconde a lista
+        // Previne o comportamento padrão do link
+        if(event) event.preventDefault();
+    };
+
+    // Fecha a lista se clicar fora
+    document.addEventListener('click', (e) => {
+        if (!searchInput.contains(e.target) && !resultsContainer.contains(e.target)) {
+            resultsContainer.style.display = 'none';
+        }
+    });
+
+    // 3. Envio do Formulário
     form.onsubmit = async (e) => {
         e.preventDefault();
+        
+        // Validação manual do ID do aluno
+        if (!hiddenIdInput.value) {
+            ui.showAlert('Por favor, pesquise e selecione um aluno da lista.', 'warning');
+            searchInput.focus();
+            return;
+        }
+
         const btn = form.querySelector('button');
         btn.disabled = true; btn.innerHTML = 'Matriculando...';
 
         const data = {
-            aluno_id: parseInt(selectAluno.value),
+            aluno_id: parseInt(hiddenIdInput.value), // Usa o ID oculto
             turma_id: parseInt(selectTurma.value),
             plano_id: parseInt(selectPlano.value)
         };
@@ -481,11 +547,15 @@ async function handleProfMatricula() {
         try {
             await api.request('/matriculas', 'POST', data);
             ui.showAlert('Matrícula realizada com sucesso!', 'success');
+            
+            // Reseta o formulário
             form.reset();
+            hiddenIdInput.value = '';
+            
         } catch (err) {
             ui.showAlert(err.message, 'danger');
         } finally {
-            btn.disabled = false; btn.innerHTML = 'Matricular';
+            btn.disabled = false; btn.innerHTML = '<i class="fas fa-check me-2"></i> Realizar Matrícula';
         }
     };
 }

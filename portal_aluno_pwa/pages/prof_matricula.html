@@ -9,11 +9,16 @@
 <div class="card shadow-sm border-0">
     <div class="card-body p-4">
         <form id="form-matricula">
-            <div class="mb-3">
-                <label for="select-aluno" class="form-label">Aluno</label>
-                <select class="form-select" id="select-aluno" required>
-                    <option value="">Selecione...</option>
-                    </select>
+            
+            <div class="mb-3 position-relative">
+                <label for="search-aluno" class="form-label">Aluno</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+                    <input type="text" class="form-control border-start-0" id="search-aluno" placeholder="Digite o nome para buscar..." autocomplete="off" required>
+                </div>
+                <input type="hidden" id="selected-aluno-id" required>
+                
+                <div id="results-aluno" class="list-group position-absolute w-100 shadow-sm" style="z-index: 1000; top: 100%; display: none;"></div>
             </div>
 
             <div class="mb-3">
