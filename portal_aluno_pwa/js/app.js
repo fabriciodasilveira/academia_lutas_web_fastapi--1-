@@ -503,6 +503,7 @@ async function handleEventsPage() {
 
 async function handleBeneficiosPage() {
     const list = document.getElementById('partners-list');
+    const mensagemWhatsapp = encodeURIComponent("Sou da Academia AZE Studio e vim pelo clube de descontos para parceiros.");
     const partners = [
          { logo: '/portal/images/iron.png', nome: 'Centro de Treinamento Iron Gym', desconto: '20% de desconto na Mensalidade.', whatsapp: '5532985062330' },
          { logo: '/portal/images/bull.png', nome: 'Arthur Carvalho Duarte - ARQUITETURA', desconto: 'Desconto de 20% em seu projeto.', whatsapp: '5532988810989' },
@@ -521,7 +522,7 @@ async function handleBeneficiosPage() {
                 <div class="card-body d-flex flex-column p-2">
                     <h6 class="card-title small fw-bold mb-1">${p.nome}</h6>
                     <p class="card-text x-small text-muted mb-2" style="font-size: 0.75rem;">${p.desconto}</p>
-                    ${p.whatsapp ? `<a href="https://wa.me/${p.whatsapp}?text=Sou%20aluno%20da%20Academia..." target="_blank" class="btn btn-success btn-sm mt-auto py-0" style="font-size: 0.75rem;"><i class="fab fa-whatsapp"></i> Contato</a>` : ''}
+                    ${p.whatsapp ? `<a href="https://wa.me/${p.whatsapp}?text=${mensagemWhatsapp}" target="_blank" class="btn btn-success btn-sm mt-auto py-0" style="font-size: 0.75rem;"><i class="fab fa-whatsapp"></i> Contato</a>` : ''}
                 </div>
             </div>
         </div>
