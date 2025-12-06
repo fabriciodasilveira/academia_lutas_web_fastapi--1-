@@ -236,48 +236,201 @@ async function handleCarteirinhaPage() {
 }
 
 async function handleEditProfilePage() {
+    const form = document.getElementById('edit-profile-form');
+    
+    // Elementos do formulário de perfil
+    const nomeInput = document.getElementById('nome');
+    const emailInput = document.getElementById('email');
+    const cpfInput = document.getElementById('cpf');
+    const telefoneInput = document.getElementById('telefone');
+    const dataNascimentoInput = document.getElementById('data_nascimento');
+    const enderecoInput = document.getElementById('endereco');
+    const observacoesInput = document.getElementById('observacoes');
+    const fotoInput = document.getElementById('foto');
+    const fotoPreview = document.getElementById('foto-preview');
+    
+    // Elementos do responsável
+    const dadosResponsavelDiv = document.getElementById('dados-responsavel');
+    const nomeResponsavelInput = document.getElementById('nome_responsavel');
+    const cpfResponsavelInput = document.getElementById('cpf_responsavel');
+    const parentescoResponsavelInput = document.getElementById('parentesco_responsavel');
+    const telefoneResponsavelInput = document.getElementById('telefone_responsavel');
+    const emailResponsavelInput = document.getElementById('email_responsavel');
+    const camposResponsavel = dadosResponsavelDiv.querySelectorAll('input');
+
+    // --- LÓGICA DE RESPONSÁVEL (MENOR DE 18) ---
+    function toggleResponsavelFields() {
+        const dataNascimento = dataNascimentoInput.value;
+        if (!dataNascimento) {
+            dadosResponsavelDiv.style.display = 'none';
+            camposResponsavel.forEach(input => input.required = false);
+            return;
+        }
+        const hoje = new Date();
+        const nascimento = new Date(dataNascimento);
+        let idade = hoje.getFullYear() - nascimento.getFullYear();
+        const m = hoje.getMonth() - nascimento.getMonth();
+        if (m < 0 || (m === 0 && hoje.getDate() < nascimento.getDate())) {
+            idade--;
+        }
+        if (idade < 18) {
+            dadosResponsavelDiv.style.display = 'flex';
+        } else {
+            dadosResponsavelDiv.style.display = 'none';
+            camposResponsavel.forEach(input => input.required = false);
+        }
+    }
+
+    // --- CARREGAR DADOS DO PERFIL ---
     try {
         const profile = await api.getProfile();
-        document.getElementById('nome').value = profile.nome || '';
-        document.getElementById('email').value = profile.email || '';
-        document.getElementById('cpf').value = profile.cpf || '';
-        document.getElementById('telefone').value = profile.telefone || '';
-        document.getElementById('data_nascimento').value = profile.data_nascimento || '';
-        document.getElementById('endereco').value = profile.endereco || '';
-        document.getElementById('observacoes').value = profile.observacoes || '';
-        document.getElementById('foto-preview').src = profile.foto || '/portal/images/default-avatar.png';
+        
+        nomeInput.value = profile.nome || '';
+        emailInput.value = profile.email || '';
+        cpfInput.value = profile.cpf || '';
+        telefoneInput.value = profile.telefone || '';
+        dataNascimentoInput.value = profile.data_nascimento || '';
+        enderecoInput.value = profile.endereco || '';
+        observacoesInput.value = profile.observacoes || '';
+        
+        if (profile.foto) {
+            fotoPreview.src = profile.foto;
+        }
+        
+        // Dados do responsável
+        nomeResponsavelInput.value = profile.nome_responsavel || '';
+        cpfResponsavelInput.value = profile.cpf_responsavel || '';
+        parentescoResponsavelInput.value = profile.parentesco_responsavel || '';
+        telefoneResponsavelInput.value = profile.telefone_responsavel || '';
+        emailResponsavelInput.value = profile.email_responsavel || '';
+        
+        toggleResponsavelFields();
+    } catch (error) {
+        ui.showAlert('Erro ao carregar seus dados para edição.');
+    }
 
-        const form = document.getElementById('edit-profile-form');
-        form.onsubmit = async (e) => {
+    // Eventos de mudança
+    dataNascimentoInput.addEventListener('change', toggleResponsavelFields);
+    
+    if (fotoInput) {
+        fotoInput.addEventListener('change', () => {
+            const file = fotoInput.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => { fotoPreview.src = e.target.result; };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    // --- SALVAR PERFIL ---
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        // Procura botão dentro do form ou pelo ID específico
+        let button = form.querySelector('button[type="submit"]');
+        if (!button) button = document.getElementById('btn-save-profile');
+        
+        if (button) {
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+        }
+        
+        const formData = new FormData();
+        formData.append('nome', nomeInput.value);
+        formData.append('cpf', cpfInput.value);
+        formData.append('telefone', telefoneInput.value);
+        formData.append('data_nascimento', dataNascimentoInput.value);
+        formData.append('endereco', enderecoInput.value);
+        formData.append('observacoes', observacoesInput.value);
+        
+        // Dados responsável
+        formData.append('nome_responsavel', nomeResponsavelInput.value);
+        formData.append('cpf_responsavel', cpfResponsavelInput.value);
+        formData.append('parentesco_responsavel', parentescoResponsavelInput.value);
+        formData.append('telefone_responsavel', telefoneResponsavelInput.value);
+        formData.append('email_responsavel', emailResponsavelInput.value);
+        
+        if (fotoInput && fotoInput.files[0]) {
+            formData.append('foto', fotoInput.files[0]);
+        }
+        
+        try {
+            await api.updateProfile(formData);
+            ui.showAlert('Perfil atualizado com sucesso!', 'success');
+            setTimeout(() => { window.location.hash = '/dashboard'; }, 1500);
+        } catch (error) {
+            ui.showAlert(error.message || 'Não foi possível salvar as alterações.', 'danger');
+        } finally {
+            if (button) {
+                button.disabled = false;
+                button.innerHTML = 'Salvar Alterações';
+            }
+        }
+    });
+
+    // --- LÓGICA DE TOGGLE DA SENHA (O QUE FALTAVA) ---
+    const btnShowPassword = document.getElementById('btn-show-password-form');
+    const passwordSection = document.getElementById('password-section');
+    const btnCancelPassword = document.getElementById('btn-cancel-password');
+    const toggleContainer = document.getElementById('toggle-password-container');
+
+    if (btnShowPassword && passwordSection && toggleContainer) {
+        btnShowPassword.addEventListener('click', () => {
+            passwordSection.style.display = 'block';
+            toggleContainer.style.display = 'none';
+        });
+
+        if (btnCancelPassword) {
+            btnCancelPassword.addEventListener('click', () => {
+                passwordSection.style.display = 'none';
+                toggleContainer.style.display = 'block';
+                const pwdForm = document.getElementById('update-password-form');
+                if(pwdForm) pwdForm.reset(); 
+            });
+        }
+    }
+
+    // --- SALVAR SENHA ---
+    const passwordForm = document.getElementById('update-password-form');
+    if (passwordForm) {
+        passwordForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const btn = document.getElementById('btn-save-profile');
-            btn.disabled = true; btn.innerHTML = 'Salvando...';
+            const button = passwordForm.querySelector('button[type="submit"]');
             
-            const formData = new FormData(form);
-            const fileInput = document.getElementById('foto');
-            if (fileInput.files.length > 0) {
-                formData.set('foto', fileInput.files[0]);
+            const current_password = document.getElementById('current_password').value;
+            const new_password = document.getElementById('new_password').value;
+            const confirm_password = document.getElementById('confirm_password').value;
+
+            if (new_password !== confirm_password) {
+                ui.showAlert('A nova senha e a confirmação não conferem.', 'danger');
+                return;
+            }
+
+            if (button) {
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Atualizando...';
             }
 
             try {
-                await api.updateProfile(formData);
-                ui.showAlert('Perfil atualizado!', 'success');
-            } catch (err) {
-                ui.showAlert('Erro ao atualizar: ' + err.message);
+                await api.updatePassword(current_password, new_password);
+                ui.showAlert('Senha atualizada com sucesso!', 'success');
+                passwordForm.reset();
+                
+                // Esconde o formulário após sucesso
+                if (passwordSection && toggleContainer) {
+                    passwordSection.style.display = 'none';
+                    toggleContainer.style.display = 'block';
+                }
+            } catch (error) {
+                ui.showAlert(error.message || 'Erro ao atualizar senha.', 'danger');
             } finally {
-                btn.disabled = false; btn.innerHTML = 'Salvar Alterações';
+                if (button) {
+                    button.disabled = false;
+                    button.innerHTML = 'Confirmar Alteração';
+                }
             }
-        };
-        
-        document.getElementById('foto').onchange = (e) => {
-            if(e.target.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function(ev) { document.getElementById('foto-preview').src = ev.target.result; };
-                reader.readAsDataURL(e.target.files[0]);
-            }
-        };
-        
-    } catch (e) { console.error(e); }
+        });
+    }
 }
 
 async function handlePaymentsPage() {
