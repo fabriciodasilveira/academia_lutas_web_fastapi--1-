@@ -507,7 +507,11 @@ async function handleBeneficiosPage() {
          { logo: '/portal/images/iron.png', nome: 'Centro de Treinamento Iron Gym', desconto: '20% de desconto na Mensalidade.', whatsapp: '5532985062330' },
          { logo: '/portal/images/bull.png', nome: 'Arthur Carvalho Duarte - ARQUITETURA', desconto: 'Desconto de 20% em seu projeto.', whatsapp: '5532988810989' },
          { logo: '/portal/images/alexandria.png', nome: 'Alexandria Hamburgueria', desconto: '20% de desconto em todos os Rodízios.', whatsapp: '5532933003620' },
-         { logo: '/portal/images/lucasStarck.png', nome: 'Lucas Starck - Nutricionista', desconto: 'Consulta com 50% de desconto.', whatsapp: '5532998180941' }
+         { logo: '/portal/images/lucasStarck.png', nome: 'Lucas Starck - Nutricionista', desconto: 'Consulta com 50% de desconto.', whatsapp: '5532998180941' },
+         { logo: '/portal/images/casadoanimal.png', nome: 'Casa do Animal Porto', desconto: '25% compra de animais, 20% para Acessórios Pet', whatsapp: '5532998641939' },
+         { logo: '/portal/images/mamaefazaFesta.png', nome: 'Mamãe Faz a Festa', desconto: '20% de desconto em todos serviços.', whatsapp: '5532988992094' },
+         { logo: '/portal/images/farmaciabompreco.png', nome: 'Farmácia Bom Preço', desconto: '20% compra de medicamentos.', whatsapp: '5532988015391' },
+         { logo: '/portal/images/studiosbanni.png', nome: 'Studio Sbanni', desconto: '20% de desconto em todos serviços.', whatsapp: '5532999553342' },
     ];
 
     list.innerHTML = partners.map(p => `
