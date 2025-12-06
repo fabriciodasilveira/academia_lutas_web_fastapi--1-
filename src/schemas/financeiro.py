@@ -11,8 +11,14 @@ from datetime import datetime
 class FinanceiroBase(BaseModel):
     tipo: str = Field(..., max_length=20)  # 'receita' ou 'despesa'
     categoria: str = Field(..., max_length=50)
-    valor: float = Field(..., gt=0)  # Valor deve ser maior que zero
-    descricao: str = Field(..., max_length=255) # Tornamos obrigatório
+    
+    # --- CORREÇÃO AQUI ---
+    # Alterado de gt=0 (maior que 0) para ge=0 (maior ou igual a 0)
+    # Isso permite registrar transações de valor R$ 0,00 (ex: eventos gratuitos)
+    valor: float = Field(..., ge=0) 
+    # ---------------------
+    
+    descricao: str = Field(..., max_length=255)
     observacoes: Optional[str] = Field(None, max_length=255)
     status: Optional[str] = Field(None, max_length=50)
     data: Optional[datetime] = None
@@ -25,7 +31,11 @@ class FinanceiroCreate(FinanceiroBase):
 class FinanceiroUpdate(BaseModel):
     tipo: Optional[str] = Field(None, max_length=20)
     categoria: Optional[str] = Field(None, max_length=50)
-    valor: Optional[float] = Field(None, gt=0)
+    
+    # --- CORREÇÃO AQUI TAMBÉM ---
+    valor: Optional[float] = Field(None, ge=0)
+    # ----------------------------
+    
     descricao: Optional[str] = Field(None, max_length=255)
     observacoes: Optional[str] = Field(None, max_length=255)
     status: Optional[str] = Field(None, max_length=50)
@@ -38,4 +48,4 @@ class FinanceiroRead(FinanceiroBase):
     data: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True # Atualizado para Pydantic v2 (era orm_mode)
