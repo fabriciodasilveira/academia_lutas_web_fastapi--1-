@@ -32,7 +32,7 @@ services:
       - db
     # ------------------------------------------------
     ports:
-      - "8000:8000"
+      - "8005:8000"
     environment:
       # Conexão interna com o banco de dados
       DATABASE_URL: postgresql://user_academia:${DB_PASSWORD}@db:5432/fightclube_db
