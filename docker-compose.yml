@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # --- Banco de Dados PostgreSQL Local ---
+  # 1. Banco de Dados (Substitui o Neon/Render)
   db:
     image: postgres:15-alpine
     container_name: academia_db
@@ -20,31 +20,32 @@ services:
       timeout: 5s
       retries: 5
 
-  # --- Backend (API FastAPI) ---
+  # 2. Backend API (FastAPI)
   backend:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: academia_api
     restart: always
+    # --- CORREÇÃO AQUI: Mudado para lista simples ---
     depends_on:
-      db:
-        condition: service_healthy
+      - db
+    # ------------------------------------------------
     ports:
       - "8000:8000"
     environment:
-      # Conexão com o banco local definido acima
+      # Conexão interna com o banco de dados
       DATABASE_URL: postgresql://user_academia:${DB_PASSWORD}@db:5432/fightclube_db
       
-      # Variáveis Gerais
+      # Variáveis da Aplicação
       SECRET_KEY: ${SECRET_KEY}
       
-      # URLs (Serão configuradas com o IP do seu servidor no Portainer)
-      BACKEND_URL: ${BACKEND_URL_LOCAL}
-      FRONTEND_URL: ${FRONTEND_URL_LOCAL}
-      FRONTEND_PWA_URL: ${FRONTEND_PWA_URL_LOCAL}
+      # URLs do Sistema
+      BACKEND_URL: ${BACKEND_URL}
+      FRONTEND_URL: ${FRONTEND_URL}
+      FRONTEND_PWA_URL: ${FRONTEND_PWA_URL}
       
-      # Cloudflare R2 (Fotos)
+      # Cloudflare R2
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
       S3_BUCKET_NAME: ${S3_BUCKET_NAME}
@@ -65,7 +66,7 @@ services:
     networks:
       - academia_net
 
-  # --- Frontend (Painel Flask) ---
+  # 3. Frontend Painel (Flask)
   frontend:
     build:
       context: ./frontend
@@ -78,8 +79,7 @@ services:
       - "5700:5700"
     environment:
       SECRET_KEY: ${SECRET_KEY}
-      # Comunicação interna: frontend fala com backend via nome do serviço
-      API_BASE_URL: http://backend:8000
+      API_BASE_URL: ${BACKEND_URL}
     networks:
       - academia_net
 
