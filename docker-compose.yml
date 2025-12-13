@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  # --- Banco de Dados PostgreSQL Local ---
+  db:
+    image: postgres:15-alpine
+    container_name: academia_db
+    restart: always
+    environment:
+      POSTGRES_USER: user_academia
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: fightclube_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - academia_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user_academia -d fightclube_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- Backend (API FastAPI) ---
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: academia_api
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    environment:
+      # Conexão com o banco local definido acima
+      DATABASE_URL: postgresql://user_academia:${DB_PASSWORD}@db:5432/fightclube_db
+      
+      # Variáveis Gerais
+      SECRET_KEY: ${SECRET_KEY}
+      
+      # URLs (Serão configuradas com o IP do seu servidor no Portainer)
+      BACKEND_URL: ${BACKEND_URL_LOCAL}
+      FRONTEND_URL: ${FRONTEND_URL_LOCAL}
+      FRONTEND_PWA_URL: ${FRONTEND_PWA_URL_LOCAL}
+      
+      # Cloudflare R2 (Fotos)
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      S3_BUCKET_NAME: ${S3_BUCKET_NAME}
+      S3_ENDPOINT_URL: ${S3_ENDPOINT_URL}
+      PUBLIC_BUCKET_URL: ${PUBLIC_BUCKET_URL}
+      
+      # Google Login
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      
+      # Pagamentos
+      PAYMENT_PROVIDER: ${PAYMENT_PROVIDER}
+      MP_ACCESS_TOKEN: ${MP_ACCESS_TOKEN}
+      MP_WEBHOOK_SECRET: ${MP_WEBHOOK_SECRET}
+      STRIPE_PUBLIC_KEY: ${STRIPE_PUBLIC_KEY}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+    networks:
+      - academia_net
+
+  # --- Frontend (Painel Flask) ---
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: academia_admin
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "5700:5700"
+    environment:
+      SECRET_KEY: ${SECRET_KEY}
+      # Comunicação interna: frontend fala com backend via nome do serviço
+      API_BASE_URL: http://backend:8000
+    networks:
+      - academia_net
+
+volumes:
+  postgres_data:
+
+networks:
+  academia_net:
+    driver: bridge
