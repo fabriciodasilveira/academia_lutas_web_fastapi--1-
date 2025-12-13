@@ -45,7 +45,7 @@ async def login_google(request: Request):
     Redireciona o usuário para a página de login do Google.
     Armazena a origem (PWA ou Flask) na sessão para o callback.
     """
-    backend_url = os.getenv("BACKEND_URL", "http://localhost:8000")
+    backend_url = os.getenv("BACKEND_URL", "http://localhost:8005")
     redirect_uri = f"{backend_url}/api/v1/auth/callback/google"
 
     # Guarda a origem da solicitação na sessão do usuário
