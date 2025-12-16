@@ -25,7 +25,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: academia_api
+    container_name: backend_fightclube
     restart: always
     # --- CORREÇÃO AQUI: Mudado para lista simples ---
     depends_on:
