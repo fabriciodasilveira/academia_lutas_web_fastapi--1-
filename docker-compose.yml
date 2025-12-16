@@ -35,7 +35,8 @@ services:
       - "8005:8005"
     environment:
       # Conexão interna com o banco de dados
-      DATABASE_URL: postgresql://user_academia:${DB_PASSWORD}@db:5432/fightclube_db
+      DATABASE_URL: postgresql://neondb_owner:npg_r2vZzG3kWPBs@ep-lingering-bird-acyhtv6b-pooler.sa-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+      #postgresql://user_academia:${DB_PASSWORD}@db:5432/fightclube_db
       
       # Variáveis da Aplicação
       SECRET_KEY: ${SECRET_KEY}
