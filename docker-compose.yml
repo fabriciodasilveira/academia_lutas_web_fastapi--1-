@@ -2,23 +2,23 @@ version: '3.8'
 
 services:
   # 1. Banco de Dados (Substitui o Neon/Render)
-  # db:
-  #   image: postgres:15-alpine
-  #   container_name: academia_db
-  #   restart: always
-  #   environment:
-  #     POSTGRES_USER: user_academia
-  #     POSTGRES_PASSWORD: ${DB_PASSWORD}
-  #     POSTGRES_DB: fightclube_db
-  #   volumes:
-  #     - postgres_data:/var/lib/postgresql/data
-  #   networks:
-  #     - academia_net
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U user_academia -d fightclube_db"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 5
+  db:
+    image: postgres:15-alpine
+    container_name: academia_db
+    restart: always
+    environment:
+      POSTGRES_USER: user_academia
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: fightclube_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - academia_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user_academia -d fightclube_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # 2. Backend API (FastAPI)
   backend:

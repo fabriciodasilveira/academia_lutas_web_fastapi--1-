@@ -1,0 +1,36 @@
+# --- Configurações Locais ---
+# Substitua pelo IP do seu servidor se não for localhost
+SERVER_IP=192.168.1.110
+DB_PASSWORD=Fvs1704lof
+
+
+# --- Suas Chaves ---
+SECRET_KEY=e0e8f53c372296ea48657cea510e7aed
+PYTHON_VERSION=3.11.0
+
+# --- Cloudflare R2 ---
+AWS_ACCESS_KEY_ID=305e5c6ff3154a6410c513957d1ab39b
+AWS_SECRET_ACCESS_KEY=3bb3974f6b1c3e678003960ed53d12ccf085460c3d7c8ad5e153cdc13a93e705
+S3_BUCKET_NAME=fightclube-uploads
+S3_ENDPOINT_URL=https://3f83073c73c148c0912525319b0c3f30.r2.cloudflarestorage.com
+PUBLIC_BUCKET_URL=https://pub-57e6cb23adc94dceacf090910b9232cd.r2.dev
+
+# --- Google ---
+GOOGLE_CLIENT_ID=162196521424-h8ui5keth47mchil92te0b72rvbvos4a.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=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
+
+# --- Pagamentos ---
+PAYMENT_PROVIDER=mercadopago
+MP_ACCESS_TOKEN=APP_USR-3250622565689487-120308-9d80edb3ca4b3bc4d16e73bf2d324585-19988581
+MP_WEBHOOK_SECRET=fafb213732250bd3d6b8d3c0856114b507d6f3bb27ab19c3da2e7a97e8487af1
+
+STRIPE_PUBLIC_KEY=pk_live_51SIGLeFNx4Q9CQAsYNSu9QeWVmHcjelqlUYSybnxtaUwlcsSIgHChQwHakRHSiwKeCSiy7jaihcZZtWjNB4LIFE100y8PA2Y0u
+STRIPE_SECRET_KEY=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
+STRIPE_WEBHOOK_SECRET=whsec_NvBaR0ZIGH8bX1PwhwHbqfs4OO47fZXE
+
+# --- URLs (Ajuste a porta se necessário) ---
+BACKEND_URL=https:aze.fightclube.com.br
+FRONTEND_URL=https://aze-adm.fightclube.com.br
+FRONTEND_PWA_URL=https://aze.fightclube.com.br/portal
+DATABASE_URL=postgresql://neondb_owner:npg_r2vZzG3kWPBs@ep-lingering-bird-acyhtv6b-pooler.sa-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+API_BASE_URL=https:aze.fightclube.com.br
