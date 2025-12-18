@@ -501,7 +501,7 @@
 
 {% block extra_js %}
 <script>
-
+const API_BASE_URL = "https://aze.fightclube.com.br/api/v1";
 const CATEGORIAS = {
     'receita': [
         { value: 'matricula', text: 'Matrícula' },
@@ -535,7 +535,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Carrega a lista de staff para o dropdown de pagamentos
-    fetch('/api/v1/financeiro/staff')
+    fetch(`${API_BASE_URL}/financeiro/staff`)
     .then(r => r.json())
     .then(data => {
         const select = document.getElementById('beneficiario_id');
@@ -793,7 +793,7 @@ function salvarTransacao() {
 }
 
 function editTransacao(id) {
-    fetch(`/api/v1/financeiro/transacoes/${id}`)
+    fetch(`${API_BASE_URL}/financeiro/transacoes/${id}`)
     .then(response => response.json())
     .then(transacao => {
         prepareModal('editar', transacao);
