@@ -535,7 +535,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Carrega a lista de staff para o dropdown de pagamentos
-    fetch(`${API_BASE_URL}/financeiro/staff`)
+    fetch('${API_BASE_URL}/financeiro/staff')
     .then(r => r.json())
     .then(data => {
         const select = document.getElementById('beneficiario_id');
@@ -793,7 +793,7 @@ function salvarTransacao() {
 }
 
 function editTransacao(id) {
-    fetch(`${API_BASE_URL}/financeiro/transacoes/${id}`)
+    fetch('/api/v1/financeiro/transacoes/${id}')
     .then(response => response.json())
     .then(transacao => {
         prepareModal('editar', transacao);
