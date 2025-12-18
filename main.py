@@ -21,6 +21,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import create_first_user
+from fastapi.responses import RedirectResponse # Adicione este import
 
 from src.models import aluno, professor, turma, evento, financeiro, matricula, plano, mensalidade, produto, categoria, historico_matricula, inscricao
 
@@ -46,14 +47,21 @@ try:
     print("Tabelas criadas com sucesso!")
 except Exception as e:
     print(f"Erro ao criar tabelas: {e}")
+    
+
+env = os.getenv("ENVIRONMENT", "development")
+
+docs_url = "/docs" if env != "production" else None
+redoc_url = "/redoc" if env != "production" else None
 
 # Inicializa a aplicação FastAPI
 app = FastAPI(
     title="API Academia de Lutas",
     description="API para gerenciamento de academia de lutas",
     version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc"
+    docs_url=docs_url,   # Será None em produção (desativa /docs)
+    redoc_url=redoc_url, # Será None em produção (desativa /redoc)
+    openapi_url="/openapi.json" if env != "production" else None # Desativa o JSON do schema
 )
 
 frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5700")
@@ -71,6 +79,11 @@ origins = [
 
 pwa_dir = Path(__file__).parent / "portal_aluno_pwa"
 app.mount("/portal", StaticFiles(directory=pwa_dir), name="portal")
+
+@app.get("/", tags=["Root"], include_in_schema=False)
+async def root():
+    # Se alguém acessar a raiz da API, joga para o portal do aluno
+    return RedirectResponse(url="/portal")
 
 # Rota principal para servir o index.html do PWA
 @app.get("/portal/{rest_of_path:path}")

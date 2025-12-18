@@ -40,6 +40,8 @@ services:
       
       # Variáveis da Aplicação
       SECRET_KEY: ${SECRET_KEY}
+
+      ENVIRONMENT: production
       
       # URLs do Sistema
       BACKEND_URL: ${BACKEND_URL}
