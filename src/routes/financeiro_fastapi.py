@@ -16,6 +16,7 @@ from src.schemas.financeiro import FinanceiroCreate, FinanceiroRead, FinanceiroU
 from src.models.categoria import Categoria 
 from sqlalchemy import func
 from src.models.mensalidade import Mensalidade
+from src.models.usuario import Usuario
 
 router = APIRouter(
     tags=["Financeiro"],
@@ -198,14 +199,38 @@ def get_balanco(
     categorias_data = {categoria: valor for categoria, valor in categorias_despesa_query}
     # --- FIM DA LÓGICA DO GRÁFICO ---
 
+    # --- LÓGICA DO CAIXA VIRTUAL (NOVA) ---
+    # Busca receitas em 'Dinheiro' agrupadas por responsável
+    # Assume que a transação criada no portal do professor tem 'responsavel_id' e forma_pagamento='Dinheiro'
+    
+    query_caixas = db.query(
+        Usuario.nome,
+        func.sum(Financeiro.valor).label("total")
+    ).join(
+        Financeiro, Usuario.id == Financeiro.responsavel_id
+    ).filter(
+        Financeiro.tipo == 'receita',
+        Financeiro.forma_pagamento == 'Dinheiro', # Filtra apenas dinheiro físico
+        func.date(Financeiro.data) >= data_inicio_obj,
+        func.date(Financeiro.data) <= data_fim_obj
+    ).group_by(Usuario.id, Usuario.nome).all()
+
+    # Formata para lista de dicionários e calcula total geral dos caixas
+    lista_caixas = [{"nome": nome, "total": total or 0.0} for nome, total in query_caixas]
+    total_caixas_virtuais = sum(item['total'] for item in lista_caixas)
+    
+    # --- FIM DA LÓGICA DO CAIXA VIRTUAL ---
+
     return {
         "receitas": total_receitas,
         "despesas": total_despesas,
         "saldo": total_receitas - total_despesas,
         "total_transacoes": total_transacoes,
         "mensalidades_pendentes": mensalidades_pendentes,
-        # Adiciona a chave 'graficos' de volta na resposta
         "graficos": {
             "categorias": categorias_data
-        }
+        },
+        # Adicione os novos dados ao retorno
+        "caixas_virtuais": lista_caixas,
+        "total_caixas_virtuais": total_caixas_virtuais
     }

@@ -126,6 +126,66 @@
     </div>
 </div>
 
+{% if stats.caixas_virtuais %}
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0 text-primary">
+                    <i class="fas fa-hand-holding-usd me-2"></i>
+                    Caixas Virtuais (Dinheiro em Mãos)
+                </h5>
+                <span class="badge bg-primary fs-6">
+                    Total: R$ {{ "%.2f"|format(stats.total_caixas_virtuais) }}
+                </span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 50%;">Responsável (Professor/Atendente)</th>
+                                <th class="text-end">Total em Dinheiro</th>
+                                <th class="text-end" style="width: 20%;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for caixa in stats.caixas_virtuais %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="bg-light rounded-circle p-2 me-3">
+                                            <i class="fas fa-user-tie text-secondary"></i>
+                                        </div>
+                                        <span class="fw-medium">{{ caixa.nome }}</span>
+                                    </div>
+                                </td>
+                                <td class="text-end fw-bold text-success">
+                                    R$ {{ "%.2f"|format(caixa.total) }}
+                                </td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-outline-secondary" title="Ver detalhes">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <td class="fw-bold">TOTAL GERAL</td>
+                                <td class="text-end fw-bold text-primary">R$ {{ "%.2f"|format(stats.total_caixas_virtuais) }}</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <div class="row g-4 mb-4">
     <div class="col-lg-8">
         <div class="card border-0 shadow-sm">
