@@ -199,27 +199,50 @@ def get_balanco(
     categorias_data = {categoria: valor for categoria, valor in categorias_despesa_query}
     # --- FIM DA LÓGICA DO GRÁFICO ---
 
-    # --- LÓGICA DO CAIXA VIRTUAL (NOVA) ---
-    # Busca receitas em 'Dinheiro' agrupadas por responsável
-    # Assume que a transação criada no portal do professor tem 'responsavel_id' e forma_pagamento='Dinheiro'
+    # --- CÁLCULO ATUALIZADO DO CAIXA VIRTUAL ---
     
-    query_caixas = db.query(
+    # 1. Soma tudo que o professor recebeu em dinheiro (Entradas no cofre dele)
+    receitas_prof = db.query(
+        Usuario.id,
         Usuario.nome,
-        func.sum(Financeiro.valor).label("total")
+        func.sum(Financeiro.valor).label("total_recebido")
     ).join(
         Financeiro, Usuario.id == Financeiro.responsavel_id
     ).filter(
         Financeiro.tipo == 'receita',
-        Financeiro.forma_pagamento == 'Dinheiro', # Filtra apenas dinheiro físico
+        Financeiro.forma_pagamento == 'Dinheiro',
+        # Nota: Normalmente o caixa virtual é acumulativo, cuidado ao filtrar por data aqui se quiser o saldo "atual real"
+        # Se quiser o saldo do período, mantenha o filtro de data. Para saldo "em carteira", remova.
         func.date(Financeiro.data) >= data_inicio_obj,
         func.date(Financeiro.data) <= data_fim_obj
     ).group_by(Usuario.id, Usuario.nome).all()
 
-    # Formata para lista de dicionários e calcula total geral dos caixas
-    lista_caixas = [{"nome": nome, "total": total or 0.0} for nome, total in query_caixas]
+    # 2. Soma tudo que já foi abatido em salários (Saídas do cofre dele para pagar o próprio salário)
+    abatimentos_prof = db.query(
+        Financeiro.beneficiario_id,
+        func.sum(Financeiro.valor_abatido_caixa).label("total_abatido")
+    ).filter(
+        Financeiro.valor_abatido_caixa > 0,
+        func.date(Financeiro.data) >= data_inicio_obj,
+        func.date(Financeiro.data) <= data_fim_obj
+    ).group_by(Financeiro.beneficiario_id).all()
+
+    # Converter para dicionário para facilitar a subtração
+    dict_abatimentos = {row.beneficiario_id: row.total_abatido for row in abatimentos_prof}
+
+    lista_caixas = []
+    for prof_id, nome, total_recebido in receitas_prof:
+        total_abatido = dict_abatimentos.get(prof_id, 0.0)
+        saldo_real = (total_recebido or 0.0) - (total_abatido or 0.0)
+        
+        if saldo_real != 0: # Só mostra se tiver saldo ou dívida
+            lista_caixas.append({
+                "id": prof_id, # Importante passar o ID para o frontend usar
+                "nome": nome, 
+                "total": saldo_real
+            })
+
     total_caixas_virtuais = sum(item['total'] for item in lista_caixas)
-    
-    # --- FIM DA LÓGICA DO CAIXA VIRTUAL ---
 
     return {
         "receitas": total_receitas,
@@ -234,3 +257,11 @@ def get_balanco(
         "caixas_virtuais": lista_caixas,
         "total_caixas_virtuais": total_caixas_virtuais
     }
+    
+@router.get("/staff", response_model=List[dict])
+def get_staff_users(db: Session = Depends(get_db)):
+    """Retorna lista de professores/atendentes para o dropdown"""
+    staff = db.query(Usuario).filter(
+        Usuario.role.in_(['professor', 'administrador', 'gerente'])
+    ).all()
+    return [{"id": u.id, "nome": u.nome} for u in staff]

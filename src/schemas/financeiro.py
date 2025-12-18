@@ -22,10 +22,14 @@ class FinanceiroBase(BaseModel):
     observacoes: Optional[str] = Field(None, max_length=255)
     status: Optional[str] = Field(None, max_length=50)
     data: Optional[datetime] = None
+    
+    beneficiario_id: Optional[int] = None
+    valor_abatido_caixa: Optional[float] = 0.0
 
 # Schema para criação de transação financeira
 class FinanceiroCreate(FinanceiroBase):
-    pass
+    beneficiario_id: Optional[int] = None
+    valor_abatido_caixa: Optional[float] = 0.0
 
 # Schema para atualização de transação financeira
 class FinanceiroUpdate(BaseModel):
@@ -46,6 +50,9 @@ class FinanceiroRead(FinanceiroBase):
     id: int
     responsavel_id: Optional[int] = None
     data: datetime
+    
+    beneficiario_id: Optional[int] = None
+    valor_abatido_caixa: Optional[float] = 0.0
 
     class Config:
         from_attributes = True # Atualizado para Pydantic v2 (era orm_mode)
