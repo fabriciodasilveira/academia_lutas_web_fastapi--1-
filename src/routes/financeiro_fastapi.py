@@ -1,6 +1,7 @@
+# src/routes/financeiro_fastapi.py
 # -*- coding: utf-8 -*-
 """
-Rotas FastAPI para o CRUD de Transações Financeiras.
+Rotas FastAPI para o CRUD de Transações Financeiras e Fluxo de Caixa.
 """
 
 from typing import List, Optional
@@ -14,14 +15,25 @@ from src.database import get_db
 from src.models.financeiro import Financeiro
 from src.schemas.financeiro import FinanceiroCreate, FinanceiroRead, FinanceiroUpdate
 from src.models.categoria import Categoria 
-from sqlalchemy import func
 from src.models.mensalidade import Mensalidade
-from src.models.usuario import Usuario
+from src.models.usuario import Usuario  # Importação necessária para o caixa virtual
 
 router = APIRouter(
     tags=["Financeiro"],
     responses={404: {"description": "Não encontrado"}},
 )
+
+# --- Endpoint auxiliar para preencher o Dropdown de Funcionários ---
+@router.get("/staff", response_model=List[dict])
+def get_staff_users(db: Session = Depends(get_db)):
+    """
+    Retorna lista de usuários com perfil de staff (professor, admin, gerente)
+    para ser usada no dropdown de pagamento de salários.
+    """
+    staff = db.query(Usuario).filter(
+        Usuario.role.in_(['professor', 'administrador', 'gerente'])
+    ).all()
+    return [{"id": u.id, "nome": u.nome} for u in staff]
 
 # --- CRUD Endpoints para Transações Financeiras --- 
 
@@ -30,7 +42,7 @@ def create_transacao(transacao: FinanceiroCreate, db: Session = Depends(get_db))
     """
     Cria uma nova transação financeira (receita ou despesa).
     """
-    # Validação do tipo e categoria
+    # Validação do tipo
     tipos_validos = ['receita', 'despesa']
     if transacao.tipo not in tipos_validos:
         raise HTTPException(
@@ -42,6 +54,7 @@ def create_transacao(transacao: FinanceiroCreate, db: Session = Depends(get_db))
     if not transacao.data:
         transacao.data = datetime.utcnow()
     
+    # Cria o objeto do banco usando os dados do schema (inclui beneficiario_id e valor_abatido)
     db_transacao = Financeiro(**transacao.dict())
     
     db.add(db_transacao)
@@ -146,8 +159,7 @@ def get_balanco(
     db: Session = Depends(get_db)
 ):
     """
-    Obtém o balanço financeiro (receitas - despesas) em um período de forma otimizada,
-    incluindo dados para gráficos.
+    Obtém o balanço financeiro, estatísticas e Caixas Virtuais (Encontro de Contas).
     """
     hoje = datetime.utcnow().date()
     primeiro_dia_mes = hoje.replace(day=1)
@@ -158,7 +170,7 @@ def get_balanco(
     except ValueError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Formato de data inválido. Use YYYY-MM-DD")
 
-    # Cálculos otimizados para os totais
+    # --- Totais Gerais ---
     query_receitas = db.query(func.sum(Financeiro.valor)).filter(
         Financeiro.tipo == 'receita',
         func.date(Financeiro.data) >= data_inicio_obj,
@@ -184,8 +196,7 @@ def get_balanco(
         Mensalidade.data_vencimento <= hoje
     ).count()
 
-    # --- LÓGICA DO GRÁFICO REINSERIDA AQUI ---
-    # Agrupa as despesas por categoria
+    # --- Lógica do Gráfico ---
     categorias_despesa_query = db.query(
         Financeiro.categoria, 
         func.sum(Financeiro.valor)
@@ -195,13 +206,13 @@ def get_balanco(
         func.date(Financeiro.data) <= data_fim_obj
     ).group_by(Financeiro.categoria).all()
 
-    # Formata os dados para o gráfico
     categorias_data = {categoria: valor for categoria, valor in categorias_despesa_query}
-    # --- FIM DA LÓGICA DO GRÁFICO ---
 
-    # --- CÁLCULO ATUALIZADO DO CAIXA VIRTUAL ---
-    
+    # --- Lógica do CAIXA VIRTUAL (Encontro de Contas) ---
     # 1. Soma tudo que o professor recebeu em dinheiro (Entradas no cofre dele)
+    # Importante: Para o saldo real de caixa, idealmente somamos tudo desde sempre, 
+    # mas aqui respeitaremos o filtro de data se o usuário quiser ver o "caixa do mês".
+    # Se quiser o saldo ACUMULADO, remova os filtros de data desta query.
     receitas_prof = db.query(
         Usuario.id,
         Usuario.nome,
@@ -211,13 +222,11 @@ def get_balanco(
     ).filter(
         Financeiro.tipo == 'receita',
         Financeiro.forma_pagamento == 'Dinheiro',
-        # Nota: Normalmente o caixa virtual é acumulativo, cuidado ao filtrar por data aqui se quiser o saldo "atual real"
-        # Se quiser o saldo do período, mantenha o filtro de data. Para saldo "em carteira", remova.
         func.date(Financeiro.data) >= data_inicio_obj,
         func.date(Financeiro.data) <= data_fim_obj
     ).group_by(Usuario.id, Usuario.nome).all()
 
-    # 2. Soma tudo que já foi abatido em salários (Saídas do cofre dele para pagar o próprio salário)
+    # 2. Soma tudo que já foi abatido em salários (Saídas do cofre dele)
     abatimentos_prof = db.query(
         Financeiro.beneficiario_id,
         func.sum(Financeiro.valor_abatido_caixa).label("total_abatido")
@@ -227,7 +236,6 @@ def get_balanco(
         func.date(Financeiro.data) <= data_fim_obj
     ).group_by(Financeiro.beneficiario_id).all()
 
-    # Converter para dicionário para facilitar a subtração
     dict_abatimentos = {row.beneficiario_id: row.total_abatido for row in abatimentos_prof}
 
     lista_caixas = []
@@ -235,9 +243,10 @@ def get_balanco(
         total_abatido = dict_abatimentos.get(prof_id, 0.0)
         saldo_real = (total_recebido or 0.0) - (total_abatido or 0.0)
         
-        if saldo_real != 0: # Só mostra se tiver saldo ou dívida
+        # Mostra na lista se tiver algum saldo (positivo ou negativo)
+        if abs(saldo_real) > 0.01: 
             lista_caixas.append({
-                "id": prof_id, # Importante passar o ID para o frontend usar
+                "id": prof_id,
                 "nome": nome, 
                 "total": saldo_real
             })
@@ -253,15 +262,6 @@ def get_balanco(
         "graficos": {
             "categorias": categorias_data
         },
-        # Adicione os novos dados ao retorno
         "caixas_virtuais": lista_caixas,
         "total_caixas_virtuais": total_caixas_virtuais
     }
-    
-@router.get("/staff", response_model=List[dict])
-def get_staff_users(db: Session = Depends(get_db)):
-    """Retorna lista de professores/atendentes para o dropdown"""
-    staff = db.query(Usuario).filter(
-        Usuario.role.in_(['professor', 'administrador', 'gerente'])
-    ).all()
-    return [{"id": u.id, "nome": u.nome} for u in staff]
