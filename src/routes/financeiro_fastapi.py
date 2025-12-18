@@ -1,88 +1,77 @@
 # src/routes/financeiro_fastapi.py
 # -*- coding: utf-8 -*-
-"""
-Rotas FastAPI para o CRUD de Transações Financeiras e Fluxo de Caixa.
-"""
-
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from datetime import datetime
-import logging
+from pydantic import BaseModel
 
 from src.database import get_db
 from src.models.financeiro import Financeiro
 from src.schemas.financeiro import FinanceiroCreate, FinanceiroRead, FinanceiroUpdate
-from src.models.categoria import Categoria 
 from src.models.mensalidade import Mensalidade
-from src.models.usuario import Usuario  # Importação necessária para o caixa virtual
+from src.models.usuario import Usuario
 
 router = APIRouter(
     tags=["Financeiro"],
     responses={404: {"description": "Não encontrado"}},
 )
 
-# --- Endpoint auxiliar para preencher o Dropdown de Funcionários ---
-@router.get("/staff", response_model=List[dict])
+# --- SCHEMA AUXILIAR PARA O DROPDOWN ---
+class StaffSelect(BaseModel):
+    id: int
+    nome: str
+    role: str
+
+    class Config:
+        orm_mode = True
+
+# --- Endpoint para preencher o Dropdown ---
+@router.get("/staff", response_model=List[StaffSelect])
 def get_staff_users(db: Session = Depends(get_db)):
     """
-    Retorna lista de usuários com perfil de staff (professor, admin, gerente)
-    para ser usada no dropdown de pagamento de salários.
+    Retorna lista de usuários com perfil de staff.
+    Usa func.lower para garantir que pegue 'Professor', 'professor', 'ADMIN', etc.
     """
     staff = db.query(Usuario).filter(
-        Usuario.role.in_(['professor', 'administrador', 'gerente'])
-    ).all()
-    return [{"id": u.id, "nome": u.nome} for u in staff]
+        or_(
+            func.lower(Usuario.role) == 'professor',
+            func.lower(Usuario.role) == 'administrador',
+            func.lower(Usuario.role) == 'gerente',
+            func.lower(Usuario.role) == 'atendente'
+        )
+    ).order_by(Usuario.nome).all()
+    
+    return staff
 
-# --- CRUD Endpoints para Transações Financeiras --- 
+# --- CRUD Endpoints --- 
 
 @router.post("/transacoes", response_model=FinanceiroRead, status_code=status.HTTP_201_CREATED)
 def create_transacao(transacao: FinanceiroCreate, db: Session = Depends(get_db)):
-    """
-    Cria uma nova transação financeira (receita ou despesa).
-    """
-    # Validação do tipo
-    tipos_validos = ['receita', 'despesa']
-    if transacao.tipo not in tipos_validos:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Tipo inválido. Use: receita ou despesa"
-        )
+    if transacao.tipo not in ['receita', 'despesa']:
+        raise HTTPException(status_code=400, detail="Tipo inválido.")
     
-    # Se a data não for fornecida, usa a data atual
     if not transacao.data:
         transacao.data = datetime.utcnow()
     
-    # Cria o objeto do banco usando os dados do schema (inclui beneficiario_id e valor_abatido)
     db_transacao = Financeiro(**transacao.dict())
-    
     db.add(db_transacao)
     db.commit()
     db.refresh(db_transacao)
-    
     return db_transacao
 
 @router.get("/transacoes", response_model=List[FinanceiroRead])
 def read_transacoes(
-    skip: int = 0,
-    limit: int = 100,
-    tipo: Optional[str] = None,
-    categoria: Optional[str] = None,
-    busca: Optional[str] = None,
-    data_inicio: Optional[str] = None,
-    data_fim: Optional[str] = None,
+    skip: int = 0, limit: int = 100, tipo: Optional[str] = None,
+    categoria: Optional[str] = None, busca: Optional[str] = None,
+    data_inicio: Optional[str] = None, data_fim: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    """
-    Lista transações financeiras com filtros opcionais.
-    """
     query = db.query(Financeiro)
     
-    if tipo:
-        query = query.filter(Financeiro.tipo == tipo)
-    if categoria:
-        query = query.filter(Financeiro.categoria == categoria)
+    if tipo: query = query.filter(Financeiro.tipo == tipo)
+    if categoria: query = query.filter(Financeiro.categoria == categoria)
     if busca:
         query = query.filter(
             (Financeiro.descricao.ilike(f"%{busca}%")) |
@@ -91,177 +80,101 @@ def read_transacoes(
     
     if data_inicio:
         try:
-            data_inicio_obj = datetime.strptime(data_inicio, "%Y-%m-%d")
-            query = query.filter(Financeiro.data >= data_inicio_obj)
-        except ValueError:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Formato de data_inicio inválido. Use YYYY-MM-DD")
+            dt = datetime.strptime(data_inicio, "%Y-%m-%d")
+            query = query.filter(Financeiro.data >= dt)
+        except: pass
     
     if data_fim:
         try:
-            data_fim_obj = datetime.strptime(data_fim, "%Y-%m-%d")
-            query = query.filter(Financeiro.data <= data_fim_obj)
-        except ValueError:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Formato de data_fim inválido. Use YYYY-MM-DD")
+            dt = datetime.strptime(data_fim, "%Y-%m-%d")
+            query = query.filter(Financeiro.data <= dt)
+        except: pass
     
-    transacoes = query.order_by(Financeiro.data.desc()).offset(skip).limit(limit).all()
-    return transacoes
+    return query.order_by(Financeiro.data.desc()).offset(skip).limit(limit).all()
 
 @router.get("/transacoes/{transacao_id}", response_model=FinanceiroRead)
 def read_transacao(transacao_id: int, db: Session = Depends(get_db)):
-    """
-    Obtém os detalhes de uma transação financeira específica pelo ID.
-    """
     db_transacao = db.query(Financeiro).filter(Financeiro.id == transacao_id).first()
-    if db_transacao is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Transação não encontrada")
+    if not db_transacao: raise HTTPException(status_code=404, detail="Não encontrado")
     return db_transacao
 
 @router.put("/transacoes/{transacao_id}", response_model=FinanceiroRead)
-def update_transacao(transacao_id: int, transacao_update: FinanceiroUpdate, db: Session = Depends(get_db)):
-    """
-    Atualiza os dados de uma transação financeira existente.
-    """
+def update_transacao(transacao_id: int, dados: FinanceiroUpdate, db: Session = Depends(get_db)):
     db_transacao = db.query(Financeiro).filter(Financeiro.id == transacao_id).first()
-    if db_transacao is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Transação não encontrada")
+    if not db_transacao: raise HTTPException(status_code=404, detail="Não encontrado")
     
-    update_data = transacao_update.dict(exclude_unset=True)
-    
-    if "tipo" in update_data:
-        tipos_validos = ['receita', 'despesa']
-        if update_data["tipo"] not in tipos_validos:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Tipo inválido. Use: receita ou despesa")
-    
-    for key, value in update_data.items():
+    for key, value in dados.dict(exclude_unset=True).items():
         setattr(db_transacao, key, value)
     
     db.commit()
     db.refresh(db_transacao)
     return db_transacao
 
-@router.delete("/transacoes/{transacao_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/transacoes/{transacao_id}", status_code=204)
 def delete_transacao(transacao_id: int, db: Session = Depends(get_db)):
-    """
-    Exclui uma transação financeira.
-    """
     db_transacao = db.query(Financeiro).filter(Financeiro.id == transacao_id).first()
-    if db_transacao is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Transação não encontrada")
-    
+    if not db_transacao: raise HTTPException(status_code=404, detail="Não encontrado")
     db.delete(db_transacao)
     db.commit()
-    return None
 
 @router.get("/balanco", response_model=dict)
-def get_balanco(
-    data_inicio: Optional[str] = None,
-    data_fim: Optional[str] = None,
-    db: Session = Depends(get_db)
-):
-    """
-    Obtém o balanço financeiro, estatísticas e Caixas Virtuais (Encontro de Contas).
-    """
+def get_balanco(data_inicio: Optional[str] = None, data_fim: Optional[str] = None, db: Session = Depends(get_db)):
     hoje = datetime.utcnow().date()
-    primeiro_dia_mes = hoje.replace(day=1)
-
-    try:
-        data_inicio_obj = datetime.strptime(data_inicio, "%Y-%m-%d").date() if data_inicio else primeiro_dia_mes
-        data_fim_obj = datetime.strptime(data_fim, "%Y-%m-%d").date() if data_fim else hoje
-    except ValueError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Formato de data inválido. Use YYYY-MM-DD")
-
-    # --- Totais Gerais ---
-    query_receitas = db.query(func.sum(Financeiro.valor)).filter(
-        Financeiro.tipo == 'receita',
-        func.date(Financeiro.data) >= data_inicio_obj,
-        func.date(Financeiro.data) <= data_fim_obj
-    )
-    total_receitas = query_receitas.scalar() or 0.0
-
-    query_despesas = db.query(func.sum(Financeiro.valor)).filter(
-        Financeiro.tipo == 'despesa',
-        func.date(Financeiro.data) >= data_inicio_obj,
-        func.date(Financeiro.data) <= data_fim_obj
-    )
-    total_despesas = query_despesas.scalar() or 0.0
+    primeiro_dia = hoje.replace(day=1)
     
-    query_total_transacoes = db.query(func.count(Financeiro.id)).filter(
-        func.date(Financeiro.data) >= data_inicio_obj,
-        func.date(Financeiro.data) <= data_fim_obj
-    )
-    total_transacoes = query_total_transacoes.scalar() or 0
+    d_ini = datetime.strptime(data_inicio, "%Y-%m-%d").date() if data_inicio else primeiro_dia
+    d_fim = datetime.strptime(data_fim, "%Y-%m-%d").date() if data_fim else hoje
 
-    mensalidades_pendentes = db.query(Mensalidade).filter(
-        Mensalidade.status == 'pendente',
-        Mensalidade.data_vencimento <= hoje
+    # Totais
+    receitas = db.query(func.sum(Financeiro.valor)).filter(
+        Financeiro.tipo == 'receita', func.date(Financeiro.data) >= d_ini, func.date(Financeiro.data) <= d_fim
+    ).scalar() or 0.0
+
+    despesas = db.query(func.sum(Financeiro.valor)).filter(
+        Financeiro.tipo == 'despesa', func.date(Financeiro.data) >= d_ini, func.date(Financeiro.data) <= d_fim
+    ).scalar() or 0.0
+    
+    total_trans = db.query(func.count(Financeiro.id)).filter(
+        func.date(Financeiro.data) >= d_ini, func.date(Financeiro.data) <= d_fim
+    ).scalar() or 0
+
+    pendentes = db.query(Mensalidade).filter(
+        Mensalidade.status == 'pendente', Mensalidade.data_vencimento <= hoje
     ).count()
 
-    # --- Lógica do Gráfico ---
-    categorias_despesa_query = db.query(
-        Financeiro.categoria, 
-        func.sum(Financeiro.valor)
-    ).filter(
-        Financeiro.tipo == 'despesa',
-        func.date(Financeiro.data) >= data_inicio_obj,
-        func.date(Financeiro.data) <= data_fim_obj
+    # Gráficos
+    cats = db.query(Financeiro.categoria, func.sum(Financeiro.valor)).filter(
+        Financeiro.tipo == 'despesa', func.date(Financeiro.data) >= d_ini, func.date(Financeiro.data) <= d_fim
     ).group_by(Financeiro.categoria).all()
+    grafico_data = {c: v for c, v in cats}
 
-    categorias_data = {categoria: valor for categoria, valor in categorias_despesa_query}
-
-    # --- Lógica do CAIXA VIRTUAL (Encontro de Contas) ---
-    # 1. Soma tudo que o professor recebeu em dinheiro (Entradas no cofre dele)
-    # Importante: Para o saldo real de caixa, idealmente somamos tudo desde sempre, 
-    # mas aqui respeitaremos o filtro de data se o usuário quiser ver o "caixa do mês".
-    # Se quiser o saldo ACUMULADO, remova os filtros de data desta query.
-    receitas_prof = db.query(
-        Usuario.id,
-        Usuario.nome,
-        func.sum(Financeiro.valor).label("total_recebido")
-    ).join(
+    # Caixa Virtual (Acumulado do período)
+    # Entradas (Receitas em dinheiro na mão do prof)
+    entradas = db.query(Usuario.id, Usuario.nome, func.sum(Financeiro.valor)).join(
         Financeiro, Usuario.id == Financeiro.responsavel_id
     ).filter(
-        Financeiro.tipo == 'receita',
-        Financeiro.forma_pagamento == 'Dinheiro',
-        func.date(Financeiro.data) >= data_inicio_obj,
-        func.date(Financeiro.data) <= data_fim_obj
+        Financeiro.tipo == 'receita', Financeiro.forma_pagamento == 'Dinheiro',
+        func.date(Financeiro.data) >= d_ini, func.date(Financeiro.data) <= d_fim
     ).group_by(Usuario.id, Usuario.nome).all()
 
-    # 2. Soma tudo que já foi abatido em salários (Saídas do cofre dele)
-    abatimentos_prof = db.query(
-        Financeiro.beneficiario_id,
-        func.sum(Financeiro.valor_abatido_caixa).label("total_abatido")
-    ).filter(
+    # Saídas (Pagamentos de salário descontando do caixa)
+    saidas = db.query(Financeiro.beneficiario_id, func.sum(Financeiro.valor_abatido_caixa)).filter(
         Financeiro.valor_abatido_caixa > 0,
-        func.date(Financeiro.data) >= data_inicio_obj,
-        func.date(Financeiro.data) <= data_fim_obj
+        func.date(Financeiro.data) >= d_ini, func.date(Financeiro.data) <= d_fim
     ).group_by(Financeiro.beneficiario_id).all()
-
-    dict_abatimentos = {row.beneficiario_id: row.total_abatido for row in abatimentos_prof}
-
-    lista_caixas = []
-    for prof_id, nome, total_recebido in receitas_prof:
-        total_abatido = dict_abatimentos.get(prof_id, 0.0)
-        saldo_real = (total_recebido or 0.0) - (total_abatido or 0.0)
-        
-        # Mostra na lista se tiver algum saldo (positivo ou negativo)
-        if abs(saldo_real) > 0.01: 
-            lista_caixas.append({
-                "id": prof_id,
-                "nome": nome, 
-                "total": saldo_real
-            })
-
-    total_caixas_virtuais = sum(item['total'] for item in lista_caixas)
+    
+    map_saidas = {uid: val for uid, val in saidas}
+    
+    caixas = []
+    for uid, nome, val_entrada in entradas:
+        val_saida = map_saidas.get(uid, 0.0)
+        saldo = (val_entrada or 0) - (val_saida or 0)
+        if abs(saldo) > 0.01:
+            caixas.append({"id": uid, "nome": nome, "total": saldo})
 
     return {
-        "receitas": total_receitas,
-        "despesas": total_despesas,
-        "saldo": total_receitas - total_despesas,
-        "total_transacoes": total_transacoes,
-        "mensalidades_pendentes": mensalidades_pendentes,
-        "graficos": {
-            "categorias": categorias_data
-        },
-        "caixas_virtuais": lista_caixas,
-        "total_caixas_virtuais": total_caixas_virtuais
+        "receitas": receitas, "despesas": despesas, "saldo": receitas - despesas,
+        "total_transacoes": total_trans, "mensalidades_pendentes": pendentes,
+        "graficos": {"categorias": grafico_data},
+        "caixas_virtuais": caixas, "total_caixas_virtuais": sum(c['total'] for c in caixas)
     }
