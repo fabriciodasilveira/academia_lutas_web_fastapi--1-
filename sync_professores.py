@@ -4,6 +4,7 @@ from src.models.professor import Professor
 from src.models.usuario import Usuario
 from src.auth import get_password_hash
 import unidecode
+from src.models.aluno import Aluno
 
 def gerar_username(nome):
     # Remove acentos e espaços, deixa minusculo. Ex: "João Silva" -> "joaosilva"
