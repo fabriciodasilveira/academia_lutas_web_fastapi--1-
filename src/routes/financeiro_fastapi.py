@@ -32,7 +32,6 @@ class StaffSelect(BaseModel):
 def get_staff_users(db: Session = Depends(get_db)):
     """
     Retorna lista de usuários com perfil de staff.
-    Usa func.lower para garantir que pegue 'Professor', 'professor', 'ADMIN', etc.
     """
     staff = db.query(Usuario).filter(
         or_(
@@ -122,10 +121,14 @@ def get_balanco(data_inicio: Optional[str] = None, data_fim: Optional[str] = Non
     hoje = datetime.utcnow().date()
     primeiro_dia = hoje.replace(day=1)
     
-    d_ini = datetime.strptime(data_inicio, "%Y-%m-%d").date() if data_inicio else primeiro_dia
-    d_fim = datetime.strptime(data_fim, "%Y-%m-%d").date() if data_fim else hoje
+    try:
+        d_ini = datetime.strptime(data_inicio, "%Y-%m-%d").date() if data_inicio else primeiro_dia
+        d_fim = datetime.strptime(data_fim, "%Y-%m-%d").date() if data_fim else hoje
+    except:
+        d_ini = primeiro_dia
+        d_fim = hoje
 
-    # Totais
+    # --- Totais Gerais (Respeitam o filtro de data para mostrar fluxo do mês) ---
     receitas = db.query(func.sum(Financeiro.valor)).filter(
         Financeiro.tipo == 'receita', func.date(Financeiro.data) >= d_ini, func.date(Financeiro.data) <= d_fim
     ).scalar() or 0.0
@@ -142,25 +145,28 @@ def get_balanco(data_inicio: Optional[str] = None, data_fim: Optional[str] = Non
         Mensalidade.status == 'pendente', Mensalidade.data_vencimento <= hoje
     ).count()
 
-    # Gráficos
+    # --- Gráficos (Respeitam o filtro de data) ---
     cats = db.query(Financeiro.categoria, func.sum(Financeiro.valor)).filter(
         Financeiro.tipo == 'despesa', func.date(Financeiro.data) >= d_ini, func.date(Financeiro.data) <= d_fim
     ).group_by(Financeiro.categoria).all()
     grafico_data = {c: v for c, v in cats}
 
-    # Caixa Virtual (Acumulado do período)
-    # Entradas (Receitas em dinheiro na mão do prof)
+    # --- Caixa Virtual (SALDO ACUMULADO GERAL - Ignora filtro de data) ---
+    # Motivo: Dinheiro no bolso é acumulativo. Se recebeu mês passado e não gastou, ainda tem hoje.
+    
+    # 1. Total Recebido na História
     entradas = db.query(Usuario.id, Usuario.nome, func.sum(Financeiro.valor)).join(
         Financeiro, Usuario.id == Financeiro.responsavel_id
     ).filter(
-        Financeiro.tipo == 'receita', Financeiro.forma_pagamento == 'Dinheiro',
-        func.date(Financeiro.data) >= d_ini, func.date(Financeiro.data) <= d_fim
+        Financeiro.tipo == 'receita', 
+        Financeiro.forma_pagamento == 'Dinheiro'
+        # REMOVIDO FILTRO DE DATA AQUI
     ).group_by(Usuario.id, Usuario.nome).all()
 
-    # Saídas (Pagamentos de salário descontando do caixa)
+    # 2. Total Abatido na História
     saidas = db.query(Financeiro.beneficiario_id, func.sum(Financeiro.valor_abatido_caixa)).filter(
-        Financeiro.valor_abatido_caixa > 0,
-        func.date(Financeiro.data) >= d_ini, func.date(Financeiro.data) <= d_fim
+        Financeiro.valor_abatido_caixa > 0
+        # REMOVIDO FILTRO DE DATA AQUI
     ).group_by(Financeiro.beneficiario_id).all()
     
     map_saidas = {uid: val for uid, val in saidas}
@@ -168,13 +174,19 @@ def get_balanco(data_inicio: Optional[str] = None, data_fim: Optional[str] = Non
     caixas = []
     for uid, nome, val_entrada in entradas:
         val_saida = map_saidas.get(uid, 0.0)
-        saldo = (val_entrada or 0) - (val_saida or 0)
+        saldo = (val_entrada or 0.0) - (val_saida or 0.0)
+        
+        # Mostra apenas se tiver saldo relevante (positivo ou negativo)
         if abs(saldo) > 0.01:
             caixas.append({"id": uid, "nome": nome, "total": saldo})
 
     return {
-        "receitas": receitas, "despesas": despesas, "saldo": receitas - despesas,
-        "total_transacoes": total_trans, "mensalidades_pendentes": pendentes,
+        "receitas": receitas, 
+        "despesas": despesas, 
+        "saldo": receitas - despesas,
+        "total_transacoes": total_trans, 
+        "mensalidades_pendentes": pendentes,
         "graficos": {"categorias": grafico_data},
-        "caixas_virtuais": caixas, "total_caixas_virtuais": sum(c['total'] for c in caixas)
+        "caixas_virtuais": caixas, 
+        "total_caixas_virtuais": sum(c['total'] for c in caixas)
     }
