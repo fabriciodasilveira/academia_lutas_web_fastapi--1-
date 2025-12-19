@@ -502,8 +502,9 @@
 {% block extra_js %}
 <script>
 
-// === CORREÇÃO IMPORTANTE: URL ABSOLUTA PARA A API ===
-const API_BASE_URL = "https://aze.fightclube.com.br/api/v1"; 
+// === CORREÇÃO: RENOMEADO PARA EVITAR CONFLITO ===
+// Esta URL garante que o Javascript chame o backend correto
+const API_URL = "https://aze.fightclube.com.br/api/v1"; 
 
 const CATEGORIAS = {
     'receita': [
@@ -538,8 +539,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Carrega a lista de staff para o dropdown de pagamentos
-    // USANDO URL ABSOLUTA PARA CORRIGIR O ERRO 404
-    fetch(`${API_BASE_URL}/financeiro/staff`)
+    // USANDO URL RENOMEADA 'API_URL'
+    fetch(`${API_URL}/financeiro/staff`)
     .then(r => r.json())
     .then(data => {
         const select = document.getElementById('beneficiario_id');
@@ -796,8 +797,8 @@ function salvarTransacao() {
 }
 
 function editTransacao(id) {
-    // USANDO URL ABSOLUTA PARA CORRIGIR O ERRO 404
-    fetch(`${API_BASE_URL}/financeiro/transacoes/${id}`)
+    // USANDO URL RENOMEADA 'API_URL'
+    fetch(`${API_URL}/financeiro/transacoes/${id}`)
     .then(response => response.json())
     .then(transacao => {
         prepareModal('editar', transacao);
