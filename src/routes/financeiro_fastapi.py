@@ -121,6 +121,7 @@ def get_balanco(data_inicio: Optional[str] = None, data_fim: Optional[str] = Non
     hoje = datetime.utcnow().date()
     primeiro_dia = hoje.replace(day=1)
     
+    # Datas usadas APENAS para o Fluxo de Caixa (Gráficos e Totais do Mês)
     try:
         d_ini = datetime.strptime(data_inicio, "%Y-%m-%d").date() if data_inicio else primeiro_dia
         d_fim = datetime.strptime(data_fim, "%Y-%m-%d").date() if data_fim else hoje
@@ -128,7 +129,7 @@ def get_balanco(data_inicio: Optional[str] = None, data_fim: Optional[str] = Non
         d_ini = primeiro_dia
         d_fim = hoje
 
-    # --- Totais Gerais (Respeitam o filtro de data para mostrar fluxo do mês) ---
+    # --- Totais Gerais (Respeitam o filtro de data para mostrar o resultado do período) ---
     receitas = db.query(func.sum(Financeiro.valor)).filter(
         Financeiro.tipo == 'receita', func.date(Financeiro.data) >= d_ini, func.date(Financeiro.data) <= d_fim
     ).scalar() or 0.0
@@ -151,22 +152,22 @@ def get_balanco(data_inicio: Optional[str] = None, data_fim: Optional[str] = Non
     ).group_by(Financeiro.categoria).all()
     grafico_data = {c: v for c, v in cats}
 
-    # --- Caixa Virtual (SALDO ACUMULADO GERAL - Ignora filtro de data) ---
-    # Motivo: Dinheiro no bolso é acumulativo. Se recebeu mês passado e não gastou, ainda tem hoje.
+    # --- Caixa Virtual (LÓGICA DO BALDE - ACUMULADO GERAL) ---
+    # Aqui removemos os filtros de data para pegar o saldo real atual
     
-    # 1. Total Recebido na História
+    # 1. Total que entrou no balde (Receitas em Dinheiro NA MÃO do professor)
     entradas = db.query(Usuario.id, Usuario.nome, func.sum(Financeiro.valor)).join(
         Financeiro, Usuario.id == Financeiro.responsavel_id
     ).filter(
         Financeiro.tipo == 'receita', 
         Financeiro.forma_pagamento == 'Dinheiro'
-        # REMOVIDO FILTRO DE DATA AQUI
+        # SEM FILTRO DE DATA: Pega desde o início dos tempos
     ).group_by(Usuario.id, Usuario.nome).all()
 
-    # 2. Total Abatido na História
+    # 2. Total que saiu do balde (Abatimentos usados em salários)
     saidas = db.query(Financeiro.beneficiario_id, func.sum(Financeiro.valor_abatido_caixa)).filter(
         Financeiro.valor_abatido_caixa > 0
-        # REMOVIDO FILTRO DE DATA AQUI
+        # SEM FILTRO DE DATA: Pega desde o início dos tempos
     ).group_by(Financeiro.beneficiario_id).all()
     
     map_saidas = {uid: val for uid, val in saidas}
@@ -174,9 +175,10 @@ def get_balanco(data_inicio: Optional[str] = None, data_fim: Optional[str] = Non
     caixas = []
     for uid, nome, val_entrada in entradas:
         val_saida = map_saidas.get(uid, 0.0)
+        # O saldo é o nível atual da água no balde
         saldo = (val_entrada or 0.0) - (val_saida or 0.0)
         
-        # Mostra apenas se tiver saldo relevante (positivo ou negativo)
+        # Mostra apenas se o balde não estiver vazio (considerando margem de erro de float)
         if abs(saldo) > 0.01:
             caixas.append({"id": uid, "nome": nome, "total": saldo})
 
