@@ -24,8 +24,6 @@
     </div>
 </div>
 
-
-
 <div class="row g-4 mb-4">
     <div class="col-xl-3 col-md-6">
         <div class="card border-0 shadow-sm h-100">
@@ -185,7 +183,6 @@
     </div>
 </div>
 {% endif %}
-
 <div class="row g-4 mb-4">
     <div class="col-lg-8">
         <div class="card border-0 shadow-sm">
@@ -368,44 +365,118 @@
     </div>
 </div>
 
-<div class="col-12" id="divBeneficiario" style="display: none;">
-    <div class="card bg-light border-0">
-        <div class="card-body">
-            <h6 class="card-title text-primary"><i class="fas fa-user-cog me-2"></i>Detalhes do Pagamento</h6>
-            
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label for="beneficiario_id" class="form-label">Funcionário/Professor</label>
-                    <select class="form-select" id="beneficiario_id" name="beneficiario_id" onchange="checkSaldoVirtual()">
-                        <option value="">Selecione...</option>
-                        </select>
-                </div>
+<div class="modal fade" id="novaTransacaoModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="transacaoModalLabel">
+                    <i class="fas fa-plus me-2"></i>
+                    Nova Transação
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="transacaoForm" action="{{ url_for('financeiro_salvar_transacao') }}" method="POST">
+                <input type="hidden" id="transacao_id" name="id">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="tipo" class="form-label">Tipo *</label>
+                            <select class="form-select" id="tipo" name="tipo" required>
+                                <option value="">Selecione o tipo</option>
+                                <option value="receita">Receita</option>
+                                <option value="despesa">Despesa</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="valor" class="form-label">Valor (R$) *</label>
+                            <input type="number" class="form-control" id="valor" name="valor" 
+                                   step="0.01" min="0" required>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="data" class="form-label">Data *</label>
+                            <input type="date" class="form-control" id="data" name="data" required>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="categoria" class="form-label">Categoria *</label>
+                            <select class="form-select" id="categoria" name="categoria" required>
+                                <option value="">Selecione a categoria</option>
+                            </select>
+                        </div>
 
-                <div class="col-md-6 d-flex align-items-end">
-                    <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" id="usar_caixa_virtual" onchange="calcularPagamento()">
-                        <label class="form-check-label" for="usar_caixa_virtual">
-                            Abater do Caixa Virtual?
-                        </label>
-                    </div>
-                </div>
+                        <div class="col-12" id="divBeneficiario" style="display: none;">
+                            <div class="card bg-light border-0">
+                                <div class="card-body">
+                                    <h6 class="card-title text-primary"><i class="fas fa-user-cog me-2"></i>Detalhes do Pagamento</h6>
+                                    
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label for="beneficiario_id" class="form-label">Funcionário/Professor</label>
+                                            <select class="form-select" id="beneficiario_id" name="beneficiario_id" onchange="checkSaldoVirtual()">
+                                                <option value="">Selecione...</option>
+                                                </select>
+                                        </div>
 
-                <div class="col-12" id="infoSaldoVirtual" style="display: none;">
-                    <div class="alert alert-info py-2 mb-0">
-                        <small>
-                            Saldo Virtual Disponível: <strong id="lblSaldoVirtual">R$ 0,00</strong><br>
-                            <hr class="my-1">
-                            Valor do Salário: <strong id="lblValorSalario">R$ 0,00</strong><br>
-                            Abatimento: <strong class="text-danger" id="lblAbatimento">- R$ 0,00</strong><br>
-                            <strong>A Pagar (Do Caixa da Academia): <span class="text-success" id="lblValorReal">R$ 0,00</span></strong>
-                        </small>
+                                        <div class="col-md-6 d-flex align-items-end">
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" id="usar_caixa_virtual" name="usar_caixa_virtual" onchange="calcularPagamento()">
+                                                <label class="form-check-label" for="usar_caixa_virtual">
+                                                    Abater do Caixa Virtual?
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-12" id="infoSaldoVirtual" style="display: none;">
+                                            <div class="alert alert-info py-2 mb-0">
+                                                <small>
+                                                    Saldo Virtual Disponível: <strong id="lblSaldoVirtual">R$ 0,00</strong><br>
+                                                    <hr class="my-1">
+                                                    Valor do Salário: <strong id="lblValorSalario">R$ 0,00</strong><br>
+                                                    Abatimento: <strong class="text-danger" id="lblAbatimento">- R$ 0,00</strong><br>
+                                                    <strong>A Pagar (Do Caixa da Academia): <span class="text-success" id="lblValorReal">R$ 0,00</span></strong>
+                                                </small>
+                                            </div>
+                                            <input type="hidden" name="valor_abatido_caixa" id="valor_abatido_caixa" value="0">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <label for="descricao" class="form-label">Descrição *</label>
+                            <input type="text" class="form-control" id="descricao" name="descricao" required
+                                   placeholder="Ex: Pagamento de Salário Mês 10">
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="status" class="form-label">Status</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="confirmado">Confirmado</option>
+                                <option value="pendente">Pendente</option>
+                                <option value="cancelado">Cancelado</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label for="observacoes" class="form-label">Observações</label>
+                            <textarea class="form-control" id="observacoes" name="observacoes" rows="3"
+                                      placeholder="Informações adicionais sobre a transação..."></textarea>
+                        </div>
                     </div>
-                    <input type="hidden" name="valor_abatido_caixa" id="valor_abatido_caixa" value="0">
-                </div>
+            </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" onclick="salvarTransacao()">
+                    <i class="fas fa-save me-1"></i>
+                    Salvar Transação
+                </button>
             </div>
         </div>
     </div>
-</div>      
+</div>
 
 <div class="modal fade" id="deleteModal" tabindex="-1">
     <div class="modal-dialog">
@@ -440,6 +511,7 @@ const CATEGORIAS = {
     ],
     'despesa': [
         { value: 'salarios', text: 'Salários' },
+        { value: 'adiantamento', text: 'Adiantamento Salarial' },
         { value: 'aluguel', text: 'Aluguel' },
         { value: 'equipamento', text: 'Compra de Equipamento' },
         { value: 'manutencao', text: 'Manutenção' },
@@ -447,10 +519,36 @@ const CATEGORIAS = {
     ]
 };
 
+// --- Lógica para Caixas Virtuais ---
+let saldosVirtuais = {}; 
+
 document.addEventListener('DOMContentLoaded', function() {
     // Dados dinâmicos do balanço
     const stats = {{ stats | tojson }};
     const transacoes = {{ transacoes | tojson }};
+
+    // Popula a variável de saldos virtuais baseado nos dados do template
+    if(stats.caixas_virtuais) {
+        stats.caixas_virtuais.forEach(c => {
+            saldosVirtuais[c.id] = c.total;
+        });
+    }
+
+    // Carrega a lista de staff para o dropdown de pagamentos
+    fetch('/api/v1/financeiro/staff')
+    .then(r => r.json())
+    .then(data => {
+        const select = document.getElementById('beneficiario_id');
+        if (select) {
+            data.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user.id;
+                option.textContent = user.nome;
+                select.appendChild(option);
+            });
+        }
+    })
+    .catch(err => console.log("Erro ao carregar staff, rota pode não existir ainda", err));
     
     // Lógica para os gráficos
     if (document.getElementById('fluxoCaixaChart')) {
@@ -538,64 +636,81 @@ document.addEventListener('DOMContentLoaded', function() {
     
     tipoSelect.addEventListener('change', function() {
         updateCategorias(this.value);
+        // Oculta o painel se mudar o tipo
+        document.getElementById('divBeneficiario').style.display = 'none';
     });
     
     updateCategorias(tipoSelect.value);
 
-    const filterForm = document.getElementById('filterForm');
-    if (filterForm) {
-        filterForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const formData = new FormData(this);
-            const queryParams = new URLSearchParams(formData).toString();
-            window.location.href = `{{ url_for("financeiro_transacoes") }}?${queryParams}`;
-        });
-    }
-
-    const urlParams = new URLSearchParams(window.location.search);
-    const searchInput = document.getElementById('searchInput');
-    if (searchInput) {
-        searchInput.value = urlParams.get('busca') || '';
-    }
-    document.getElementById('tipoFilter').value = urlParams.get('tipo') || '';
-    document.getElementById('categoriaFilter').value = urlParams.get('categoria') || '';
-    document.getElementById('dataInicioFilter').value = urlParams.get('data_inicio') || '';
-    document.getElementById('dataFimFilter').value = urlParams.get('data_fim') || '';
-    
-    if (document.getElementById('tipoFilter').value) {
-        const filterTipo = document.getElementById('tipoFilter').value;
-        const filterCategoriaSelect = document.getElementById('categoriaFilter');
-        const selectedCategoria = urlParams.get('categoria');
+    // Evento ao mudar Categoria para exibir/ocultar painel de pagamento
+    categoriaSelect.addEventListener('change', function() {
+        const divBeneficiario = document.getElementById('divBeneficiario');
         
-        filterCategoriaSelect.innerHTML = '<option value="">Todas categorias</option>';
-        if (CATEGORIAS_RECEITA.concat(CATEGORIAS_DESPESA).some(c => c.value === selectedCategoria)) {
-            let categorias = [];
-            if (filterTipo === 'receita') {
-                categorias = CATEGORIAS_RECEITA;
-            } else if (filterTipo === 'despesa') {
-                categorias = CATEGORIAS_DESPESA;
-            } else {
-                categorias = CATEGORIAS_RECEITA.concat(CATEGORIAS_DESPESA);
-            }
-
-            categorias.forEach(cat => {
-                const option = document.createElement('option');
-                option.value = cat.value;
-                option.textContent = cat.text;
-                if (cat.value === selectedCategoria) {
-                    option.selected = true;
-                }
-                filterCategoriaSelect.appendChild(option);
-            });
+        // Se for salário ou adiantamento, mostra as opções extras
+        if (this.value === 'salarios' || this.value === 'adiantamento') {
+            divBeneficiario.style.display = 'block';
+        } else {
+            divBeneficiario.style.display = 'none';
+            // Reseta campos do painel
+            document.getElementById('usar_caixa_virtual').checked = false;
+            document.getElementById('beneficiario_id').value = '';
+            document.getElementById('infoSaldoVirtual').style.display = 'none';
+            document.getElementById('valor_abatido_caixa').value = 0;
         }
+    });
+
+    // Evento para recalcular ao mudar valor
+    const valorInput = document.getElementById('valor');
+    if (valorInput) {
+        valorInput.addEventListener('input', calcularPagamento);
     }
 });
+
+// Funções para cálculo do pagamento com caixa virtual
+function checkSaldoVirtual() {
+    calcularPagamento();
+}
+
+function calcularPagamento() {
+    const userId = document.getElementById('beneficiario_id').value;
+    const usarCaixa = document.getElementById('usar_caixa_virtual').checked;
+    const valorSalario = parseFloat(document.getElementById('valor').value) || 0;
+    const infoDiv = document.getElementById('infoSaldoVirtual');
+    const inputAbatido = document.getElementById('valor_abatido_caixa');
+    
+    if (!userId) {
+        infoDiv.style.display = 'none';
+        return;
+    }
+
+    // Busca o saldo disponível (padrão 0 se não existir)
+    const saldoDisponivel = saldosVirtuais[userId] || 0;
+    
+    if (usarCaixa) {
+        infoDiv.style.display = 'block';
+        
+        // O abatimento é o menor valor entre: O Salário total OU O que ele tem no bolso
+        let abatimento = Math.min(valorSalario, saldoDisponivel);
+        let valorReal = valorSalario - abatimento;
+        
+        document.getElementById('lblSaldoVirtual').innerText = `R$ ${saldoDisponivel.toFixed(2)}`;
+        document.getElementById('lblValorSalario').innerText = `R$ ${valorSalario.toFixed(2)}`;
+        document.getElementById('lblAbatimento').innerText = `- R$ ${abatimento.toFixed(2)}`;
+        document.getElementById('lblValorReal').innerText = `R$ ${valorReal.toFixed(2)}`;
+        
+        inputAbatido.value = abatimento;
+    } else {
+        infoDiv.style.display = 'none';
+        inputAbatido.value = 0;
+    }
+}
 
 function prepareModal(mode, transacao = {}) {
     const modalLabel = document.getElementById('transacaoModalLabel');
     const form = document.getElementById('transacaoForm');
     const transacaoIdInput = document.getElementById('transacao_id');
     const tipoSelect = document.getElementById('tipo');
+    const categoriaSelect = document.getElementById('categoria');
     
     if (mode === 'novo') {
         modalLabel.innerHTML = '<i class="fas fa-plus me-2"></i> Nova Transação';
@@ -604,19 +719,39 @@ function prepareModal(mode, transacao = {}) {
         document.getElementById('data').value = new Date().toISOString().split('T')[0];
         document.getElementById('status').value = 'confirmado';
         
+        // Reseta visuais
         tipoSelect.value = '';
         tipoSelect.dispatchEvent(new Event('change'));
+        document.getElementById('divBeneficiario').style.display = 'none';
+        
     } else if (mode === 'editar') {
         modalLabel.innerHTML = '<i class="fas fa-edit me-2"></i> Editar Transação';
         transacaoIdInput.value = transacao.id;
+        
         tipoSelect.value = transacao.tipo;
-        tipoSelect.dispatchEvent(new Event('change'));
+        // Força atualização das categorias
+        // Simular o evento de change para popular as categorias
+        const event = new Event('change');
+        tipoSelect.dispatchEvent(event);
+        
         document.getElementById('valor').value = transacao.valor;
         document.getElementById('data').value = transacao.data.split('T')[0];
         document.getElementById('categoria').value = transacao.categoria;
         document.getElementById('descricao').value = transacao.descricao;
         document.getElementById('observacoes').value = transacao.observacoes;
         document.getElementById('status').value = transacao.status;
+
+        // Se tiver beneficiário, popula campos extras
+        categoriaSelect.dispatchEvent(new Event('change')); // Dispara para mostrar/esconder div
+        if (transacao.beneficiario_id) {
+            document.getElementById('beneficiario_id').value = transacao.beneficiario_id;
+            // Se houve abatimento, marca checkbox
+             if (transacao.valor_abatido_caixa > 0) {
+                 document.getElementById('usar_caixa_virtual').checked = true;
+                 document.getElementById('valor_abatido_caixa').value = transacao.valor_abatido_caixa;
+                 calcularPagamento();
+             }
+        }
     }
 }
 
@@ -633,6 +768,11 @@ function salvarTransacao() {
     let endpoint = '{{ url_for("financeiro_salvar_transacao") }}';
     if (id) {
         endpoint += `?id=${id}`;
+    }
+
+    // Se o checkbox de usar caixa virtual não estiver marcado, garante que envie 0
+    if (!document.getElementById('usar_caixa_virtual').checked) {
+        formData.set('valor_abatido_caixa', 0);
     }
 
     fetch(endpoint, {
