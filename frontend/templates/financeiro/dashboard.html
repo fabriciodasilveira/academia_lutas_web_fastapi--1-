@@ -502,6 +502,9 @@
 {% block extra_js %}
 <script>
 
+// === CORREÇÃO IMPORTANTE: URL ABSOLUTA PARA A API ===
+const API_BASE_URL = "https://aze.fightclube.com.br/api/v1"; 
+
 const CATEGORIAS = {
     'receita': [
         { value: 'matricula', text: 'Matrícula' },
@@ -535,7 +538,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Carrega a lista de staff para o dropdown de pagamentos
-    fetch('/api/v1/financeiro/staff')
+    // USANDO URL ABSOLUTA PARA CORRIGIR O ERRO 404
+    fetch(`${API_BASE_URL}/financeiro/staff`)
     .then(r => r.json())
     .then(data => {
         const select = document.getElementById('beneficiario_id');
@@ -548,7 +552,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     })
-    .catch(err => console.log("Erro ao carregar staff, rota pode não existir ainda", err));
+    .catch(err => console.error("Erro ao carregar staff:", err));
     
     // Lógica para os gráficos
     if (document.getElementById('fluxoCaixaChart')) {
@@ -730,7 +734,6 @@ function prepareModal(mode, transacao = {}) {
         
         tipoSelect.value = transacao.tipo;
         // Força atualização das categorias
-        // Simular o evento de change para popular as categorias
         const event = new Event('change');
         tipoSelect.dispatchEvent(event);
         
@@ -793,7 +796,8 @@ function salvarTransacao() {
 }
 
 function editTransacao(id) {
-    fetch(`/api/v1/financeiro/transacoes/${id}`)
+    // USANDO URL ABSOLUTA PARA CORRIGIR O ERRO 404
+    fetch(`${API_BASE_URL}/financeiro/transacoes/${id}`)
     .then(response => response.json())
     .then(transacao => {
         prepareModal('editar', transacao);
