@@ -958,10 +958,16 @@ def financeiro_transacoes():
     return render_template("financeiro/transacoes.html", transacoes=transacoes, stats=stats, categorias=categorias)
 
 
+# Em frontend/app.py
+
 @app.route("/financeiro/salvar_transacao", methods=["POST"])
 @login_required
 def financeiro_salvar_transacao():
     try:
+        # Captura os dados do formulário
+        beneficiario = request.form.get("beneficiario_id")
+        abatido = request.form.get("valor_abatido_caixa")
+        
         transacao_data = {
             "id": request.form.get("id"),
             "tipo": request.form.get("tipo"),
@@ -970,10 +976,15 @@ def financeiro_salvar_transacao():
             "valor": float(request.form.get("valor").replace(',', '.')),
             "status": request.form.get("status"),
             "observacoes": request.form.get("observacoes"),
-            "data": request.form.get("data")
+            "data": request.form.get("data"),
+            
+            # --- NOVOS CAMPOS DO CAIXA VIRTUAL ---
+            "beneficiario_id": int(beneficiario) if beneficiario else None,
+            "valor_abatido_caixa": float(abatido) if abatido else 0.0
         }
         
-        transacao_data = {k: v for k, v in transacao_data.items() if v}
+        # Remove chaves com valor None (exceto valor_abatido_caixa que pode ser 0)
+        transacao_data = {k: v for k, v in transacao_data.items() if v is not None}
 
         transacao_id = request.form.get("id")
         if transacao_id:

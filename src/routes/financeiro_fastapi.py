@@ -30,9 +30,7 @@ class StaffSelect(BaseModel):
 # --- Endpoint para preencher o Dropdown ---
 @router.get("/staff", response_model=List[StaffSelect])
 def get_staff_users(db: Session = Depends(get_db)):
-    """
-    Retorna lista de usuários com perfil de staff.
-    """
+    """Retorna lista de usuários com perfil de staff."""
     staff = db.query(Usuario).filter(
         or_(
             func.lower(Usuario.role) == 'professor',
@@ -41,7 +39,6 @@ def get_staff_users(db: Session = Depends(get_db)):
             func.lower(Usuario.role) == 'atendente'
         )
     ).order_by(Usuario.nome).all()
-    
     return staff
 
 # --- CRUD Endpoints --- 
@@ -50,7 +47,6 @@ def get_staff_users(db: Session = Depends(get_db)):
 def create_transacao(transacao: FinanceiroCreate, db: Session = Depends(get_db)):
     if transacao.tipo not in ['receita', 'despesa']:
         raise HTTPException(status_code=400, detail="Tipo inválido.")
-    
     if not transacao.data:
         transacao.data = datetime.utcnow()
     
@@ -61,32 +57,17 @@ def create_transacao(transacao: FinanceiroCreate, db: Session = Depends(get_db))
     return db_transacao
 
 @router.get("/transacoes", response_model=List[FinanceiroRead])
-def read_transacoes(
-    skip: int = 0, limit: int = 100, tipo: Optional[str] = None,
-    categoria: Optional[str] = None, busca: Optional[str] = None,
-    data_inicio: Optional[str] = None, data_fim: Optional[str] = None,
-    db: Session = Depends(get_db)
-):
+def read_transacoes(skip: int = 0, limit: int = 100, tipo: Optional[str] = None, categoria: Optional[str] = None, busca: Optional[str] = None, data_inicio: Optional[str] = None, data_fim: Optional[str] = None, db: Session = Depends(get_db)):
     query = db.query(Financeiro)
-    
     if tipo: query = query.filter(Financeiro.tipo == tipo)
     if categoria: query = query.filter(Financeiro.categoria == categoria)
-    if busca:
-        query = query.filter(
-            (Financeiro.descricao.ilike(f"%{busca}%")) |
-            (Financeiro.observacoes.ilike(f"%{busca}%"))
-        )
+    if busca: query = query.filter((Financeiro.descricao.ilike(f"%{busca}%")) | (Financeiro.observacoes.ilike(f"%{busca}%")))
     
     if data_inicio:
-        try:
-            dt = datetime.strptime(data_inicio, "%Y-%m-%d")
-            query = query.filter(Financeiro.data >= dt)
+        try: query = query.filter(Financeiro.data >= datetime.strptime(data_inicio, "%Y-%m-%d"))
         except: pass
-    
     if data_fim:
-        try:
-            dt = datetime.strptime(data_fim, "%Y-%m-%d")
-            query = query.filter(Financeiro.data <= dt)
+        try: query = query.filter(Financeiro.data <= datetime.strptime(data_fim, "%Y-%m-%d"))
         except: pass
     
     return query.order_by(Financeiro.data.desc()).offset(skip).limit(limit).all()
@@ -116,12 +97,12 @@ def delete_transacao(transacao_id: int, db: Session = Depends(get_db)):
     db.delete(db_transacao)
     db.commit()
 
+# --- CÁLCULO DE BALANÇO E CAIXA VIRTUAL ---
 @router.get("/balanco", response_model=dict)
 def get_balanco(data_inicio: Optional[str] = None, data_fim: Optional[str] = None, db: Session = Depends(get_db)):
     hoje = datetime.utcnow().date()
     primeiro_dia = hoje.replace(day=1)
     
-    # Datas usadas APENAS para o Fluxo de Caixa (Gráficos e Totais do Mês)
     try:
         d_ini = datetime.strptime(data_inicio, "%Y-%m-%d").date() if data_inicio else primeiro_dia
         d_fim = datetime.strptime(data_fim, "%Y-%m-%d").date() if data_fim else hoje
@@ -129,66 +110,55 @@ def get_balanco(data_inicio: Optional[str] = None, data_fim: Optional[str] = Non
         d_ini = primeiro_dia
         d_fim = hoje
 
-    # --- Totais Gerais (Respeitam o filtro de data para mostrar o resultado do período) ---
-    receitas = db.query(func.sum(Financeiro.valor)).filter(
-        Financeiro.tipo == 'receita', func.date(Financeiro.data) >= d_ini, func.date(Financeiro.data) <= d_fim
-    ).scalar() or 0.0
-
-    despesas = db.query(func.sum(Financeiro.valor)).filter(
-        Financeiro.tipo == 'despesa', func.date(Financeiro.data) >= d_ini, func.date(Financeiro.data) <= d_fim
-    ).scalar() or 0.0
+    # Totais do Período (Mês atual ou selecionado)
+    receitas = db.query(func.sum(Financeiro.valor)).filter(Financeiro.tipo == 'receita', func.date(Financeiro.data) >= d_ini, func.date(Financeiro.data) <= d_fim).scalar() or 0.0
+    despesas = db.query(func.sum(Financeiro.valor)).filter(Financeiro.tipo == 'despesa', func.date(Financeiro.data) >= d_ini, func.date(Financeiro.data) <= d_fim).scalar() or 0.0
+    total_trans = db.query(func.count(Financeiro.id)).filter(func.date(Financeiro.data) >= d_ini, func.date(Financeiro.data) <= d_fim).scalar() or 0
+    pendentes = db.query(Mensalidade).filter(Mensalidade.status == 'pendente', Mensalidade.data_vencimento <= hoje).count()
     
-    total_trans = db.query(func.count(Financeiro.id)).filter(
-        func.date(Financeiro.data) >= d_ini, func.date(Financeiro.data) <= d_fim
-    ).scalar() or 0
-
-    pendentes = db.query(Mensalidade).filter(
-        Mensalidade.status == 'pendente', Mensalidade.data_vencimento <= hoje
-    ).count()
-
-    # --- Gráficos (Respeitam o filtro de data) ---
-    cats = db.query(Financeiro.categoria, func.sum(Financeiro.valor)).filter(
-        Financeiro.tipo == 'despesa', func.date(Financeiro.data) >= d_ini, func.date(Financeiro.data) <= d_fim
-    ).group_by(Financeiro.categoria).all()
+    cats = db.query(Financeiro.categoria, func.sum(Financeiro.valor)).filter(Financeiro.tipo == 'despesa', func.date(Financeiro.data) >= d_ini, func.date(Financeiro.data) <= d_fim).group_by(Financeiro.categoria).all()
     grafico_data = {c: v for c, v in cats}
 
-    # --- Caixa Virtual (LÓGICA DO BALDE - ACUMULADO GERAL) ---
-    # Aqui removemos os filtros de data para pegar o saldo real atual
+    # --- LÓGICA DO CAIXA VIRTUAL (BALDE ACUMULATIVO) ---
+    # Nota: Removemos os filtros de data (d_ini, d_fim) para pegar o histórico completo
     
-    # 1. Total que entrou no balde (Receitas em Dinheiro NA MÃO do professor)
-    entradas = db.query(Usuario.id, Usuario.nome, func.sum(Financeiro.valor)).join(
-        Financeiro, Usuario.id == Financeiro.responsavel_id
-    ).filter(
+    # 1. Buscar a equipe para garantir que todos apareçam, mesmo com saldo 0
+    equipe = db.query(Usuario).filter(
+        or_(func.lower(Usuario.role) == 'professor', func.lower(Usuario.role) == 'administrador', func.lower(Usuario.role) == 'gerente')
+    ).order_by(Usuario.nome).all()
+
+    # 2. Total que entrou no caixa (Recebido em Dinheiro) - DESDE O INÍCIO
+    entradas_query = db.query(Financeiro.responsavel_id, func.sum(Financeiro.valor)).filter(
         Financeiro.tipo == 'receita', 
         Financeiro.forma_pagamento == 'Dinheiro'
-        # SEM FILTRO DE DATA: Pega desde o início dos tempos
-    ).group_by(Usuario.id, Usuario.nome).all()
+    ).group_by(Financeiro.responsavel_id).all()
+    map_entradas = {uid: val for uid, val in entradas_query}
 
-    # 2. Total que saiu do balde (Abatimentos usados em salários)
-    saidas = db.query(Financeiro.beneficiario_id, func.sum(Financeiro.valor_abatido_caixa)).filter(
+    # 3. Total que saiu do caixa (Abatido em Pagamentos) - DESDE O INÍCIO
+    saidas_query = db.query(Financeiro.beneficiario_id, func.sum(Financeiro.valor_abatido_caixa)).filter(
         Financeiro.valor_abatido_caixa > 0
-        # SEM FILTRO DE DATA: Pega desde o início dos tempos
     ).group_by(Financeiro.beneficiario_id).all()
-    
-    map_saidas = {uid: val for uid, val in saidas}
-    
+    map_saidas = {uid: val for uid, val in saidas_query}
+
     caixas = []
-    for uid, nome, val_entrada in entradas:
-        val_saida = map_saidas.get(uid, 0.0)
-        # O saldo é o nível atual da água no balde
-        saldo = (val_entrada or 0.0) - (val_saida or 0.0)
+    total_caixas_virtuais = 0.0
+    
+    for membro in equipe:
+        entrada = map_entradas.get(membro.id, 0.0)
+        saida = map_saidas.get(membro.id, 0.0)
+        saldo = (entrada or 0.0) - (saida or 0.0)
         
-        # Mostra apenas se o balde não estiver vazio (considerando margem de erro de float)
-        if abs(saldo) > 0.01:
-            caixas.append({"id": uid, "nome": nome, "total": saldo})
+        # Adiciona na lista
+        caixas.append({
+            "id": membro.id,
+            "nome": membro.nome,
+            "total": saldo
+        })
+        total_caixas_virtuais += saldo
 
     return {
-        "receitas": receitas, 
-        "despesas": despesas, 
-        "saldo": receitas - despesas,
-        "total_transacoes": total_trans, 
-        "mensalidades_pendentes": pendentes,
+        "receitas": receitas, "despesas": despesas, "saldo": receitas - despesas,
+        "total_transacoes": total_trans, "mensalidades_pendentes": pendentes,
         "graficos": {"categorias": grafico_data},
-        "caixas_virtuais": caixas, 
-        "total_caixas_virtuais": sum(c['total'] for c in caixas)
+        "caixas_virtuais": caixas, "total_caixas_virtuais": total_caixas_virtuais
     }
