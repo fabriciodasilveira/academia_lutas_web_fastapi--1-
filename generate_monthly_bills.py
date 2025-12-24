@@ -1,37 +1,45 @@
 import os
 import logging
+import argparse
 from datetime import date
 from dateutil.relativedelta import relativedelta
 from sqlalchemy import create_engine, and_
 from sqlalchemy.orm import sessionmaker, joinedload
 from dotenv import load_dotenv
 
-# --- Importações de todos os modelos (necessário) ---
+# --- Importações de todos os modelos ---
 from src.database import Base
 from src.models.aluno import Aluno
+from src.models.matricula import Matricula
+from src.models.mensalidade import Mensalidade
+from src.models.plano import Plano
+# (Outros imports mantidos)
 from src.models.categoria import Categoria
 from src.models.evento import Evento
 from src.models.financeiro import Financeiro
 from src.models.historico_matricula import HistoricoMatricula
 from src.models.inscricao import Inscricao
-from src.models.matricula import Matricula
-from src.models.mensalidade import Mensalidade
-from src.models.plano import Plano
 from src.models.produto import Produto
 from src.models.professor import Professor
 from src.models.turma import Turma
 from src.models.usuario import Usuario
 # ------------------------------------------------------
 
-
 # Configuração básica de logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def generate_bills():
     """
-    Verifica matrículas ativas e gera a mensalidade para o mês corrente
-    se ela ainda não existir, com vencimento padrão no dia 10.
+    Gera mensalidades para todas as matrículas ativas.
+    Por padrão, gera para o PRÓXIMO MÊS com vencimento no dia 10.
+    Aceita argumentos --month e --year para forçar um período específico.
     """
+    # 1. Configurar leitura de argumentos da linha de comando
+    parser = argparse.ArgumentParser(description='Gerador de Mensalidades')
+    parser.add_argument('--month', type=int, help='Mês de referência (1-12)')
+    parser.add_argument('--year', type=int, help='Ano de referência (ex: 2025)')
+    args = parser.parse_args()
+
     load_dotenv()
     DATABASE_URL = os.getenv("DATABASE_URL")
 
@@ -52,23 +60,30 @@ def generate_bills():
         logging.error(f"Erro ao conectar ao banco de dados: {e}")
         return
 
-    today = date.today()
+    # 2. Definir a Data Alvo
+    hoje = date.today()
     DIA_VENCIMENTO_PADRAO = 10
-    
-    # Define a data de vencimento alvo para este mês
-    # Ex: Se hoje é 06/11/2025, a data alvo é 10/11/2025
-    data_vencimento_alvo = today.replace(day=DIA_VENCIMENTO_PADRAO)
-    
-    # Se o script rodar DEPOIS do dia 10 (ex: dia 11), 
-    # ele ainda gera a fatura do mês corrente com vencimento no dia 10.
-    # O script de "catch-up" (alcance) não é mais necessário com esta lógica.
 
-    logging.info(f"Iniciando geração de mensalidades para o vencimento de: {data_vencimento_alvo.strftime('%d/%m/%Y')}")
+    if args.month and args.year:
+        # Se o usuário passou parâmetros, usamos eles
+        try:
+            data_vencimento_alvo = date(args.year, args.month, DIA_VENCIMENTO_PADRAO)
+            logging.info(f"MODO MANUAL: Gerando faturas para {data_vencimento_alvo.strftime('%m/%Y')}")
+        except ValueError:
+            logging.error("Data inválida fornecida nos parâmetros.")
+            return
+    else:
+        # Se não passou nada, padrão é PRÓXIMO MÊS (Next Month)
+        # Ex: Rodando em Dezembro -> Gera Janeiro
+        data_base = hoje + relativedelta(months=1)
+        data_vencimento_alvo = date(data_base.year, data_base.month, DIA_VENCIMENTO_PADRAO)
+        logging.info(f"MODO AUTOMÁTICO: Gerando faturas para o próximo mês ({data_vencimento_alvo.strftime('%m/%Y')})")
+
     mensalidades_criadas = 0
     matriculas_processadas = 0
 
     try:
-        # Busca matrículas ativas, carregando plano e aluno
+        # Busca matrículas ativas
         active_matriculas = db.query(Matricula).options(
             joinedload(Matricula.plano),
             joinedload(Matricula.aluno)
@@ -77,16 +92,13 @@ def generate_bills():
         logging.info(f"Encontradas {len(active_matriculas)} matrículas ativas.")
 
         for matricula in active_matriculas:
-            # Verifica se as relações foram carregadas corretamente
             if not matricula.plano or not matricula.aluno:
-                logging.warning(f"Matrícula ID {matricula.id} sem plano ou aluno associado. Pulando.")
+                logging.warning(f"Matrícula ID {matricula.id} sem plano ou aluno. Pulando.")
                 continue
 
             matriculas_processadas += 1
 
-            # --- LÓGICA DO USUÁRIO ---
-            # Verifica se já existe uma mensalidade para esta matrícula
-            # E com este vencimento específico.
+            # 3. Verificar se já existe (Evitar duplicidade)
             existing_bill = db.query(Mensalidade)\
                               .filter(
                                   and_(
@@ -96,36 +108,34 @@ def generate_bills():
                               ).first()
 
             if existing_bill:
-                # Log opcional (pode poluir o log, mas é útil para depurar)
-                # logging.info(f"Matrícula {matricula.id} (Aluno: {matricula.aluno.nome}) já possui fatura para este mês. Pulando.")
+                # Já existe cobrança para este mês/ano específico
                 continue
 
-            # Se não existe, cria a nova mensalidade
+            # 4. Criar a nova mensalidade
+            # Mantém sempre o DIA_VENCIMENTO_PADRAO (10) independente do cadastro da matrícula
             new_bill = Mensalidade(
                 aluno_id=matricula.aluno_id,
                 plano_id=matricula.plano_id,
                 matricula_id=matricula.id,
                 valor=matricula.plano.valor,
-                data_vencimento=data_vencimento_alvo,
+                data_vencimento=data_vencimento_alvo, # Sempre dia 10 do mês/ano alvo
                 status="pendente"
             )
             db.add(new_bill)
             mensalidades_criadas += 1
-            logging.info(f"-> GERADA fatura para Aluno ID {matricula.aluno_id} (Matrícula ID {matricula.id}), Venc: {data_vencimento_alvo}")
-            # --- FIM DA LÓGICA ---
+            logging.info(f"-> GERADA: {matricula.aluno.nome} | Venc: {data_vencimento_alvo} | R$ {matricula.plano.valor}")
 
     except Exception as e:
-        logging.error(f"Erro durante a busca ou geração de mensalidades: {e}")
+        logging.error(f"Erro durante a geração de mensalidades: {e}")
         db.rollback()
     else:
         if mensalidades_criadas > 0:
             db.commit()
-            logging.info(f"Commit realizado. {mensalidades_criadas} novas mensalidades geradas.")
+            logging.info(f"SUCESSO: {mensalidades_criadas} novas mensalidades geradas.")
         else:
-            logging.info("Nenhuma nova mensalidade precisou ser gerada nesta execução.")
+            logging.info(f"Nenhuma nova mensalidade necessária para {data_vencimento_alvo.strftime('%m/%Y')} (todas já existem).")
     finally:
         db.close()
-        logging.info(f"Processo concluído. {matriculas_processadas} matrículas ativas verificadas.")
 
 if __name__ == "__main__":
     generate_bills()
