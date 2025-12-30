@@ -29,165 +29,171 @@
 {% if aluno %}
 <div class="row">
     <div class="col-lg-8">
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-transparent border-0">
-                <h5 class="card-title mb-0">
-                    <i class="fas fa-info-circle me-2"></i>
-                    Informações Pessoais
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="row g-4">
-                    <div class="col-md-6">
-                        <div class="d-flex align-items-center">
-                            <div class="flex-shrink-0">
-                                <div class="bg-primary bg-opacity-10 rounded-circle p-2">
-                                    <i class="fas fa-user text-primary"></i>
-                                </div>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h6 class="mb-0">Nome Completo</h6>
-                                <p class="mb-0 text-muted">{{ aluno.nome }}</p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <div class="d-flex align-items-center">
-                            <div class="flex-shrink-0">
-                                <div class="bg-success bg-opacity-10 rounded-circle p-2">
-                                    <i class="fas fa-envelope text-success"></i>
-                                </div>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h6 class="mb-0">Email</h6>
-                                <p class="mb-0 text-muted">
-                                    {% if aluno.email %}
-                                        <a href="mailto:{{ aluno.email }}" class="text-decoration-none">{{ aluno.email }}</a>
-                                    {% else %}
-                                        Não informado
-                                    {% endif %}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <div class="d-flex align-items-center">
-                            <div class="flex-shrink-0">
-                                <div class="bg-info bg-opacity-10 rounded-circle p-2">
-                                    <i class="fas fa-phone text-info"></i>
-                                </div>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h6 class="mb-0">Telefone</h6>
-                                <p class="mb-0 text-muted">
-                                    {% if aluno.telefone %}
-                                        <a href="tel:{{ aluno.telefone }}" class="text-decoration-none">{{ aluno.telefone }}</a>
-                                    {% else %}
-                                        Não informado
-                                    {% endif %}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <div class="d-flex align-items-center">
-                            <div class="flex-shrink-0">
-                                <div class="bg-warning bg-opacity-10 rounded-circle p-2">
-                                    <i class="fas fa-calendar text-warning"></i>
-                                </div>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h6 class="mb-0">Data de Nascimento</h6>
-                                <p class="mb-0 text-muted">
-                                    {% if aluno.data_nascimento %}
-                                        {{ aluno.data_nascimento }}
-                                        {% if aluno.idade is not none %}
-                                            <small class="text-muted">({{ aluno.idade }} anos)</small>
-                                        {% endif %}
-                                    {% else %}
-                                        Não informada
-                                    {% endif %}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    {% if aluno.endereco %}
-                    <div class="col-12">
-                        <div class="d-flex align-items-start">
-                            <div class="flex-shrink-0">
-                                <div class="bg-danger bg-opacity-10 rounded-circle p-2">
-                                    <i class="fas fa-map-marker-alt text-danger"></i>
-                                </div>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h6 class="mb-0">Endereço</h6>
-                                <p class="mb-0 text-muted">{{ aluno.endereco }}</p>
-                            </div>
-                        </div>
-                    </div>
-                    {% endif %}
-                    
-                    {% if aluno.observacoes %}
-                    <div class="col-12">
-                        <div class="d-flex align-items-start">
-                            <div class="flex-shrink-0">
-                                <div class="bg-secondary bg-opacity-10 rounded-circle p-2">
-                                    <i class="fas fa-sticky-note text-secondary"></i>
-                                </div>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h6 class="mb-0">Observações</h6>
-                                <p class="mb-0 text-muted">{{ aluno.observacoes }}</p>
-                            </div>
-                        </div>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
         
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="graduacao-tab" data-bs-toggle="tab" data-bs-target="#graduacao" type="button" role="tab">
-                <i class="fas fa-medal me-2"></i>Graduação
-            </button>
-        </li>
+        <ul class="nav nav-tabs mb-3" id="alunoTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="dados-tab" data-bs-toggle="tab" data-bs-target="#dados" type="button" role="tab">
+                    <i class="fas fa-user me-2"></i>Dados Pessoais
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="graduacao-tab" data-bs-toggle="tab" data-bs-target="#graduacao" type="button" role="tab">
+                    <i class="fas fa-medal me-2"></i>Graduação
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="historico-tab" data-bs-toggle="tab" data-bs-target="#historico" type="button" role="tab">
+                    <i class="fas fa-history me-2"></i>Histórico
+                </button>
+            </li>
+        </ul>
 
-        <div class="tab-pane fade" id="graduacao" role="tabpanel">
-            <div class="card border-0 shadow-sm mt-3">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <div>
-                            <h5 class="card-title text-primary">Faixa Atual: <span id="lbl-faixa-atual" class="fw-bold text-dark">{{ aluno.faixa_atual }}</span></h5>
-                            <small class="text-muted">Desde: <span id="lbl-data-graduacao">{{ aluno.data_ultima_graduacao }}</span></small>
-                        </div>
-                        <button class="btn btn-warning text-white" onclick="abrirModalGraduacao()">
-                            <i class="fas fa-level-up-alt me-2"></i>Nova Graduação
-                        </button>
+        <div class="tab-content" id="alunoTabContent">
+            
+            <div class="tab-pane fade show active" id="dados" role="tabpanel">
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-transparent border-0">
+                        <h5 class="card-title mb-0">Informações Pessoais</h5>
                     </div>
-
-                    <h6 class="border-bottom pb-2 mb-3">Histórico de Conquistas</h6>
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle" id="tabela-graduacao">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Data</th>
-                                    <th>Faixa Conquistada</th>
-                                    <th>Aulas Treinadas</th> <th>Obs</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tbody-graduacao">
-                                </tbody>
-                        </table>
+                    <div class="card-body">
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-shrink-0">
+                                        <div class="bg-primary bg-opacity-10 rounded-circle p-2"><i class="fas fa-user text-primary"></i></div>
+                                    </div>
+                                    <div class="flex-grow-1 ms-3">
+                                        <h6 class="mb-0">Nome Completo</h6>
+                                        <p class="mb-0 text-muted">{{ aluno.nome }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-shrink-0">
+                                        <div class="bg-success bg-opacity-10 rounded-circle p-2"><i class="fas fa-envelope text-success"></i></div>
+                                    </div>
+                                    <div class="flex-grow-1 ms-3">
+                                        <h6 class="mb-0">Email</h6>
+                                        <p class="mb-0 text-muted">{{ aluno.email or 'Não informado' }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-shrink-0">
+                                        <div class="bg-info bg-opacity-10 rounded-circle p-2"><i class="fas fa-phone text-info"></i></div>
+                                    </div>
+                                    <div class="flex-grow-1 ms-3">
+                                        <h6 class="mb-0">Telefone</h6>
+                                        <p class="mb-0 text-muted">{{ aluno.telefone or 'Não informado' }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-shrink-0">
+                                        <div class="bg-warning bg-opacity-10 rounded-circle p-2"><i class="fas fa-calendar text-warning"></i></div>
+                                    </div>
+                                    <div class="flex-grow-1 ms-3">
+                                        <h6 class="mb-0">Data de Nascimento</h6>
+                                        <p class="mb-0 text-muted">
+                                            {{ aluno.data_nascimento }} 
+                                            {% if aluno.idade %}({{ aluno.idade }} anos){% endif %}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            {% if aluno.endereco %}
+                            <div class="col-12">
+                                <div class="d-flex align-items-start">
+                                    <div class="flex-shrink-0">
+                                        <div class="bg-danger bg-opacity-10 rounded-circle p-2"><i class="fas fa-map-marker-alt text-danger"></i></div>
+                                    </div>
+                                    <div class="flex-grow-1 ms-3">
+                                        <h6 class="mb-0">Endereço</h6>
+                                        <p class="mb-0 text-muted">{{ aluno.endereco }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% if aluno.observacoes %}
+                            <div class="col-12">
+                                <div class="d-flex align-items-start">
+                                    <div class="flex-shrink-0">
+                                        <div class="bg-secondary bg-opacity-10 rounded-circle p-2"><i class="fas fa-sticky-note text-secondary"></i></div>
+                                    </div>
+                                    <div class="flex-grow-1 ms-3">
+                                        <h6 class="mb-0">Observações</h6>
+                                        <p class="mb-0 text-muted">{{ aluno.observacoes }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <div class="modal fade" id="modalGraduacao" tabindex="-1">
+            <div class="tab-pane fade" id="graduacao" role="tabpanel">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <div>
+                                <h5 class="card-title text-primary mb-0">Faixa Atual: <span class="fw-bold text-dark">{{ aluno.faixa_atual }}</span></h5>
+                                <small class="text-muted">Desde: {{ aluno.data_ultima_graduacao }}</small>
+                            </div>
+                            <button class="btn btn-warning text-white" onclick="abrirModalGraduacao()">
+                                <i class="fas fa-level-up-alt me-2"></i>Nova Graduação
+                            </button>
+                        </div>
+
+                        <h6 class="border-bottom pb-2 mb-3">Histórico de Conquistas</h6>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Data</th>
+                                        <th>Faixa Conquistada</th>
+                                        <th>Aulas Treinadas</th>
+                                        <th>Obs</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-graduacao">
+                                    </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="historico" role="tabpanel">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        {% if historico %}
+                        <div class="timeline">
+                            {% for evento in historico %}
+                                <div class="timeline-item">
+                                    {% set cor = 'success' if evento.tipo == 'cadastro' else ('primary' if evento.tipo == 'matricula' else 'warning') %}
+                                    <div class="timeline-marker bg-{{ cor }}"></div>
+                                    <div class="timeline-content">
+                                        <h6 class="mb-1">{{ evento.descricao }}</h6>
+                                        <p class="mb-0 text-muted small">{{ evento.data_formatada }}</p>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="text-center py-3">
+                            <i class="fas fa-history fa-2x text-muted mb-2"></i>
+                            <p class="text-muted mb-0">Nenhuma atividade registrada.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+        </div> <div class="modal fade" id="modalGraduacao" tabindex="-1">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header bg-warning text-white">
@@ -202,7 +208,6 @@
                                 Este aluno treinou <strong id="lbl-aulas-treinadas" class="fs-5">0</strong> vezes desde a última faixa.
                             </div>
                         </div>
-
                         <div class="mb-3">
                             <label class="form-label">Nova Faixa / Grau</label>
                             <input type="text" class="form-control" id="input-nova-faixa" placeholder="Ex: Faixa Azul, 1º Grau...">
@@ -219,40 +224,25 @@
                 </div>
             </div>
         </div>
-
-        <div class="card border-0 shadow-sm mt-4">
-            <div class="card-header bg-transparent border-0">
-                <h5 class="card-title mb-0">
-                    <i class="fas fa-history me-2"></i>
-                    Histórico de Atividades
-                </h5>
-            </div>
-            <div class="card-body">
-                {% if historico %}
-                <div class="timeline">
-                    {% for evento in historico %}
-                        <div class="timeline-item">
-                            {% set cor = 'success' if evento.tipo == 'cadastro' else ('primary' if evento.tipo == 'matricula' else 'warning') %}
-                            {% set icone = 'fa-user-plus' if evento.tipo == 'cadastro' else ('fa-graduation-cap' if evento.tipo == 'matricula' else 'fa-info-circle') %}
-
-                            <div class="timeline-marker bg-{{ cor }}"></div>
-                            <div class="timeline-content">
-                                <h6 class="mb-1"><i class="fas {{ icone }} me-2"></i>{{ evento.descricao }}</h6>
-                                <p class="mb-0 text-muted small">
-                                    {{ evento.data_formatada }}
-                                </p>
-                            </div>
-                        </div>
-                    {% endfor %}
+        
+        <div class="modal fade" id="deleteModal" tabindex="-1">
+             <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Confirmar Exclusão</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Tem certeza que deseja excluir o aluno <strong id="alunoNameToDelete"></strong>?</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-danger" onclick="deleteAluno()">Excluir</button>
+                    </div>
                 </div>
-                {% else %}
-                <div class="text-center py-3">
-                    <i class="fas fa-history fa-2x text-muted mb-2"></i>
-                    <p class="text-muted mb-0">Nenhuma atividade registrada para este aluno.</p>
-                </div>
-                {% endif %}
             </div>
         </div>
+
     </div>
 
     <div class="col-lg-4">
