@@ -15,6 +15,7 @@ from src.models.usuario import Usuario
 from src import auth
 from fastapi import File, UploadFile, Form
 from src import image_utils # Seu módulo de imagens existente
+import io
 
 router = APIRouter(
     tags=["Financeiro"],
@@ -76,10 +77,10 @@ async def create_despesa_com_comprovante(
     descricao: str = Form(...),
     valor: float = Form(...),
     categoria: str = Form(...),
-    data: Optional[str] = Form(None), # Recebe como string "YYYY-MM-DD"
+    data: Optional[str] = Form(None),
     forma_pagamento: str = Form(...),
     observacoes: Optional[str] = Form(None),
-    arquivo: Optional[UploadFile] = File(None), # O arquivo é opcional
+    arquivo: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(auth.get_current_active_user)
 ):
@@ -91,24 +92,36 @@ async def create_despesa_com_comprovante(
         except:
             pass
 
-    # Processa a Imagem (usando sua função existente)
     url_comprovante = None
+    
+    # --- CORREÇÃO DA LÓGICA DE IMAGEM ---
     if arquivo:
-        # Tenta usar a função do seu image_utils. 
-        # Verifique se o nome da função no seu arquivo é 'salvar_imagem', 'upload_image' ou similar.
-        # Aqui estou assumindo uma implementação padrão baseada no seu contexto:
         try:
-            # Exemplo genérico: (ajuste o nome da função conforme seu src/image_utils.py)
+            # 1. Lê o conteúdo do upload
             contents = await arquivo.read()
-            filename = f"recibo_{datetime.now().timestamp()}_{arquivo.filename}"
-            # url_comprovante = image_utils.salvar_imagem_cloudflare(contents, filename) 
-            # OU se for local:
-            url_comprovante = image_utils.process_avatar_image(contents, filename, pasta="financeiro")
-        except Exception as e:
-            print(f"Erro ao salvar imagem: {e}")
-            # Não paramos o processo, apenas segue sem imagem ou lança erro dependendo da regra
+            
+            # 2. Processa (Redimensiona/Comprime) - Passando BytesIO
+            processed_image, content_type = image_utils.process_avatar_image(
+                io.BytesIO(contents), 
+                max_size=(800, 1200) # Recibos podem precisar de mais altura
+            )
+            
+            if processed_image:
+                # 3. Envia para o Cloudflare R2
+                filename = arquivo.filename or "recibo.jpg"
+                url_comprovante = image_utils.salvar_imagem_cloudflare(
+                    processed_image, 
+                    filename,
+                    content_type
+                )
+                print(f"Upload sucesso: {url_comprovante}")
+            else:
+                print("Falha ao processar imagem (image_utils retornou None).")
 
-    # Cria a transação
+        except Exception as e:
+            print(f"Erro grave ao salvar imagem: {e}")
+
+    # Cria a transação no banco
     nova_despesa = Financeiro(
         tipo='despesa',
         categoria=categoria,
@@ -118,7 +131,7 @@ async def create_despesa_com_comprovante(
         forma_pagamento=forma_pagamento,
         observacoes=observacoes,
         responsavel_id=current_user.id,
-        comprovante_url=url_comprovante # Salva a URL
+        comprovante_url=url_comprovante 
     )
     
     db.add(nova_despesa)
