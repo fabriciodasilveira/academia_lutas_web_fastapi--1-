@@ -7,6 +7,7 @@ from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Tex
 from sqlalchemy.orm import relationship
 from src.database import Base
 from datetime import datetime
+from typing import Optional
 
 # Importante: Importar o modelo Usuario para o relacionamento funcionar, 
 # mas usando string "Usuario" no relationship evitamos import circular
@@ -27,7 +28,7 @@ class Financeiro(Base):
     status = Column(String(50), default='confirmado') # Ex: 'confirmado', 'pendente', 'cancelado'
     data = Column(DateTime, default=datetime.utcnow)
     forma_pagamento = Column(String(50), nullable=True)
-    comprovante_url = Column(String(500), nullable=True)
+    comprovante_url: Optional[str] = None
     
     # --- COLUNAS DE RELACIONAMENTO (Chaves Estrangeiras) ---
     # Adicionamos ForeignKey para dizer ao banco que esse ID pertence a um Usuario
