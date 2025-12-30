@@ -444,16 +444,21 @@ function deleteAluno() {
     }
 }
 
-const ALUNO_ID = {{ aluno.id }}; // O Flask preenche isso
+const ALUNO_ID = {{ aluno.id }}; 
 
 // Carrega o histórico ao abrir a aba
-document.getElementById('graduacao-tab').addEventListener('shown.bs.tab', carregarHistoricoGraduacao);
+const tabGraduacao = document.getElementById('graduacao-tab');
+if (tabGraduacao) {
+    tabGraduacao.addEventListener('shown.bs.tab', carregarHistoricoGraduacao);
+}
 
 function carregarHistoricoGraduacao() {
-    fetch(`/api/v1/alunos/${ALUNO_ID}/historico-graduacao`)
+    // CORREÇÃO: Chama a rota do Flask (sem /api/v1)
+    fetch(`/alunos/${ALUNO_ID}/historico-graduacao`)
         .then(res => res.json())
         .then(data => {
             const tbody = document.getElementById('tbody-graduacao');
+            if(!tbody) return;
             tbody.innerHTML = '';
             
             if(data.length === 0) {
@@ -462,26 +467,40 @@ function carregarHistoricoGraduacao() {
             }
 
             data.forEach(item => {
+                // Formata a data simples
+                const dataFormatada = new Date(item.data_graduacao).toLocaleDateString('pt-BR', {timeZone: 'UTC'});
+                
                 tbody.innerHTML += `
                     <tr>
-                        <td>${new Date(item.data_graduacao).toLocaleDateString('pt-BR')}</td>
+                        <td>${dataFormatada}</td>
                         <td><span class="badge bg-secondary">${item.faixa}</span></td>
                         <td>${item.aulas_acumuladas} aulas</td>
                         <td>${item.observacao || '-'}</td>
                     </tr>
                 `;
             });
-        });
+        })
+        .catch(err => console.error("Erro ao carregar histórico:", err));
 }
 
 function abrirModalGraduacao() {
-    // Busca a "Inteligência" (quantas aulas ele fez)
-    fetch(`/api/v1/alunos/${ALUNO_ID}/previa-graduacao`)
-        .then(res => res.json())
+    // CORREÇÃO: Chama a rota do Flask (sem /api/v1)
+    fetch(`/alunos/${ALUNO_ID}/previa-graduacao`)
+        .then(res => {
+            if(!res.ok) throw new Error("Erro na requisição");
+            return res.json();
+        })
         .then(data => {
-            document.getElementById('lbl-aulas-treinadas').textContent = data.aulas_realizadas;
-            const modal = new bootstrap.Modal(document.getElementById('modalGraduacao'));
+            const lblAulas = document.getElementById('lbl-aulas-treinadas');
+            if(lblAulas) lblAulas.textContent = data.aulas_realizadas;
+            
+            const modalEl = document.getElementById('modalGraduacao');
+            const modal = new bootstrap.Modal(modalEl);
             modal.show();
+        })
+        .catch(err => {
+            console.error(err);
+            alert("Erro ao carregar prévia de aulas.");
         });
 }
 
@@ -494,22 +513,42 @@ function confirmarGraduacao() {
         return;
     }
 
-    fetch(`/api/v1/alunos/${ALUNO_ID}/graduar`, {
+    // CORREÇÃO: Chama a rota do Flask (sem /api/v1)
+    fetch(`/alunos/${ALUNO_ID}/graduar`, {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('access_token')}` // Se usar token no front admin
+            'Content-Type': 'application/json'
         },
         body: JSON.stringify({ nova_faixa: novaFaixa, observacao: obs })
     })
     .then(res => {
         if(res.ok) {
             alert('Aluno graduado com sucesso!');
-            location.reload(); // Recarrega para atualizar o cabeçalho
+            location.reload(); 
         } else {
             alert('Erro ao graduar.');
         }
-    });
+    })
+    .catch(err => console.error(err));
+}
+
+// Função de deletar existente (mantida para não quebrar)
+let alunoToDeleteId = null;
+function confirmDelete(id, nome) {
+    alunoToDeleteId = id;
+    document.getElementById('alunoNameToDelete').innerText = nome;
+    var deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    deleteModal.show();
+}
+
+function deleteAluno() {
+    if (alunoToDeleteId) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/alunos/${alunoToDeleteId}/deletar`;
+        document.body.appendChild(form);
+        form.submit();
+    }
 }
 
 </script>

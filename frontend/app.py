@@ -1783,6 +1783,35 @@ def portal_aluno_edit():
     return redirect(url_for('portal_aluno_dashboard'))
 
 
+@app.route("/alunos/<int:id>/historico-graduacao")
+@login_required
+def ajax_historico_graduacao(id):
+    # O Flask chama o Backend aqui
+    response = api_request(f"/alunos/{id}/historico-graduacao")
+    if response and response.status_code == 200:
+        return jsonify(response.json())
+    return jsonify([]), 200 # Retorna lista vazia em caso de erro
+
+@app.route("/alunos/<int:id>/previa-graduacao")
+@login_required
+def ajax_previa_graduacao(id):
+    response = api_request(f"/alunos/{id}/previa-graduacao")
+    if response and response.status_code == 200:
+        return jsonify(response.json())
+    return jsonify({"error": "Erro ao buscar prévia"}), 404
+
+@app.route("/alunos/<int:id>/graduar", methods=["POST"])
+@login_required
+def ajax_graduar_aluno(id):
+    data = request.json # Recebe o JSON do Javascript
+    # Repassa para o Backend
+    response = api_request(f"/alunos/{id}/graduar", method="POST", json=data)
+    
+    if response and response.status_code == 200:
+        return jsonify(response.json())
+    else:
+        return jsonify({"error": "Erro ao graduar"}), 400
+
 if __name__ == '__main__':
     print("Iniciando aplicação Flask de depuração...")
     app.run(debug=False, host='0.0.0.0', port=5700)
