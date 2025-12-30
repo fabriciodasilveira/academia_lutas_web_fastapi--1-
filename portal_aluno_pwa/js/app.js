@@ -719,62 +719,68 @@ async function handleProfDespesa() {
     const selectCat = document.getElementById('select-categoria');
     const inputData = document.getElementById('data-despesa');
 
-    // Define data de hoje como padrão
+    // Define data de hoje
     inputData.valueAsDate = new Date();
 
-    // 1. Carregar Categorias (Lógica Híbrida)
-    // Tenta buscar do banco. Se não houver, ou se falhar, usa a lista fixa que você pediu.
+    // 1. Carregar Categorias (Mantém o código anterior igual)
     const categoriasPadrao = ["Manutenção", "Compra de equipamento", "Compra de insumo", "Outros"];
-    
     try {
         selectCat.innerHTML = '<option value="" selected disabled>Carregando...</option>';
-        
-        let opcoesHtml = '';
         let categoriasApi = [];
-
         try {
-            // Tenta buscar do backend
             categoriasApi = await api.request('/categorias?tipo=despesa');
-        } catch (e) {
-            console.warn("Não foi possível carregar categorias do servidor. Usando lista local.");
-        }
+        } catch (e) { console.warn("Usando categorias locais."); }
 
-        // Se vieram categorias do banco, usa elas. Se não, usa a lista padrão.
         if (categoriasApi && categoriasApi.length > 0) {
-            opcoesHtml = categoriasApi.map(c => `<option value="${c.nome}">${c.nome}</option>`).join('');
+            selectCat.innerHTML = '<option value="" selected disabled>Selecione...</option>' + 
+                categoriasApi.map(c => `<option value="${c.nome}">${c.nome}</option>`).join('');
         } else {
-            // Usa sua lista específica
-            opcoesHtml = categoriasPadrao.map(c => `<option value="${c}">${c}</option>`).join('');
+            selectCat.innerHTML = categoriasPadrao.map(c => `<option value="${c}">${c}</option>`).join('');
         }
-
-        selectCat.innerHTML = '<option value="" selected disabled>Selecione...</option>' + opcoesHtml;
-
     } catch (e) {
-        console.error(e);
-        // Fallback de segurança garantido
         selectCat.innerHTML = categoriasPadrao.map(c => `<option value="${c}">${c}</option>`).join('');
     }
 
-    // 2. Envio do Formulário
+    // 2. Envio do Formulário COM ARQUIVO
     form.onsubmit = async (e) => {
         e.preventDefault();
         const btn = form.querySelector('button');
         const originalText = btn.innerHTML;
-        btn.disabled = true; btn.innerHTML = 'Salvando...';
+        btn.disabled = true; btn.innerHTML = 'Enviando...';
 
+        // O FormData captura todos os inputs, incluindo o type="file" (name="arquivo")
         const formData = new FormData(form);
-        const data = Object.fromEntries(formData.entries());
         
-        // Conversão de valor para float
-        data.valor = parseFloat(data.valor);
+        // Em requisições com arquivo (FormData puro), 
+        // NÃO convertemos para JSON (Object.fromEntries).
+        // Passamos o formData direto na função de request modificada ou usamos fetch direto.
         
         try {
-            // CORREÇÃO DO ERRO 404: Adicionado '/financeiro' antes de '/transacoes'
-            await api.request('/financeiro/transacoes', 'POST', data);
+            // OBSERVAÇÃO IMPORTANTE:
+            // Sua função api.request padrão provavelmente tenta enviar JSON ('Content-Type': 'application/json').
+            // Para envio de arquivos, precisamos que o navegador defina o boundary automaticamente.
+            // Vamos usar uma chamada especial aqui para garantir:
+
+            const token = localStorage.getItem('accessToken');
+            const response = await fetch(`${api.baseUrl}/financeiro/lancar-despesa`, { // <--- Nova Rota
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                    // NÃO adicionar 'Content-Type' aqui, o fetch adiciona multipart/form-data automático
+                },
+                body: formData
+            });
+
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.detail || 'Erro ao enviar.');
+            }
             
-            ui.showAlert('Despesa lançada com sucesso!', 'success');
+            ui.showAlert('Despesa e recibo salvos com sucesso!', 'success');
             form.reset();
-            inputData.valueAsDate = new Date(); // Reseta data para hoje
+            inputData.valueAsDate = new Date();
+            document.getElementById('input-arquivo').value = ""; // Limpa o input file
+
         } catch (err) {
             ui.showAlert(err.message || 'Erro ao lançar despesa.', 'danger');
         } finally {

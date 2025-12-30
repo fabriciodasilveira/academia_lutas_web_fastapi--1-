@@ -27,6 +27,7 @@ class Financeiro(Base):
     status = Column(String(50), default='confirmado') # Ex: 'confirmado', 'pendente', 'cancelado'
     data = Column(DateTime, default=datetime.utcnow)
     forma_pagamento = Column(String(50), nullable=True)
+    comprovante_url = Column(String(500), nullable=True)
     
     # --- COLUNAS DE RELACIONAMENTO (Chaves Estrangeiras) ---
     # Adicionamos ForeignKey para dizer ao banco que esse ID pertence a um Usuario
