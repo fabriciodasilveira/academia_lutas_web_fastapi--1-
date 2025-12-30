@@ -1,0 +1,36 @@
+<div class="d-flex align-items-center mb-3">
+    <a href="#/prof/dashboard" class="text-decoration-none text-secondary me-3">
+        <i class="fas fa-arrow-left fa-lg"></i>
+    </a>
+    <h3 class="mb-0">Chamada</h3>
+</div>
+
+<div class="card shadow-sm border-0 mb-3">
+    <div class="card-body">
+        <div class="row g-2">
+            <div class="col-8">
+                <label class="form-label small text-muted">Turma</label>
+                <select id="select-turma-chamada" class="form-select">
+                    <option value="" selected disabled>Carregando...</option>
+                </select>
+            </div>
+            <div class="col-4">
+                <label class="form-label small text-muted">Data</label>
+                <input type="date" id="data-chamada" class="form-control">
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="lista-chamada" class="list-group shadow-sm mb-4">
+    <div class="text-center py-4 text-muted">
+        Selecione uma turma para iniciar.
+    </div>
+</div>
+
+<div class="d-grid fixed-bottom p-3 bg-white border-top" style="z-index: 1000;">
+    <button id="btn-salvar-chamada" class="btn btn-primary btn-lg" disabled>
+        <i class="fas fa-check-circle me-2"></i> Salvar Presenças
+    </button>
+</div>
+<div style="height: 80px;"></div>

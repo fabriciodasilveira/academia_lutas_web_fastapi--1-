@@ -21,6 +21,7 @@ const routes = {
     '/prof/matricula': { page: '/portal/pages/prof_matricula.html', handler: handleProfMatricula },
     '/prof/financeiro': { page: '/portal/pages/prof_financeiro.html', handler: handleProfFinanceiro },
     '/prof/despesa': { page: '/portal/pages/prof_despesa.html', handler: handleProfDespesa },
+    '/prof/chamada': { page: '/portal/pages/prof_chamada.html', handler: handleProfChamada },
 };
 
 // --- FUNÇÕES DE NAVEGAÇÃO ---
@@ -772,6 +773,118 @@ async function handleProfDespesa() {
         } finally {
             btn.innerHTML = originalText;
             btn.disabled = false;
+        }
+    };
+}
+
+
+async function handleProfChamada() {
+    const selectTurma = document.getElementById('select-turma-chamada');
+    const inputData = document.getElementById('data-chamada');
+    const listaContainer = document.getElementById('lista-chamada');
+    const btnSalvar = document.getElementById('btn-salvar-chamada');
+
+    // Define hoje como padrão
+    inputData.valueAsDate = new Date();
+
+    // 1. Carregar Turmas do Professor (Reutilizando rota existente)
+    try {
+        const turmas = await api.request('/portal/professor/turmas');
+        if (turmas.length > 0) {
+            selectTurma.innerHTML = '<option value="" selected disabled>Selecione a turma...</option>' + 
+                turmas.map(t => `<option value="${t.id}">${t.nome} - ${t.horario}</option>`).join('');
+        } else {
+            selectTurma.innerHTML = '<option disabled>Nenhuma turma encontrada</option>';
+        }
+    } catch (e) {
+        console.error(e);
+        ui.showAlert('Erro ao carregar turmas', 'danger');
+    }
+
+    // Função para carregar alunos
+    async function carregarAlunos() {
+        const turmaId = selectTurma.value;
+        const data = inputData.value;
+        
+        if (!turmaId) return;
+
+        listaContainer.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>';
+        btnSalvar.disabled = true;
+
+        try {
+            // Chama a rota que criamos no backend
+            const alunos = await api.request(`/portal/professor/turmas/${turmaId}/alunos-chamada?data=${data}`);
+            
+            if (alunos.length === 0) {
+                listaContainer.innerHTML = '<div class="text-center py-4 text-muted">Nenhum aluno matriculado nesta turma.</div>';
+                return;
+            }
+
+            let html = '';
+            alunos.forEach(aluno => {
+                const checked = aluno.presente ? 'checked' : '';
+                // Ícone ou foto
+                const avatar = aluno.foto ? 
+                    `<img src="${aluno.foto}" class="rounded-circle me-3" width="40" height="40" style="object-fit:cover">` :
+                    `<div class="rounded-circle bg-light d-flex align-items-center justify-content-center me-3" style="width:40px; height:40px"><i class="fas fa-user text-secondary"></i></div>`;
+
+                html += `
+                <label class="list-group-item d-flex align-items-center justify-content-between p-3 cursor-pointer">
+                    <div class="d-flex align-items-center">
+                        ${avatar}
+                        <div>
+                            <h6 class="mb-0">${aluno.nome}</h6>
+                            <small class="text-muted">Matrícula Ativa</small>
+                        </div>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input fs-4" type="checkbox" data-aluno-id="${aluno.aluno_id}" ${checked}>
+                    </div>
+                </label>`;
+            });
+
+            listaContainer.innerHTML = html;
+            btnSalvar.disabled = false;
+
+        } catch (e) {
+            console.error(e);
+            listaContainer.innerHTML = '<div class="text-danger text-center p-3">Erro ao carregar alunos.</div>';
+        }
+    }
+
+    // Listeners
+    selectTurma.addEventListener('change', carregarAlunos);
+    inputData.addEventListener('change', carregarAlunos);
+
+    // Salvar
+    btnSalvar.onclick = async () => {
+        const checkboxes = listaContainer.querySelectorAll('input[type="checkbox"]');
+        const presencas = [];
+        
+        checkboxes.forEach(chk => {
+            presencas.push({
+                aluno_id: parseInt(chk.dataset.alunoId),
+                presente: chk.checked
+            });
+        });
+
+        const payload = {
+            turma_id: parseInt(selectTurma.value),
+            data: inputData.value,
+            presencas: presencas
+        };
+
+        const originalText = btnSalvar.innerHTML;
+        btnSalvar.disabled = true; btnSalvar.innerHTML = 'Salvando...';
+
+        try {
+            await api.request('/portal/professor/chamada', 'POST', payload);
+            ui.showAlert('Chamada salva com sucesso!', 'success');
+        } catch (e) {
+            ui.showAlert('Erro ao salvar chamada.', 'danger');
+        } finally {
+            btnSalvar.innerHTML = originalText;
+            btnSalvar.disabled = false;
         }
     };
 }
