@@ -92,23 +92,16 @@ def receber_mensalidade_dinheiro(
 
 @router.get("/turmas/{turma_id}/alunos-chamada")
 def get_alunos_para_chamada(turma_id: int, data: str = None, db: Session = Depends(get_db)):
-    """
-    Retorna lista de alunos ATIVOS na turma para fazer chamada.
-    Se já houver chamada na data, retorna o status atual (presente=true/false).
-    """
-    # 1. Define a data (hoje ou a passada)
     data_chamada = datetime.utcnow().date()
     if data:
         try: data_chamada = datetime.strptime(data, '%Y-%m-%d').date()
         except: pass
 
-    # 2. Busca matrículas ativas dessa turma
     matriculas = db.query(Matricula).filter(
         Matricula.turma_id == turma_id,
         Matricula.ativa == True
     ).all()
 
-    # 3. Verifica se já existe presença lançada para essa data
     presencas_hoje = db.query(Presenca).filter(
         Presenca.turma_id == turma_id,
         Presenca.data == data_chamada
@@ -117,17 +110,13 @@ def get_alunos_para_chamada(turma_id: int, data: str = None, db: Session = Depen
 
     lista_alunos = []
     for m in matriculas:
-        # Se já tiver registro, usa ele. Se não, padrão é False (Falta) ou True (Presença) dependendo da sua preferência.
-        # Vamos deixar False (desmarcado) por padrão para forçar o professor a marcar quem veio.
         status = map_presenca.get(m.aluno_id, False) 
-        
         lista_alunos.append({
             "aluno_id": m.aluno_id,
             "nome": m.aluno.nome,
-            "foto": m.aluno.foto_perfil, # Se tiver URL da foto
+            "foto": m.aluno.foto, 
             "presente": status
         })
-    
     return lista_alunos
 
 @router.post("/chamada")
