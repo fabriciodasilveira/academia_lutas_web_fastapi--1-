@@ -12,6 +12,7 @@ from src.models.financeiro import Financeiro
 from src.schemas.financeiro import FinanceiroCreate, FinanceiroRead, FinanceiroUpdate
 from src.models.mensalidade import Mensalidade
 from src.models.usuario import Usuario
+from src import auth
 
 router = APIRouter(
     tags=["Financeiro"],
@@ -44,13 +45,24 @@ def get_staff_users(db: Session = Depends(get_db)):
 # --- CRUD Endpoints --- 
 
 @router.post("/transacoes", response_model=FinanceiroRead, status_code=status.HTTP_201_CREATED)
-def create_transacao(transacao: FinanceiroCreate, db: Session = Depends(get_db)):
+def create_transacao(
+    transacao: FinanceiroCreate, 
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(auth.get_current_active_user) # <--- Injeção do usuário
+):
     if transacao.tipo not in ['receita', 'despesa']:
         raise HTTPException(status_code=400, detail="Tipo inválido.")
+    
     if not transacao.data:
         transacao.data = datetime.utcnow()
     
-    db_transacao = Financeiro(**transacao.dict())
+    # Prepara o dicionário de dados
+    transacao_data = transacao.dict()
+    
+    # Atribui o responsável automaticamente pelo token do usuário logado
+    transacao_data['responsavel_id'] = current_user.id 
+    
+    db_transacao = Financeiro(**transacao_data)
     db.add(db_transacao)
     db.commit()
     db.refresh(db_transacao)

@@ -20,6 +20,7 @@ const routes = {
     '/prof/alunos/novo': { page: '/portal/pages/prof_aluno_novo.html', handler: handleProfAlunoNovo },
     '/prof/matricula': { page: '/portal/pages/prof_matricula.html', handler: handleProfMatricula },
     '/prof/financeiro': { page: '/portal/pages/prof_financeiro.html', handler: handleProfFinanceiro },
+    '/prof/despesa': { page: '/portal/pages/prof_despesa.html', handler: handleProfDespesa },
 };
 
 // --- FUNÇÕES DE NAVEGAÇÃO ---
@@ -709,6 +710,60 @@ async function handleProfMatricula() {
             ui.showAlert(err.message, 'danger');
         } finally {
             btn.disabled = false; btn.innerHTML = '<i class="fas fa-check me-2"></i> Realizar Matrícula';
+        }
+    };
+}
+
+async function handleProfDespesa() {
+    const form = document.getElementById('form-despesa');
+    const selectCat = document.getElementById('select-categoria');
+    const inputData = document.getElementById('data-despesa');
+
+    // Define data de hoje como padrão
+    inputData.valueAsDate = new Date();
+
+    // 1. Carregar Categorias
+    try {
+        // Assume que sua rota de categorias aceita filtro por tipo (se implementado) ou traz todas
+        // Se a rota for '/categorias', usamos ela.
+        const categorias = await api.request('/categorias?tipo=despesa'); 
+        
+        if (categorias.length > 0) {
+            selectCat.innerHTML = '<option value="" selected disabled>Selecione...</option>' + 
+                categorias.map(c => `<option value="${c.nome}">${c.nome}</option>`).join('');
+        } else {
+            selectCat.innerHTML = '<option value="Geral">Geral (Padrão)</option>';
+        }
+    } catch (e) {
+        console.error(e);
+        selectCat.innerHTML = '<option value="Outros">Outros</option>'; // Fallback
+    }
+
+    // 2. Envio do Formulário
+    form.onsubmit = async (e) => {
+        e.preventDefault();
+        const btn = form.querySelector('button');
+        const originalText = btn.innerHTML;
+        btn.disabled = true; btn.innerHTML = 'Salvando...';
+
+        // Monta o objeto JSON manualmente ou via FormData se a API aceitar
+        // Como o endpoint espera JSON (FinanceiroCreate), vamos montar o objeto:
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+        
+        // Conversões necessárias
+        data.valor = parseFloat(data.valor);
+        
+        try {
+            await api.request('/transacoes', 'POST', data);
+            ui.showAlert('Despesa lançada com sucesso!', 'success');
+            form.reset();
+            inputData.valueAsDate = new Date(); // Reseta data para hoje
+        } catch (err) {
+            ui.showAlert(err.message || 'Erro ao lançar despesa.', 'danger');
+        } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
         }
     };
 }

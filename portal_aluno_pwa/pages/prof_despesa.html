@@ -1,0 +1,58 @@
+<div class="d-flex align-items-center mb-3">
+    <a href="#/prof/dashboard" class="text-decoration-none text-secondary me-3">
+        <i class="fas fa-arrow-left fa-lg"></i>
+    </a>
+    <h3 class="mb-0">Lançar Despesa</h3>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body">
+        <form id="form-despesa">
+            <input type="hidden" name="tipo" value="despesa">
+            
+            <div class="mb-3">
+                <label class="form-label">Descrição</label>
+                <input type="text" class="form-control" name="descricao" required placeholder="Ex: Compra de material de limpeza">
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-6">
+                    <label class="form-label">Valor (R$)</label>
+                    <input type="number" step="0.01" class="form-control" name="valor" required placeholder="0.00">
+                </div>
+                <div class="col-6">
+                    <label class="form-label">Data</label>
+                    <input type="date" class="form-control" name="data" id="data-despesa" required>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Categoria</label>
+                <select class="form-select" name="categoria" id="select-categoria" required>
+                    <option value="" selected disabled>Carregando...</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Forma de Pagamento</label>
+                <select class="form-select" name="forma_pagamento" required>
+                    <option value="Dinheiro"> Dinheiro </option>
+                    <option value="Pix">Pix da Academia</option>
+                    <!-- <option value="Cartão">Cartão</option>
+                    <option value="Boleto">Boleto</option> -->
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Observações</label>
+                <textarea class="form-control" name="observacoes" rows="2"></textarea>
+            </div>
+
+            <div class="d-grid">
+                <button type="submit" class="btn btn-danger btn-lg">
+                    <i class="fas fa-save me-2"></i> Registrar Saída
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
