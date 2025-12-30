@@ -1013,6 +1013,30 @@ def financeiro_salvar_transacao():
     return redirect(url_for("financeiro_transacoes"))
 
 
+@app.route("/financeiro/exportar")
+@login_required
+def financeiro_exportar():
+    """
+    Rota no Frontend que serve como ponte para baixar o Excel gerado pelo Backend.
+    """
+    # Chama a rota do Backend que criamos anteriormente
+    response = api_request("/financeiro/exportar-excel")
+    
+    if response and response.status_code == 200:
+        # Repassa o arquivo recebido do Backend para o navegador do usuário
+        return Response(
+            response.content,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            headers={"Content-Disposition": "attachment;filename=historico_financeiro.xlsx"}
+        )
+    else:
+        error_msg = "Erro ao baixar arquivo."
+        if response:
+            try: error_msg = response.json().get('detail', error_msg)
+            except: pass
+        flash(error_msg, "error")
+        return redirect(url_for('financeiro_transacoes'))
+
 @app.route("/financeiro/deletar_transacao/<int:id>", methods=["POST"])
 @login_required
 def financeiro_deletar_transacao(id):
