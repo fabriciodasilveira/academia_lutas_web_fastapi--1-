@@ -722,7 +722,7 @@ async function handleProfDespesa() {
     // Define data de hoje
     inputData.valueAsDate = new Date();
 
-    // 1. Carregar Categorias (Mantém o código anterior igual)
+    // 1. Carregar Categorias
     const categoriasPadrao = ["Manutenção", "Compra de equipamento", "Compra de insumo", "Outros"];
     try {
         selectCat.innerHTML = '<option value="" selected disabled>Carregando...</option>';
@@ -741,47 +741,33 @@ async function handleProfDespesa() {
         selectCat.innerHTML = categoriasPadrao.map(c => `<option value="${c}">${c}</option>`).join('');
     }
 
-    // 2. Envio do Formulário COM ARQUIVO
+    // 2. Envio do Formulário (CORRIGIDO)
     form.onsubmit = async (e) => {
         e.preventDefault();
         const btn = form.querySelector('button');
         const originalText = btn.innerHTML;
         btn.disabled = true; btn.innerHTML = 'Enviando...';
 
-        // O FormData captura todos os inputs, incluindo o type="file" (name="arquivo")
         const formData = new FormData(form);
         
-        // Em requisições com arquivo (FormData puro), 
-        // NÃO convertemos para JSON (Object.fromEntries).
-        // Passamos o formData direto na função de request modificada ou usamos fetch direto.
-        
         try {
-            // OBSERVAÇÃO IMPORTANTE:
-            // Sua função api.request padrão provavelmente tenta enviar JSON ('Content-Type': 'application/json').
-            // Para envio de arquivos, precisamos que o navegador defina o boundary automaticamente.
-            // Vamos usar uma chamada especial aqui para garantir:
+            // --- CORREÇÃO AQUI ---
+            // Usamos api.request em vez de fetch.
+            // O 4º parâmetro 'true' avisa a API que é um upload de arquivo (FormData)
+            // e ela ajusta os headers automaticamente.
+            await api.request('/financeiro/lancar-despesa', 'POST', formData, true);
 
-            const token = localStorage.getItem('accessToken');
-            const response = await fetch(`${api.baseUrl}/financeiro/lancar-despesa`, { // <--- Nova Rota
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                    // NÃO adicionar 'Content-Type' aqui, o fetch adiciona multipart/form-data automático
-                },
-                body: formData
-            });
-
-            if (!response.ok) {
-                const errData = await response.json();
-                throw new Error(errData.detail || 'Erro ao enviar.');
-            }
-            
             ui.showAlert('Despesa e recibo salvos com sucesso!', 'success');
+            
+            // Limpeza do formulário
             form.reset();
             inputData.valueAsDate = new Date();
-            document.getElementById('input-arquivo').value = ""; // Limpa o input file
+            // Limpa o input file manualmente para garantir
+            const fileInput = document.getElementById('input-arquivo');
+            if(fileInput) fileInput.value = ""; 
 
         } catch (err) {
+            console.error(err);
             ui.showAlert(err.message || 'Erro ao lançar despesa.', 'danger');
         } finally {
             btn.innerHTML = originalText;
