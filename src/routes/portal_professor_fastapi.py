@@ -181,6 +181,7 @@ def list_turmas_professor(
 ):
     """
     Lista todas as turmas ativas para preencher o dropdown da chamada.
-    (Futuramente pode filtrar apenas turmas do professor logado)
     """
+    # Importante: certifique-se que 'Turma' está importado no topo do arquivo
     return db.query(Turma).filter(Turma.ativa == True).order_by(Turma.nome).all()
+# ------------------------------------

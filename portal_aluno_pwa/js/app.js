@@ -784,12 +784,12 @@ async function handleProfChamada() {
     const listaContainer = document.getElementById('lista-chamada');
     const btnSalvar = document.getElementById('btn-salvar-chamada');
 
-    // Define hoje como padrão
     inputData.valueAsDate = new Date();
 
-    // 1. Carregar Turmas do Professor (Reutilizando rota existente)
+    // 1. Carregar Turmas (URL CORRIGIDA)
     try {
-        const turmas = await api.request('/portal-professor/turmas');
+        // Atenção ao hífen: /portal-professor
+        const turmas = await api.request('/portal-professor/turmas'); 
         if (turmas.length > 0) {
             selectTurma.innerHTML = '<option value="" selected disabled>Selecione a turma...</option>' + 
                 turmas.map(t => `<option value="${t.id}">${t.nome} - ${t.horario}</option>`).join('');
@@ -801,18 +801,16 @@ async function handleProfChamada() {
         ui.showAlert('Erro ao carregar turmas', 'danger');
     }
 
-    // Função para carregar alunos
     async function carregarAlunos() {
         const turmaId = selectTurma.value;
         const data = inputData.value;
-        
         if (!turmaId) return;
 
         listaContainer.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>';
         btnSalvar.disabled = true;
 
         try {
-            // Chama a rota que criamos no backend
+            // URL CORRIGIDA
             const alunos = await api.request(`/portal-professor/turmas/${turmaId}/alunos-chamada?data=${data}`);
             
             if (alunos.length === 0) {
@@ -823,7 +821,6 @@ async function handleProfChamada() {
             let html = '';
             alunos.forEach(aluno => {
                 const checked = aluno.presente ? 'checked' : '';
-                // Ícone ou foto
                 const avatar = aluno.foto ? 
                     `<img src="${aluno.foto}" class="rounded-circle me-3" width="40" height="40" style="object-fit:cover">` :
                     `<div class="rounded-circle bg-light d-flex align-items-center justify-content-center me-3" style="width:40px; height:40px"><i class="fas fa-user text-secondary"></i></div>`;
@@ -852,15 +849,12 @@ async function handleProfChamada() {
         }
     }
 
-    // Listeners
     selectTurma.addEventListener('change', carregarAlunos);
     inputData.addEventListener('change', carregarAlunos);
 
-    // Salvar
     btnSalvar.onclick = async () => {
         const checkboxes = listaContainer.querySelectorAll('input[type="checkbox"]');
         const presencas = [];
-        
         checkboxes.forEach(chk => {
             presencas.push({
                 aluno_id: parseInt(chk.dataset.alunoId),
@@ -878,6 +872,7 @@ async function handleProfChamada() {
         btnSalvar.disabled = true; btnSalvar.innerHTML = 'Salvando...';
 
         try {
+            // URL CORRIGIDA
             await api.request('/portal-professor/chamada', 'POST', payload);
             ui.showAlert('Chamada salva com sucesso!', 'success');
         } catch (e) {
