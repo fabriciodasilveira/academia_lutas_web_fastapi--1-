@@ -230,6 +230,80 @@
         </div>
     </div>
 </div>
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white border-0 py-3">
+                <h5 class="card-title mb-0 text-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Alunos em Risco (Ausentes > 7 dias)
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% if frequencia and frequencia.alunos_em_risco %}
+                        {% for aluno in frequencia.alunos_em_risco %}
+                        <div class="list-group-item px-4 py-3 border-0 border-bottom">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-0 fw-bold text-dark">{{ aluno.nome }}</h6>
+                                    <small class="text-muted">Último treino: {{ aluno.data }}</small>
+                                </div>
+                                <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill">
+                                    {{ aluno.dias }} dias off
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-4 text-muted">
+                            <i class="fas fa-check-circle fa-2x mb-2 text-success"></i>
+                            <p class="mb-0">Todos os alunos estão frequentando!</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white border-0 py-3">
+                <h5 class="card-title mb-0 text-primary">
+                    <i class="fas fa-trophy me-2"></i>
+                    Ranking de Assiduidade (30 dias)
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% if frequencia and frequencia.top_assiduos %}
+                        {% for aluno in frequencia.top_assiduos %}
+                        <div class="list-group-item px-4 py-3 border-0 border-bottom">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3 fw-bold fs-5 
+                                    {% if loop.index == 1 %}text-warning{% elif loop.index == 2 %}text-secondary{% elif loop.index == 3 %}text-danger{% else %}text-muted{% endif %}">
+                                    #{{ loop.index }}
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-0 fw-bold">{{ aluno.nome }}</h6>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-primary rounded-pill">{{ aluno.aulas }} treinos</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-4 text-muted">
+                            <p class="mb-0">Ainda não há dados suficientes.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}

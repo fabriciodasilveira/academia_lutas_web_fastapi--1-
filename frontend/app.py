@@ -144,6 +144,12 @@ def index():
         "datasets": {"alunos": [], "eventos": []}
     }
     
+    # --- NOVO DICIONÁRIO PARA FREQUÊNCIA ---
+    frequencia_data = {
+        "alunos_em_risco": [],
+        "top_assiduos": []
+    }
+    
     try:
         # Busca o total de ALUNOS ATIVOS
         alunos_ativos_resp = api_request("/alunos?status=ativo&limit=1")
@@ -172,11 +178,17 @@ def index():
         chart_response = api_request("/dashboard/atividades-recentes")
         if chart_response and chart_response.status_code == 200:
             chart_data = chart_response.json()
+            
+        # --- NOVA CHAMADA PARA O RELATÓRIO DE FREQUÊNCIA ---
+        freq_resp = api_request("/dashboard/relatorio-frequencia")
+        if freq_resp and freq_resp.status_code == 200:
+            frequencia_data = freq_resp.json()
+        # ---------------------------------------------------
                 
     except Exception as e:
         app.logger.error(f"Erro ao buscar estatísticas do dashboard: {e}")
     
-    return render_template('index.html', stats=stats, chart_data=chart_data)
+    return render_template('index.html', stats=stats, chart_data=chart_data, frequencia=frequencia_data)
 
 @app.route('/alunos')
 @login_required

@@ -9,6 +9,7 @@ from collections import defaultdict
 from src.database import get_db
 from src.models.aluno import Aluno
 from src.models.evento import Evento
+from src.models.presenca import Presenca
 
 router = APIRouter(
     tags=["Dashboard"],
@@ -53,4 +54,37 @@ def get_atividades_recentes(db: Session = Depends(get_db)):
             "alunos": dados_alunos,
             "eventos": dados_eventos,
         }
+    }
+    
+@router.get("/relatorio-frequencia")
+def get_relatorio_frequencia(db: Session = Depends(get_db)):
+    # 1. Alunos em Risco (Sem presença nos últimos 7 dias, mas com matrícula ativa)
+    # (Lógica simplificada: pega a última presença de cada um)
+    subquery = db.query(
+        Presenca.aluno_id, 
+        func.max(Presenca.data).label('ultima_presenca')
+    ).group_by(Presenca.aluno_id).subquery()
+
+    sete_dias_atras = datetime.utcnow().date() - timedelta(days=7)
+    
+    # Busca alunos cuja última presença foi antes de 7 dias atrás
+    alunos_sumidos = db.query(Aluno.nome, subquery.c.ultima_presenca).join(
+        subquery, Aluno.id == subquery.c.aluno_id
+    ).filter(
+        subquery.c.ultima_presenca < sete_dias_atras
+    ).all()
+
+    # 2. Ranking de Assiduidade (Últimos 30 dias)
+    trinta_dias_atras = datetime.utcnow().date() - timedelta(days=30)
+    ranking = db.query(
+        Aluno.nome, 
+        func.count(Presenca.id).label('total_aulas')
+    ).join(Presenca).filter(
+        Presenca.data >= trinta_dias_atras,
+        Presenca.presente == True
+    ).group_by(Aluno.id).order_by(func.count(Presenca.id).desc()).limit(5).all()
+
+    return {
+        "alunos_em_risco": [{"nome": a.nome, "ultimo_treino": a.ultima_presenca} for a in alunos_sumidos],
+        "top_assiduos": [{"nome": r.nome, "aulas_mes": r.total_aulas} for r in ranking]
     }
