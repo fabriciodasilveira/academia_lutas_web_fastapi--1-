@@ -16,6 +16,10 @@ from src.models.mensalidade import Mensalidade
 from src.models.usuario import Usuario
 from src import auth
 from src import image_utils 
+import pandas as pd
+import io
+from fastapi.responses import StreamingResponse
+
 
 router = APIRouter(
     tags=["Financeiro"],
@@ -203,6 +207,70 @@ def delete_transacao(transacao_id: int, db: Session = Depends(get_db)):
     
     db.delete(db_transacao)
     db.commit()
+
+@router.get("/exportar-excel")
+def exportar_transacoes_excel(db: Session = Depends(get_db)):
+    """
+    Gera um arquivo Excel com TODO o histórico financeiro para contabilidade.
+    """
+    # Busca todas as transações ordenadas por data
+    transacoes = db.query(Financeiro).order_by(Financeiro.data.desc()).all()
+
+    # Cria uma lista de dicionários para o Pandas
+    dados_lista = []
+    for t in transacoes:
+        dados_lista.append({
+            "ID": t.id,
+            "Data": t.data.strftime("%d/%m/%Y") if t.data else "",
+            "Tipo": t.tipo.upper(),
+            "Categoria": t.categoria,
+            "Descrição": t.descricao,
+            "Valor": float(t.valor),
+            "Status": t.status,
+            "Forma Pagamento": t.forma_pagamento,
+            "Observações": t.observacoes,
+            "Responsável": t.responsavel.nome if t.responsavel else "Sistema",
+            "Link Comprovante": t.comprovante_url if t.comprovante_url else ""
+        })
+
+    # Cria o DataFrame
+    df = pd.DataFrame(dados_lista)
+
+    # Cria o arquivo em memória
+    output = io.BytesIO()
+    
+    # Escreve o Excel usando engine 'openpyxl'
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name="Histórico Financeiro")
+        
+        # Ajuste cosmético: Largura das colunas (Opcional, mas fica bonito)
+        worksheet = writer.sheets['Histórico Financeiro']
+        for column in worksheet.columns:
+            max_length = 0
+            column = [cell for cell in column]
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(cell.value)
+                except:
+                    pass
+            adjusted_width = (max_length + 2)
+            worksheet.column_dimensions[column[0].column_letter].width = adjusted_width
+
+    output.seek(0)
+
+    # Define nome do arquivo com a data de hoje
+    filename = f"transacoes_academia_{datetime.now().strftime('%Y-%m-%d')}.xlsx"
+    
+    headers = {
+        'Content-Disposition': f'attachment; filename="{filename}"'
+    }
+
+    return StreamingResponse(
+        output, 
+        headers=headers, 
+        media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
 
 @router.get("/balanco", response_model=dict)
 def get_balanco(data_inicio: Optional[str] = None, data_fim: Optional[str] = None, db: Session = Depends(get_db)):
