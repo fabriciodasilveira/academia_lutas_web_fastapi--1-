@@ -22,7 +22,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import create_first_user
 from fastapi.responses import RedirectResponse # Adicione este import
-from src.models import aluno, professor, turma, evento, financeiro, matricula, plano, mensalidade, produto, categoria, historico_matricula, inscricao, presenca 
+from src.models import aluno, professor, turma, evento, financeiro, matricula, plano, mensalidade, produto, categoria, historico_matricula, inscricao, presenca, graduacao
 
 
 from src.routes import (alunos_fastapi, professores_fastapi, turmas_fastapi, eventos_fastapi, 

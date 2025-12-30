@@ -150,6 +150,76 @@
             </div>
         </div>
         
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="graduacao-tab" data-bs-toggle="tab" data-bs-target="#graduacao" type="button" role="tab">
+                <i class="fas fa-medal me-2"></i>Graduação
+            </button>
+        </li>
+
+        <div class="tab-pane fade" id="graduacao" role="tabpanel">
+            <div class="card border-0 shadow-sm mt-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div>
+                            <h5 class="card-title text-primary">Faixa Atual: <span id="lbl-faixa-atual" class="fw-bold text-dark">{{ aluno.faixa_atual }}</span></h5>
+                            <small class="text-muted">Desde: <span id="lbl-data-graduacao">{{ aluno.data_ultima_graduacao }}</span></small>
+                        </div>
+                        <button class="btn btn-warning text-white" onclick="abrirModalGraduacao()">
+                            <i class="fas fa-level-up-alt me-2"></i>Nova Graduação
+                        </button>
+                    </div>
+
+                    <h6 class="border-bottom pb-2 mb-3">Histórico de Conquistas</h6>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle" id="tabela-graduacao">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Faixa Conquistada</th>
+                                    <th>Aulas Treinadas</th> <th>Obs</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-graduacao">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="modalGraduacao" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header bg-warning text-white">
+                        <h5 class="modal-title"><i class="fas fa-medal me-2"></i>Promover Aluno</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-info d-flex align-items-center">
+                            <i class="fas fa-info-circle fa-2x me-3"></i>
+                            <div>
+                                <strong>Desempenho Atual:</strong><br>
+                                Este aluno treinou <strong id="lbl-aulas-treinadas" class="fs-5">0</strong> vezes desde a última faixa.
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Nova Faixa / Grau</label>
+                            <input type="text" class="form-control" id="input-nova-faixa" placeholder="Ex: Faixa Azul, 1º Grau...">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Observação (Opcional)</label>
+                            <textarea class="form-control" id="input-obs-graduacao" rows="2"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-warning text-white" onclick="confirmarGraduacao()">Confirmar Promoção</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="card border-0 shadow-sm mt-4">
             <div class="card-header bg-transparent border-0">
                 <h5 class="card-title mb-0">
@@ -383,5 +453,74 @@ function deleteAluno() {
         form.submit();
     }
 }
+
+const ALUNO_ID = {{ aluno.id }}; // O Flask preenche isso
+
+// Carrega o histórico ao abrir a aba
+document.getElementById('graduacao-tab').addEventListener('shown.bs.tab', carregarHistoricoGraduacao);
+
+function carregarHistoricoGraduacao() {
+    fetch(`/api/v1/alunos/${ALUNO_ID}/historico-graduacao`)
+        .then(res => res.json())
+        .then(data => {
+            const tbody = document.getElementById('tbody-graduacao');
+            tbody.innerHTML = '';
+            
+            if(data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Nenhum histórico encontrado.</td></tr>';
+                return;
+            }
+
+            data.forEach(item => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${new Date(item.data_graduacao).toLocaleDateString('pt-BR')}</td>
+                        <td><span class="badge bg-secondary">${item.faixa}</span></td>
+                        <td>${item.aulas_acumuladas} aulas</td>
+                        <td>${item.observacao || '-'}</td>
+                    </tr>
+                `;
+            });
+        });
+}
+
+function abrirModalGraduacao() {
+    // Busca a "Inteligência" (quantas aulas ele fez)
+    fetch(`/api/v1/alunos/${ALUNO_ID}/previa-graduacao`)
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('lbl-aulas-treinadas').textContent = data.aulas_realizadas;
+            const modal = new bootstrap.Modal(document.getElementById('modalGraduacao'));
+            modal.show();
+        });
+}
+
+function confirmarGraduacao() {
+    const novaFaixa = document.getElementById('input-nova-faixa').value;
+    const obs = document.getElementById('input-obs-graduacao').value;
+
+    if(!novaFaixa) {
+        alert('Digite o nome da nova faixa!');
+        return;
+    }
+
+    fetch(`/api/v1/alunos/${ALUNO_ID}/graduar`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('access_token')}` // Se usar token no front admin
+        },
+        body: JSON.stringify({ nova_faixa: novaFaixa, observacao: obs })
+    })
+    .then(res => {
+        if(res.ok) {
+            alert('Aluno graduado com sucesso!');
+            location.reload(); // Recarrega para atualizar o cabeçalho
+        } else {
+            alert('Erro ao graduar.');
+        }
+    });
+}
+
 </script>
 {% endblock %}

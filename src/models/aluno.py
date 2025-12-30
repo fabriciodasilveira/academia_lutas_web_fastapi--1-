@@ -24,11 +24,16 @@ class Aluno(Base):
     parentesco_responsavel = Column(String(50), nullable=True)
     telefone_responsavel = Column(String(20), nullable=True)
     email_responsavel = Column(String(100), nullable=True)
+    
+    # Novos Campos de Graduação
+    faixa_atual = Column(String(100), default="Faixa Branca")
+    data_ultima_graduacao = Column(Date, default=datetime.utcnow().date)
 
     # Relacionamentos existentes
     matriculas = relationship("Matricula", back_populates="aluno")
     mensalidades = relationship("Mensalidade", back_populates="aluno")
     inscricoes = relationship("Inscricao", back_populates="aluno")
+    historico_graduacoes = relationship("Graduacao", back_populates="aluno")    
     
     # Novo relacionamento
     usuario = relationship("Usuario", back_populates="aluno")
