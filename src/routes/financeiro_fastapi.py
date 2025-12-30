@@ -1,7 +1,9 @@
 # src/routes/financeiro_fastapi.py
 # -*- coding: utf-8 -*-
+import os
+import boto3 # Import necessário para o upload
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Form
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
 from datetime import datetime
@@ -13,9 +15,7 @@ from src.schemas.financeiro import FinanceiroCreate, FinanceiroRead, FinanceiroU
 from src.models.mensalidade import Mensalidade
 from src.models.usuario import Usuario
 from src import auth
-from fastapi import File, UploadFile, Form
-from src import image_utils # Seu módulo de imagens existente
-import io
+from src import image_utils 
 
 router = APIRouter(
     tags=["Financeiro"],
@@ -51,7 +51,7 @@ def get_staff_users(db: Session = Depends(get_db)):
 def create_transacao(
     transacao: FinanceiroCreate, 
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(auth.get_current_active_user) # <--- Injeção do usuário
+    current_user: Usuario = Depends(auth.get_current_active_user)
 ):
     if transacao.tipo not in ['receita', 'despesa']:
         raise HTTPException(status_code=400, detail="Tipo inválido.")
@@ -59,10 +59,7 @@ def create_transacao(
     if not transacao.data:
         transacao.data = datetime.utcnow()
     
-    # Prepara o dicionário de dados
     transacao_data = transacao.dict()
-    
-    # Atribui o responsável automaticamente pelo token do usuário logado
     transacao_data['responsavel_id'] = current_user.id 
     
     db_transacao = Financeiro(**transacao_data)
@@ -93,35 +90,58 @@ async def create_despesa_com_comprovante(
             pass
 
     url_comprovante = None
-    
-    # --- CORREÇÃO DA LÓGICA DE IMAGEM ---
-    if arquivo:
-        try:
-            # 1. Lê o conteúdo do upload
-            contents = await arquivo.read()
-            
-            # 2. Processa (Redimensiona/Comprime) - Passando BytesIO
-            processed_image, content_type = image_utils.process_avatar_image(
-                io.BytesIO(contents), 
-                max_size=(800, 1200) # Recibos podem precisar de mais altura
-            )
-            
-            if processed_image:
-                # 3. Envia para o Cloudflare R2
-                filename = arquivo.filename or "recibo.jpg"
-                url_comprovante = image_utils.salvar_imagem_cloudflare(
-                    processed_image, 
-                    filename,
-                    content_type
-                )
-                print(f"Upload sucesso: {url_comprovante}")
+
+    # --- LÓGICA DE UPLOAD (CÓPIA IDÊNTICA AO ALUNOS_FASTAPI.PY) ---
+    if arquivo and arquivo.filename:
+        # 1. Processa a imagem (Redimensiona)
+        # Usamos um tamanho maior (800x1200) pois recibos precisam de leitura
+        processed_image, mime_type = image_utils.process_avatar_image(
+            arquivo.file, 
+            max_size=(800, 1200)
+        )
+        
+        if processed_image:
+            # 2. Pega as credenciais do ambiente
+            s3_endpoint_url = os.getenv("S3_ENDPOINT_URL")
+            s3_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
+            s3_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+            s3_bucket_name = os.getenv("S3_BUCKET_NAME")
+            public_bucket_url = os.getenv("PUBLIC_BUCKET_URL")
+
+            # Valida configuração
+            if all([s3_endpoint_url, s3_access_key_id, s3_secret_access_key, s3_bucket_name, public_bucket_url]):
+                try:
+                    # 3. Conecta ao S3/R2
+                    s3_client = boto3.client(
+                        's3', 
+                        endpoint_url=s3_endpoint_url, 
+                        aws_access_key_id=s3_access_key_id, 
+                        aws_secret_access_key=s3_secret_access_key, 
+                        region_name="auto"
+                    )
+                    
+                    # 4. Gera nome seguro e faz Upload
+                    base_filename, _ = os.path.splitext(arquivo.filename)
+                    # Ex: despesa_1_17200000_nomearquivo.jpg
+                    safe_filename = f"despesa_{current_user.id}_{int(datetime.utcnow().timestamp())}_{base_filename.replace(' ', '_')}.jpg"
+
+                    s3_client.upload_fileobj(
+                        processed_image, 
+                        s3_bucket_name, 
+                        safe_filename, 
+                        ExtraArgs={'ContentType': mime_type}
+                    )
+                    
+                    # 5. Define a URL final
+                    url_comprovante = f"{public_bucket_url.rstrip('/')}/{safe_filename}"
+                    print(f"Upload Sucesso: {url_comprovante}")
+                    
+                except Exception as e:
+                    print(f"Erro no upload para o R2 (financeiro): {e}")
             else:
-                print("Falha ao processar imagem (image_utils retornou None).")
+                print("Configuração de nuvem incompleta. Imagem não enviada.")
+    # --- FIM DA LÓGICA DE UPLOAD ---
 
-        except Exception as e:
-            print(f"Erro grave ao salvar imagem: {e}")
-
-    # Cria a transação no banco
     nova_despesa = Financeiro(
         tipo='despesa',
         categoria=categoria,
@@ -131,7 +151,7 @@ async def create_despesa_com_comprovante(
         forma_pagamento=forma_pagamento,
         observacoes=observacoes,
         responsavel_id=current_user.id,
-        comprovante_url=url_comprovante 
+        comprovante_url=url_comprovante
     )
     
     db.add(nova_despesa)
@@ -178,10 +198,12 @@ def update_transacao(transacao_id: int, dados: FinanceiroUpdate, db: Session = D
 def delete_transacao(transacao_id: int, db: Session = Depends(get_db)):
     db_transacao = db.query(Financeiro).filter(Financeiro.id == transacao_id).first()
     if not db_transacao: raise HTTPException(status_code=404, detail="Não encontrado")
+    
+    # (Opcional) Poderíamos deletar a imagem do S3 aqui também, similar ao delete_aluno
+    
     db.delete(db_transacao)
     db.commit()
 
-# --- CÁLCULO DE BALANÇO E CAIXA VIRTUAL ---
 @router.get("/balanco", response_model=dict)
 def get_balanco(data_inicio: Optional[str] = None, data_fim: Optional[str] = None, db: Session = Depends(get_db)):
     hoje = datetime.utcnow().date()
@@ -194,7 +216,6 @@ def get_balanco(data_inicio: Optional[str] = None, data_fim: Optional[str] = Non
         d_ini = primeiro_dia
         d_fim = hoje
 
-    # Totais do Período (Mês atual ou selecionado)
     receitas = db.query(func.sum(Financeiro.valor)).filter(Financeiro.tipo == 'receita', func.date(Financeiro.data) >= d_ini, func.date(Financeiro.data) <= d_fim).scalar() or 0.0
     despesas = db.query(func.sum(Financeiro.valor)).filter(Financeiro.tipo == 'despesa', func.date(Financeiro.data) >= d_ini, func.date(Financeiro.data) <= d_fim).scalar() or 0.0
     total_trans = db.query(func.count(Financeiro.id)).filter(func.date(Financeiro.data) >= d_ini, func.date(Financeiro.data) <= d_fim).scalar() or 0
@@ -203,22 +224,16 @@ def get_balanco(data_inicio: Optional[str] = None, data_fim: Optional[str] = Non
     cats = db.query(Financeiro.categoria, func.sum(Financeiro.valor)).filter(Financeiro.tipo == 'despesa', func.date(Financeiro.data) >= d_ini, func.date(Financeiro.data) <= d_fim).group_by(Financeiro.categoria).all()
     grafico_data = {c: v for c, v in cats}
 
-    # --- LÓGICA DO CAIXA VIRTUAL (BALDE ACUMULATIVO) ---
-    # Nota: Removemos os filtros de data (d_ini, d_fim) para pegar o histórico completo
-    
-    # 1. Buscar a equipe para garantir que todos apareçam, mesmo com saldo 0
     equipe = db.query(Usuario).filter(
         or_(func.lower(Usuario.role) == 'professor', func.lower(Usuario.role) == 'administrador', func.lower(Usuario.role) == 'gerente')
     ).order_by(Usuario.nome).all()
 
-    # 2. Total que entrou no caixa (Recebido em Dinheiro) - DESDE O INÍCIO
     entradas_query = db.query(Financeiro.responsavel_id, func.sum(Financeiro.valor)).filter(
         Financeiro.tipo == 'receita', 
         Financeiro.forma_pagamento == 'Dinheiro'
     ).group_by(Financeiro.responsavel_id).all()
     map_entradas = {uid: val for uid, val in entradas_query}
 
-    # 3. Total que saiu do caixa (Abatido em Pagamentos) - DESDE O INÍCIO
     saidas_query = db.query(Financeiro.beneficiario_id, func.sum(Financeiro.valor_abatido_caixa)).filter(
         Financeiro.valor_abatido_caixa > 0
     ).group_by(Financeiro.beneficiario_id).all()
@@ -232,7 +247,6 @@ def get_balanco(data_inicio: Optional[str] = None, data_fim: Optional[str] = Non
         saida = map_saidas.get(membro.id, 0.0)
         saldo = (entrada or 0.0) - (saida or 0.0)
         
-        # Adiciona na lista
         caixas.append({
             "id": membro.id,
             "nome": membro.nome,
