@@ -172,3 +172,15 @@ def salvar_chamada(
     
     db.commit()
     return {"status": "sucesso", "mensagem": "Chamada salva com sucesso!"}
+
+
+@router.get("/turmas")
+def list_turmas_professor(
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_staff)
+):
+    """
+    Lista todas as turmas ativas para preencher o dropdown da chamada.
+    (Futuramente pode filtrar apenas turmas do professor logado)
+    """
+    return db.query(Turma).filter(Turma.ativa == True).order_by(Turma.nome).all()

@@ -789,7 +789,7 @@ async function handleProfChamada() {
 
     // 1. Carregar Turmas do Professor (Reutilizando rota existente)
     try {
-        const turmas = await api.request('/portal/professor/turmas');
+        const turmas = await api.request('/portal-professor/turmas');
         if (turmas.length > 0) {
             selectTurma.innerHTML = '<option value="" selected disabled>Selecione a turma...</option>' + 
                 turmas.map(t => `<option value="${t.id}">${t.nome} - ${t.horario}</option>`).join('');
@@ -813,7 +813,7 @@ async function handleProfChamada() {
 
         try {
             // Chama a rota que criamos no backend
-            const alunos = await api.request(`/portal/professor/turmas/${turmaId}/alunos-chamada?data=${data}`);
+            const alunos = await api.request(`/portal-professor/turmas/${turmaId}/alunos-chamada?data=${data}`);
             
             if (alunos.length === 0) {
                 listaContainer.innerHTML = '<div class="text-center py-4 text-muted">Nenhum aluno matriculado nesta turma.</div>';
@@ -878,7 +878,7 @@ async function handleProfChamada() {
         btnSalvar.disabled = true; btnSalvar.innerHTML = 'Salvando...';
 
         try {
-            await api.request('/portal/professor/chamada', 'POST', payload);
+            await api.request('/portal-professor/chamada', 'POST', payload);
             ui.showAlert('Chamada salva com sucesso!', 'success');
         } catch (e) {
             ui.showAlert('Erro ao salvar chamada.', 'danger');
