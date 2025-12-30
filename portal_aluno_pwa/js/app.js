@@ -755,7 +755,7 @@ async function handleProfDespesa() {
         data.valor = parseFloat(data.valor);
         
         try {
-            await api.request('/transacoes', 'POST', data);
+            await api.request('/financeiro/transacoes', 'POST', data);
             ui.showAlert('Despesa lançada com sucesso!', 'success');
             form.reset();
             inputData.valueAsDate = new Date(); // Reseta data para hoje
