@@ -722,21 +722,37 @@ async function handleProfDespesa() {
     // Define data de hoje como padrão
     inputData.valueAsDate = new Date();
 
-    // 1. Carregar Categorias
+    // 1. Carregar Categorias (Lógica Híbrida)
+    // Tenta buscar do banco. Se não houver, ou se falhar, usa a lista fixa que você pediu.
+    const categoriasPadrao = ["Manutenção", "Compra de equipamento", "Compra de insumo", "Outros"];
+    
     try {
-        // Assume que sua rota de categorias aceita filtro por tipo (se implementado) ou traz todas
-        // Se a rota for '/categorias', usamos ela.
-        const categorias = await api.request('/categorias?tipo=despesa'); 
+        selectCat.innerHTML = '<option value="" selected disabled>Carregando...</option>';
         
-        if (categorias.length > 0) {
-            selectCat.innerHTML = '<option value="" selected disabled>Selecione...</option>' + 
-                categorias.map(c => `<option value="${c.nome}">${c.nome}</option>`).join('');
-        } else {
-            selectCat.innerHTML = '<option value="Geral">Geral (Padrão)</option>';
+        let opcoesHtml = '';
+        let categoriasApi = [];
+
+        try {
+            // Tenta buscar do backend
+            categoriasApi = await api.request('/categorias?tipo=despesa');
+        } catch (e) {
+            console.warn("Não foi possível carregar categorias do servidor. Usando lista local.");
         }
+
+        // Se vieram categorias do banco, usa elas. Se não, usa a lista padrão.
+        if (categoriasApi && categoriasApi.length > 0) {
+            opcoesHtml = categoriasApi.map(c => `<option value="${c.nome}">${c.nome}</option>`).join('');
+        } else {
+            // Usa sua lista específica
+            opcoesHtml = categoriasPadrao.map(c => `<option value="${c}">${c}</option>`).join('');
+        }
+
+        selectCat.innerHTML = '<option value="" selected disabled>Selecione...</option>' + opcoesHtml;
+
     } catch (e) {
         console.error(e);
-        selectCat.innerHTML = '<option value="Outros">Outros</option>'; // Fallback
+        // Fallback de segurança garantido
+        selectCat.innerHTML = categoriasPadrao.map(c => `<option value="${c}">${c}</option>`).join('');
     }
 
     // 2. Envio do Formulário
@@ -746,16 +762,16 @@ async function handleProfDespesa() {
         const originalText = btn.innerHTML;
         btn.disabled = true; btn.innerHTML = 'Salvando...';
 
-        // Monta o objeto JSON manualmente ou via FormData se a API aceitar
-        // Como o endpoint espera JSON (FinanceiroCreate), vamos montar o objeto:
         const formData = new FormData(form);
         const data = Object.fromEntries(formData.entries());
         
-        // Conversões necessárias
+        // Conversão de valor para float
         data.valor = parseFloat(data.valor);
         
         try {
+            // CORREÇÃO DO ERRO 404: Adicionado '/financeiro' antes de '/transacoes'
             await api.request('/financeiro/transacoes', 'POST', data);
+            
             ui.showAlert('Despesa lançada com sucesso!', 'success');
             form.reset();
             inputData.valueAsDate = new Date(); // Reseta data para hoje
