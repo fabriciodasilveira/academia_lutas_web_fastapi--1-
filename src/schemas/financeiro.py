@@ -12,6 +12,7 @@ class FinanceiroBase(BaseModel):
     status: Optional[str] = "confirmado"
     observacoes: Optional[str] = None
     forma_pagamento: Optional[str] = None
+    comprovante_url: Optional[str] = None
     
     # NOVOS CAMPOS PARA O PAGAMENTO DE SALÁRIO
     beneficiario_id: Optional[int] = None
