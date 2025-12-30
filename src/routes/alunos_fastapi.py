@@ -438,16 +438,22 @@ def get_aluno_status_detalhado(aluno_id: int, db: Session = Depends(get_db)):
         "valor_pendente": mensalidades_pendentes
     }
 
-@router.get("/alunos/{aluno_id}/historico-graduacao")
+# src/routes/alunos_fastapi.py
+
+# ... (código anterior mantido)
+
+# --- ROTAS DE GRADUAÇÃO CORRIGIDAS ---
+# Removemos o prefixo "/alunos" pois o Router já o inclui
+
+@router.get("/{aluno_id}/historico-graduacao")
 def get_historico_graduacao(aluno_id: int, db: Session = Depends(get_db)):
     """Retorna todo o histórico de faixas do aluno"""
     return db.query(Graduacao).filter(Graduacao.aluno_id == aluno_id).order_by(Graduacao.data_graduacao.desc()).all()
 
-@router.get("/alunos/{aluno_id}/previa-graduacao")
+@router.get("/{aluno_id}/previa-graduacao")
 def get_previa_graduacao(aluno_id: int, db: Session = Depends(get_db)):
     """
     Calcula quantas aulas o aluno fez desde a última graduação.
-    Isso ajuda o professor a decidir se gradua ou não.
     """
     aluno = db.query(Aluno).filter(Aluno.id == aluno_id).first()
     if not aluno:
@@ -466,10 +472,10 @@ def get_previa_graduacao(aluno_id: int, db: Session = Depends(get_db)):
         "aulas_realizadas": total_aulas or 0
     }
 
-@router.post("/alunos/{aluno_id}/graduar")
+@router.post("/{aluno_id}/graduar")
 def graduar_aluno(
     aluno_id: int, 
-    nova_faixa: str = Body(..., embed=True), # Recebe { "nova_faixa": "Azul" }
+    nova_faixa: str = Body(..., embed=True),
     observacao: Optional[str] = Body(None, embed=True),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(auth.get_current_active_user)
