@@ -31,7 +31,8 @@ import re
 from src.models.graduacao import Graduacao 
 from src.models.presenca import Presenca  
 from src.models.usuario import Usuario
-from sqlalchemy import func                
+from sqlalchemy import func      
+from src.models.inscricao import Inscricao          
 
 
 router = APIRouter(
@@ -426,7 +427,7 @@ def get_aluno_status_detalhado(aluno_id: int, db: Session = Depends(get_db)):
     ).scalar() or 0.0
     status_mensalidade = "Em dia" if mensalidades_pendentes == 0 else "Pendente"
 
-    # 3. Estatísticas (NOVO)
+    # 3. Estatísticas (CÓDIGO NOVO QUE FALTAVA)
     total_turmas = db.query(Matricula).filter(Matricula.aluno_id == aluno_id, Matricula.ativa == True).count()
     total_eventos = db.query(Inscricao).filter(Inscricao.aluno_id == aluno_id).count()
     total_presencas = db.query(Presenca).filter(Presenca.aluno_id == aluno_id, Presenca.presente == True).count()
@@ -442,13 +443,6 @@ def get_aluno_status_detalhado(aluno_id: int, db: Session = Depends(get_db)):
         "total_presencas": total_presencas,
         "total_faltas": total_faltas
     }
-
-# src/routes/alunos_fastapi.py
-
-# ... (código anterior mantido)
-
-# --- ROTAS DE GRADUAÇÃO CORRIGIDAS ---
-# Removemos o prefixo "/alunos" pois o Router já o inclui
 
 @router.get("/{aluno_id}/historico-graduacao")
 def get_historico_graduacao(aluno_id: int, db: Session = Depends(get_db)):
@@ -472,8 +466,8 @@ def get_previa_graduacao(aluno_id: int, db: Session = Depends(get_db)):
 
     # Lógica Inteligente:
     # Se não for Faixa Branca, filtramos apenas as aulas DEPOIS da última graduação.
-    # Se for Faixa Branca, pegamos TUDO (pois a data_ultima_graduacao pode ser a data de cadastro ou bug de migração).
-    if aluno.faixa_atual and aluno.faixa_atual.lower() != "faixa branca":
+    # Se for Faixa Branca, pegamos TUDO (ignora a data_ultima_graduacao que pode estar errada).
+    if aluno.faixa_atual and "branca" not in aluno.faixa_atual.lower():
         query = query.filter(Presenca.data >= aluno.data_ultima_graduacao)
 
     total_aulas = query.scalar() or 0
@@ -496,12 +490,15 @@ def graduar_aluno(
     if not aluno:
         raise HTTPException(status_code=404, detail="Aluno não encontrado")
 
-    # Calcula quantas aulas ele treinou para conquistar ESSA faixa
-    aulas_nesta_faixa = db.query(func.count(Presenca.id)).filter(
+    # Reutiliza a lógica da prévia para gravar o número correto de aulas no histórico
+    query = db.query(func.count(Presenca.id)).filter(
         Presenca.aluno_id == aluno_id,
-        Presenca.presente == True,
-        Presenca.data >= aluno.data_ultima_graduacao
-    ).scalar() or 0
+        Presenca.presente == True
+    )
+    if aluno.faixa_atual and "branca" not in aluno.faixa_atual.lower():
+        query = query.filter(Presenca.data >= aluno.data_ultima_graduacao)
+    
+    aulas_nesta_faixa = query.scalar() or 0
 
     # 1. Cria o registro no histórico
     nova_graduacao = Graduacao(
