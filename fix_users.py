@@ -17,7 +17,7 @@ from src.models.evento import Evento
 from src.models.historico_matricula import HistoricoMatricula
 from src.models.produto import Produto
 from src.models.categoria import Categoria
-from src.models.financeiro import Financeiro
+from src.models.financeiro import Financeiro 
 # ---------------------------------------------------------------------------
 
 # Configuração de log simples
