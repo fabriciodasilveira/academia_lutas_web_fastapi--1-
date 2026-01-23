@@ -889,17 +889,17 @@ async function handleProfChamada() {
 
 // --- FUNÇÕES DE VÍDEO E CONTEÚDO ---
 
-// Em portal_aluno_pwa/js/app.js (Cole no final do arquivo)
+// --- MÓDULO DE VÍDEOS E CONTEÚDO (Adicionado Manualmente) ---
 
-// --- FUNÇÕES DE VÍDEO E CONTEÚDO (Youtube) ---
-
+// Função Auxiliar: Extrai ID do YouTube
 function getYoutubeId(url) {
+    if (!url) return null;
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
     const match = url.match(regExp);
     return (match && match[2].length === 11) ? match[2] : null;
 }
 
-// 1. Tela do Professor (Gestão)
+// 1. Lógica da Tela do Professor (Gestão)
 async function handleProfConteudos() {
     const form = document.getElementById('form-novo-conteudo');
     const lista = document.getElementById('lista-conteudos-prof');
@@ -907,33 +907,35 @@ async function handleProfConteudos() {
     async function carregarAulas() {
         try {
             const aulas = await api.request('/conteudos');
-            lista.innerHTML = '';
+            if(lista) lista.innerHTML = '';
             
-            if (aulas.length === 0) {
+            if (aulas.length === 0 && lista) {
                 lista.innerHTML = '<div class="text-center text-muted my-4">Nenhuma aula cadastrada.</div>';
                 return;
             }
 
-            aulas.forEach(aula => {
-                const videoId = getYoutubeId(aula.video_url);
-                const thumb = videoId ? `https://img.youtube.com/vi/${videoId}/default.jpg` : 'portal/images/icone.png';
-                
-                lista.innerHTML += `
-                    <div class="card mb-3 shadow-sm border-0">
-                        <div class="card-body d-flex align-items-center">
-                            <img src="${thumb}" class="rounded me-3" width="80" style="object-fit: cover;">
-                            <div class="flex-grow-1">
-                                <small class="text-primary fw-bold text-uppercase">Semana ${aula.semana}</small>
-                                <h6 class="mb-0 text-dark">${aula.titulo}</h6>
-                                <small class="text-muted">${aula.modulo}</small>
+            if(lista) {
+                aulas.forEach(aula => {
+                    const videoId = getYoutubeId(aula.video_url);
+                    const thumb = videoId ? `https://img.youtube.com/vi/${videoId}/default.jpg` : 'portal/images/icone.png';
+                    
+                    lista.innerHTML += `
+                        <div class="card mb-3 shadow-sm border-0">
+                            <div class="card-body d-flex align-items-center">
+                                <img src="${thumb}" class="rounded me-3" width="80" style="object-fit: cover;">
+                                <div class="flex-grow-1">
+                                    <small class="text-primary fw-bold text-uppercase">Semana ${aula.semana}</small>
+                                    <h6 class="mb-0 text-dark">${aula.titulo}</h6>
+                                    <small class="text-muted">${aula.modulo}</small>
+                                </div>
+                                <button class="btn btn-sm btn-outline-danger ms-2" onclick="deletarConteudo(${aula.id})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
                             </div>
-                            <button class="btn btn-sm btn-outline-danger ms-2" onclick="deletarConteudo(${aula.id})">
-                                <i class="fas fa-trash"></i>
-                            </button>
                         </div>
-                    </div>
-                `;
-            });
+                    `;
+                });
+            }
         } catch (e) {
             console.error(e);
             ui.showAlert('Erro ao carregar aulas.', 'danger');
@@ -969,6 +971,7 @@ async function handleProfConteudos() {
         };
     }
 
+    // Torna a função global para ser acessível pelo onclick do HTML
     window.deletarConteudo = async (id) => {
         if(!confirm('Tem certeza que deseja apagar?')) return;
         try {
@@ -982,15 +985,15 @@ async function handleProfConteudos() {
     carregarAulas();
 }
 
-// 2. Tela do Aluno (Visualização)
+// 2. Lógica da Tela do Aluno (Visualização)
 async function handleAlunoMetodo() {
     const container = document.getElementById('metodo-container');
-    container.innerHTML = '<div class="text-center py-5"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
+    if(container) container.innerHTML = '<div class="text-center py-5"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
 
     try {
         const aulas = await api.request('/conteudos');
         
-        if (aulas.length === 0) {
+        if (aulas.length === 0 && container) {
             container.innerHTML = '<div class="text-center py-5 text-muted">Nenhuma aula disponível ainda.</div>';
             return;
         }
@@ -1044,10 +1047,12 @@ async function handleAlunoMetodo() {
             });
             html += `</div></div>`;
         });
-        container.innerHTML = html;
+        
+        if(container) container.innerHTML = html;
+
     } catch (e) {
         console.error(e);
-        container.innerHTML = '<div class="text-danger text-center">Erro ao carregar método.</div>';
+        if(container) container.innerHTML = '<div class="text-danger text-center">Erro ao carregar método.</div>';
     }
 }
 
