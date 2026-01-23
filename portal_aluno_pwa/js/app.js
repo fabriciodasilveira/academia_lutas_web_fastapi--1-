@@ -22,8 +22,8 @@ const routes = {
     '/prof/financeiro': { page: '/portal/pages/prof_financeiro.html', handler: handleProfFinanceiro },
     '/prof/despesa': { page: '/portal/pages/prof_despesa.html', handler: handleProfDespesa },
     '/prof/chamada': { page: '/portal/pages/prof_chamada.html', handler: handleProfChamada },
-    '/prof/conteudos': { page: '/portal/pages/prof_conteudos.html', handler: handleProfConteudos }, // Admin
-    '/aluno/metodo': { page: '/portal/pages/metodo.html', handler: handleAlunoMetodo }, // Aluno
+    '/prof/conteudos': { page: '/portal/pages/prof_conteudos.html', handler: handleProfConteudos },
+    '/aluno/metodo': { page: '/portal/pages/metodo.html', handler: handleAlunoMetodo },
 };
 
 // --- FUNÇÕES DE NAVEGAÇÃO ---
@@ -889,22 +889,24 @@ async function handleProfChamada() {
 
 // --- FUNÇÕES DE VÍDEO E CONTEÚDO ---
 
-// Extrai o ID do vídeo de qualquer link do YouTube (curto ou longo)
+// Em portal_aluno_pwa/js/app.js (Cole no final do arquivo)
+
+// --- FUNÇÕES DE VÍDEO E CONTEÚDO (Youtube) ---
+
 function getYoutubeId(url) {
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
     const match = url.match(regExp);
     return (match && match[2].length === 11) ? match[2] : null;
 }
 
-// Lógica da Tela do Professor (Cadastrar Aula)
+// 1. Tela do Professor (Gestão)
 async function handleProfConteudos() {
     const form = document.getElementById('form-novo-conteudo');
     const lista = document.getElementById('lista-conteudos-prof');
 
-    // 1. Carregar aulas existentes
     async function carregarAulas() {
         try {
-            const aulas = await api.request('/conteudos'); // Chama a rota que criamos
+            const aulas = await api.request('/conteudos');
             lista.innerHTML = '';
             
             if (aulas.length === 0) {
@@ -912,10 +914,9 @@ async function handleProfConteudos() {
                 return;
             }
 
-            // Agrupa por módulo/semana visualmente
             aulas.forEach(aula => {
                 const videoId = getYoutubeId(aula.video_url);
-                const thumb = videoId ? `https://img.youtube.com/vi/${videoId}/default.jpg` : 'images/icone.png';
+                const thumb = videoId ? `https://img.youtube.com/vi/${videoId}/default.jpg` : 'portal/images/icone.png';
                 
                 lista.innerHTML += `
                     <div class="card mb-3 shadow-sm border-0">
@@ -939,38 +940,37 @@ async function handleProfConteudos() {
         }
     }
 
-    // 2. Salvar nova aula
-    form.onsubmit = async (e) => {
-        e.preventDefault();
-        
-        const payload = {
-            modulo: document.getElementById('input-modulo').value,
-            semana: parseInt(document.getElementById('input-semana').value),
-            ordem: parseInt(document.getElementById('input-ordem').value),
-            titulo: document.getElementById('input-titulo').value,
-            video_url: document.getElementById('input-video').value,
-            descricao: document.getElementById('input-descricao').value
+    if(form) {
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            const payload = {
+                modulo: document.getElementById('input-modulo').value,
+                semana: parseInt(document.getElementById('input-semana').value),
+                ordem: parseInt(document.getElementById('input-ordem').value),
+                titulo: document.getElementById('input-titulo').value,
+                video_url: document.getElementById('input-video').value,
+                descricao: document.getElementById('input-descricao').value
+            };
+
+            const btn = form.querySelector('button[type="submit"]');
+            const originalText = btn.innerHTML;
+            btn.disabled = true; btn.innerHTML = 'Salvando...';
+
+            try {
+                await api.request('/conteudos', 'POST', payload);
+                ui.showAlert('Aula publicada!', 'success');
+                form.reset();
+                carregarAulas();
+            } catch (error) {
+                ui.showAlert('Erro ao salvar.', 'danger');
+            } finally {
+                btn.disabled = false; btn.innerHTML = originalText;
+            }
         };
+    }
 
-        const btn = form.querySelector('button[type="submit"]');
-        const originalText = btn.innerHTML;
-        btn.disabled = true; btn.innerHTML = 'Salvando...';
-
-        try {
-            await api.request('/conteudos', 'POST', payload);
-            ui.showAlert('Aula publicada com sucesso!', 'success');
-            form.reset();
-            carregarAulas(); // Recarrega a lista
-        } catch (error) {
-            ui.showAlert('Erro ao salvar aula.', 'danger');
-        } finally {
-            btn.disabled = false; btn.innerHTML = originalText;
-        }
-    };
-
-    // Globalizar a função de deletar para o HTML acessar
     window.deletarConteudo = async (id) => {
-        if(!confirm('Tem certeza que deseja apagar esta aula?')) return;
+        if(!confirm('Tem certeza que deseja apagar?')) return;
         try {
             await api.request(`/conteudos/${id}`, 'DELETE');
             carregarAulas();
@@ -982,7 +982,7 @@ async function handleProfConteudos() {
     carregarAulas();
 }
 
-// Lógica da Tela do Aluno (Visualizar Método)
+// 2. Tela do Aluno (Visualização)
 async function handleAlunoMetodo() {
     const container = document.getElementById('metodo-container');
     container.innerHTML = '<div class="text-center py-5"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
@@ -995,7 +995,6 @@ async function handleAlunoMetodo() {
             return;
         }
 
-        // Agrupar aulas por Semana
         const semanas = {};
         aulas.forEach(aula => {
             if (!semanas[aula.semana]) semanas[aula.semana] = [];
@@ -1003,8 +1002,6 @@ async function handleAlunoMetodo() {
         });
 
         let html = '';
-        
-        // Ordena as semanas (1, 2, 3...)
         Object.keys(semanas).sort((a,b) => a - b).forEach(numSemana => {
             const listaAulas = semanas[numSemana];
             
@@ -1018,7 +1015,6 @@ async function handleAlunoMetodo() {
 
             listaAulas.forEach(aula => {
                 const videoId = getYoutubeId(aula.video_url);
-                // Cria um ID único para o modal/collapse deste vídeo
                 const collapseId = `video-${aula.id}`;
                 
                 html += `
@@ -1034,13 +1030,11 @@ async function handleAlunoMetodo() {
                             </div>
                             <i class="fas fa-chevron-down text-muted small"></i>
                         </div>
-
                         <div class="collapse bg-light" id="${collapseId}">
                             <div class="p-3">
                                 <div class="ratio ratio-16x9 rounded overflow-hidden shadow-sm">
                                     <iframe src="https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1" 
-                                            title="${aula.titulo}" 
-                                            allowfullscreen></iframe>
+                                            title="${aula.titulo}" allowfullscreen></iframe>
                                 </div>
                                 <p class="mt-2 mb-0 text-secondary small">${aula.descricao || ''}</p>
                             </div>
@@ -1048,18 +1042,12 @@ async function handleAlunoMetodo() {
                     </div>
                 `;
             });
-
-            html += `
-                    </div>
-                </div>
-            `;
+            html += `</div></div>`;
         });
-
         container.innerHTML = html;
-
     } catch (e) {
         console.error(e);
-        container.innerHTML = '<div class="text-danger text-center">Erro ao carregar o método.</div>';
+        container.innerHTML = '<div class="text-danger text-center">Erro ao carregar método.</div>';
     }
 }
 
