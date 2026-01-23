@@ -24,6 +24,7 @@ const routes = {
     '/prof/chamada': { page: '/portal/pages/prof_chamada.html', handler: handleProfChamada },
     '/prof/conteudos': { page: '/portal/pages/prof_conteudos.html', handler: handleProfConteudos },
     '/aluno/metodo': { page: '/portal/pages/metodo.html', handler: handleAlunoMetodo },
+    '/outros': { page: '/portal/pages/outros.html', handler: null },
 };
 
 // --- FUNÇÕES DE NAVEGAÇÃO ---
@@ -35,15 +36,34 @@ function updateActiveNav(path) {
     if (!navContainer) return; // Proteção caso a nav não exista no DOM
 
     if (role === 'aluno') {
-        // Menu do Aluno
+        // Menu do Aluno OTIMIZADO (5 Itens)
         navContainer.innerHTML = `
-            <a href="#/dashboard" class="nav__link"><i class="fas fa-user nav__icon"></i><span class="nav__text">Perfil</span></a>
-            <a href="#/payments" class="nav__link"><i class="fas fa-file-invoice-dollar nav__icon"></i><span class="nav__text">Pagamentos</span></a>
-            <a href="#/events" class="nav__link"><i class="fas fa-calendar-alt nav__icon"></i><span class="nav__text">Eventos</span></a>
-            <a href="#/carteirinha" class="nav__link"><i class="fas fa-id-card nav__icon"></i><span class="nav__text">Carteirinha</span></a>
-            <a href="#/beneficios" class="nav__link"><i class="fas fa-handshake nav__icon"></i><span class="nav__text">Benefícios</span></a>
+            <a href="#/dashboard" class="nav__link">
+                <i class="fas fa-user nav__icon"></i>
+                <span class="nav__text">Perfil</span>
+            </a>
+            
+            <a href="#/payments" class="nav__link">
+                <i class="fas fa-file-invoice-dollar nav__icon"></i>
+                <span class="nav__text">Pagar</span>
+            </a>
+            
+            <a href="#/aluno/metodo" class="nav__link">
+                <i class="fas fa-play-circle nav__icon" style="font-size: 1.4rem;"></i>
+                <span class="nav__text">Aulas</span>
+            </a>
+            
+            <a href="#/carteirinha" class="nav__link">
+                <i class="fas fa-id-card nav__icon"></i>
+                <span class="nav__text">Carteira</span>
+            </a>
+            
+            <a href="#/outros" class="nav__link">
+                <i class="fas fa-bars nav__icon"></i>
+                <span class="nav__text">Menu</span>
+            </a>
         `;
-    } else {
+    }else {
         // Menu do Professor/Staff
         navContainer.innerHTML = `
             <a href="#/prof/dashboard" class="nav__link"><i class="fas fa-home nav__icon"></i><span class="nav__text">Início</span></a>
