@@ -1,5 +1,5 @@
 # src/image_utils.py
-from PIL import Image
+from PIL import Image, ImageOps # <--- ADICIONEI ImageOps
 import io
 import os
 import boto3
@@ -24,12 +24,17 @@ def get_s3_client():
         region_name="auto" # R2 não usa região, mas boto3 exige
     )
 
-def process_avatar_image(file_stream, max_size=(800, 800), quality=70): # Aumentei um pouco para recibos
+def process_avatar_image(file_stream, max_size=(800, 800), quality=70):
     """
-    Redimensiona e comprime. Retorna BytesIO.
+    Redimensiona e comprime, CORRIGINDO A ROTAÇÃO (EXIF).
     """
     try:
         img = Image.open(file_stream)
+
+        # --- CORREÇÃO DE ROTAÇÃO (O PULO DO GATO) ---
+        # Verifica a orientação EXIF e aplica a rotação física na imagem
+        img = ImageOps.exif_transpose(img)
+        # ---------------------------------------------
         
         if img.mode in ('P', 'RGBA'):
             img = img.convert('RGB')
