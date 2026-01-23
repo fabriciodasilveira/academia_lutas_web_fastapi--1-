@@ -22,6 +22,8 @@ const routes = {
     '/prof/financeiro': { page: '/portal/pages/prof_financeiro.html', handler: handleProfFinanceiro },
     '/prof/despesa': { page: '/portal/pages/prof_despesa.html', handler: handleProfDespesa },
     '/prof/chamada': { page: '/portal/pages/prof_chamada.html', handler: handleProfChamada },
+    '/prof/conteudos': { page: '/portal/pages/prof_conteudos.html', handler: handleProfConteudos }, // Admin
+    '/aluno/metodo': { page: '/portal/pages/metodo.html', handler: handleAlunoMetodo }, // Aluno
 };
 
 // --- FUNÇÕES DE NAVEGAÇÃO ---
@@ -882,6 +884,183 @@ async function handleProfChamada() {
             btnSalvar.disabled = false;
         }
     };
+}
+
+
+// --- FUNÇÕES DE VÍDEO E CONTEÚDO ---
+
+// Extrai o ID do vídeo de qualquer link do YouTube (curto ou longo)
+function getYoutubeId(url) {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+}
+
+// Lógica da Tela do Professor (Cadastrar Aula)
+async function handleProfConteudos() {
+    const form = document.getElementById('form-novo-conteudo');
+    const lista = document.getElementById('lista-conteudos-prof');
+
+    // 1. Carregar aulas existentes
+    async function carregarAulas() {
+        try {
+            const aulas = await api.request('/conteudos'); // Chama a rota que criamos
+            lista.innerHTML = '';
+            
+            if (aulas.length === 0) {
+                lista.innerHTML = '<div class="text-center text-muted my-4">Nenhuma aula cadastrada.</div>';
+                return;
+            }
+
+            // Agrupa por módulo/semana visualmente
+            aulas.forEach(aula => {
+                const videoId = getYoutubeId(aula.video_url);
+                const thumb = videoId ? `https://img.youtube.com/vi/${videoId}/default.jpg` : 'images/icone.png';
+                
+                lista.innerHTML += `
+                    <div class="card mb-3 shadow-sm border-0">
+                        <div class="card-body d-flex align-items-center">
+                            <img src="${thumb}" class="rounded me-3" width="80" style="object-fit: cover;">
+                            <div class="flex-grow-1">
+                                <small class="text-primary fw-bold text-uppercase">Semana ${aula.semana}</small>
+                                <h6 class="mb-0 text-dark">${aula.titulo}</h6>
+                                <small class="text-muted">${aula.modulo}</small>
+                            </div>
+                            <button class="btn btn-sm btn-outline-danger ms-2" onclick="deletarConteudo(${aula.id})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+        } catch (e) {
+            console.error(e);
+            ui.showAlert('Erro ao carregar aulas.', 'danger');
+        }
+    }
+
+    // 2. Salvar nova aula
+    form.onsubmit = async (e) => {
+        e.preventDefault();
+        
+        const payload = {
+            modulo: document.getElementById('input-modulo').value,
+            semana: parseInt(document.getElementById('input-semana').value),
+            ordem: parseInt(document.getElementById('input-ordem').value),
+            titulo: document.getElementById('input-titulo').value,
+            video_url: document.getElementById('input-video').value,
+            descricao: document.getElementById('input-descricao').value
+        };
+
+        const btn = form.querySelector('button[type="submit"]');
+        const originalText = btn.innerHTML;
+        btn.disabled = true; btn.innerHTML = 'Salvando...';
+
+        try {
+            await api.request('/conteudos', 'POST', payload);
+            ui.showAlert('Aula publicada com sucesso!', 'success');
+            form.reset();
+            carregarAulas(); // Recarrega a lista
+        } catch (error) {
+            ui.showAlert('Erro ao salvar aula.', 'danger');
+        } finally {
+            btn.disabled = false; btn.innerHTML = originalText;
+        }
+    };
+
+    // Globalizar a função de deletar para o HTML acessar
+    window.deletarConteudo = async (id) => {
+        if(!confirm('Tem certeza que deseja apagar esta aula?')) return;
+        try {
+            await api.request(`/conteudos/${id}`, 'DELETE');
+            carregarAulas();
+        } catch (e) {
+            ui.showAlert('Erro ao deletar.', 'danger');
+        }
+    };
+
+    carregarAulas();
+}
+
+// Lógica da Tela do Aluno (Visualizar Método)
+async function handleAlunoMetodo() {
+    const container = document.getElementById('metodo-container');
+    container.innerHTML = '<div class="text-center py-5"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
+
+    try {
+        const aulas = await api.request('/conteudos');
+        
+        if (aulas.length === 0) {
+            container.innerHTML = '<div class="text-center py-5 text-muted">Nenhuma aula disponível ainda.</div>';
+            return;
+        }
+
+        // Agrupar aulas por Semana
+        const semanas = {};
+        aulas.forEach(aula => {
+            if (!semanas[aula.semana]) semanas[aula.semana] = [];
+            semanas[aula.semana].push(aula);
+        });
+
+        let html = '';
+        
+        // Ordena as semanas (1, 2, 3...)
+        Object.keys(semanas).sort((a,b) => a - b).forEach(numSemana => {
+            const listaAulas = semanas[numSemana];
+            
+            html += `
+                <div class="mb-4">
+                    <h6 class="text-uppercase text-secondary fw-bold px-2 mb-2 border-bottom pb-1">
+                        <i class="fas fa-calendar-week me-2"></i>Semana ${numSemana}
+                    </h6>
+                    <div class="list-group shadow-sm rounded-3 border-0">
+            `;
+
+            listaAulas.forEach(aula => {
+                const videoId = getYoutubeId(aula.video_url);
+                // Cria um ID único para o modal/collapse deste vídeo
+                const collapseId = `video-${aula.id}`;
+                
+                html += `
+                    <div class="list-group-item border-0 p-0 bg-white mb-1">
+                        <div class="d-flex align-items-center p-3 cursor-pointer" 
+                             data-bs-toggle="collapse" data-bs-target="#${collapseId}">
+                            <div class="bg-primary bg-opacity-10 rounded-circle p-2 text-primary me-3">
+                                <i class="fas fa-play fa-sm"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-0 fw-bold">${aula.titulo}</h6>
+                                <small class="text-muted" style="font-size: 0.8rem;">${aula.modulo}</small>
+                            </div>
+                            <i class="fas fa-chevron-down text-muted small"></i>
+                        </div>
+
+                        <div class="collapse bg-light" id="${collapseId}">
+                            <div class="p-3">
+                                <div class="ratio ratio-16x9 rounded overflow-hidden shadow-sm">
+                                    <iframe src="https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1" 
+                                            title="${aula.titulo}" 
+                                            allowfullscreen></iframe>
+                                </div>
+                                <p class="mt-2 mb-0 text-secondary small">${aula.descricao || ''}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+
+    } catch (e) {
+        console.error(e);
+        container.innerHTML = '<div class="text-danger text-center">Erro ao carregar o método.</div>';
+    }
 }
 
 // --- FUNÇÕES GLOBAIS DE AÇÃO ---

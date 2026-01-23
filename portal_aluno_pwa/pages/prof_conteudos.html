@@ -1,0 +1,61 @@
+<div class="d-flex align-items-center mb-3">
+    <a href="#/prof/dashboard" class="text-decoration-none text-secondary me-3">
+        <i class="fas fa-arrow-left fa-lg"></i>
+    </a>
+    <h3 class="mb-0">Gestão de Aulas</h3>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white border-0 pt-3">
+        <h6 class="fw-bold text-primary"><i class="fas fa-plus-circle me-2"></i>Nova Técnica</h6>
+    </div>
+    <div class="card-body">
+        <form id="form-novo-conteudo">
+            <div class="row g-2">
+                <div class="col-6">
+                    <label class="form-label small text-muted">Módulo</label>
+                    <select id="input-modulo" class="form-select form-select-sm">
+                        <option value="Jiu-Jitsu Básico">Básico</option>
+                        <option value="Jiu-Jitsu Avançado">Avançado</option>
+                        <option value="Nogi / Sem Kimono">Nogi</option>
+                        <option value="Muay Thai">Muay Thai</option>
+                    </select>
+                </div>
+                <div class="col-3">
+                    <label class="form-label small text-muted">Semana</label>
+                    <input type="number" id="input-semana" class="form-control form-control-sm" required placeholder="1">
+                </div>
+                <div class="col-3">
+                    <label class="form-label small text-muted">Ordem</label>
+                    <input type="number" id="input-ordem" class="form-control form-control-sm" value="1">
+                </div>
+                
+                <div class="col-12">
+                    <label class="form-label small text-muted">Título da Técnica</label>
+                    <input type="text" id="input-titulo" class="form-control" required placeholder="Ex: Armlock da Guarda Fechada">
+                </div>
+                
+                <div class="col-12">
+                    <label class="form-label small text-muted">Link do YouTube</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fab fa-youtube text-danger"></i></span>
+                        <input type="url" id="input-video" class="form-control" required placeholder="https://youtu.be/...">
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <textarea id="input-descricao" class="form-control form-control-sm" rows="2" placeholder="Detalhes (Opcional)"></textarea>
+                </div>
+            </div>
+            
+            <div class="d-grid mt-3">
+                <button type="submit" class="btn btn-primary">Publicar Aula</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<h6 class="text-muted ms-1 mb-3">Aulas Cadastradas</h6>
+<div id="lista-conteudos-prof" class="pb-5">
+    </div>
+<div style="height: 50px;"></div>
