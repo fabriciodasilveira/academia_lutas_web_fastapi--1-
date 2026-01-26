@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import or_ # <--- IMPORTANTE: Import para a busca
 
-from src import database, models, schemas
+from src import database, models, schemas, auth
 from src.auth import get_password_hash, get_admin_user
 
 router = APIRouter(
