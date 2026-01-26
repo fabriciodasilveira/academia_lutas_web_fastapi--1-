@@ -107,7 +107,7 @@ def reset_user_password(
     user_id: int, 
     db: Session = Depends(database.get_db),
     # Garanta que apenas admins possam chamar esta rota
-    current_user: models.usuario.Usuario = Depends(auth.get_current_admin_user) 
+    current_user: models.usuario.Usuario = Depends(auth.get_admin_user)
 ):
     db_user = db.query(models.usuario.Usuario).filter(models.usuario.Usuario.id == user_id).first()
     if not db_user:
