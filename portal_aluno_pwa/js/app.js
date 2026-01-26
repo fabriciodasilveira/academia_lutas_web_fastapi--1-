@@ -25,6 +25,7 @@ const routes = {
     '/prof/conteudos': { page: '/portal/pages/prof_conteudos.html', handler: handleProfConteudos },
     '/aluno/metodo': { page: '/portal/pages/metodo.html', handler: handleAlunoMetodo },
     '/outros': { page: '/portal/pages/outros.html', handler: null },
+    '#admin_usuarios': carregarUsuariosAdmin,
 };
 
 // --- FUNÇÕES DE NAVEGAÇÃO ---
@@ -1216,5 +1217,38 @@ async function handleAlunoMetodo() {
     } catch (e) {
         console.error(e);
         if(container) container.innerHTML = '<div class="text-danger text-center">Erro ao carregar método.</div>';
+    }
+}
+
+
+async function carregarUsuariosAdmin() {
+    const listagem = document.getElementById('usersList');
+    try {
+        const usuarios = await apiFetch('/usuarios/'); // Rota que retorna todos os usuários
+        listagem.innerHTML = usuarios.map(user => `
+            <div class="user-card">
+                <div class="user-info">
+                    <h3>${user.nome || 'Sem nome'}</h3>
+                    <p><strong>User:</strong> ${user.username}</p>
+                    <p><strong>Acesso:</strong> ${user.ultimo_acesso ? new Date(user.ultimo_acesso).toLocaleString() : 'Nunca'}</p>
+                </div>
+                <button class="btn-reset" onclick="confirmarReset(${user.id}, '${user.nome}')">
+                    <i class="fas fa-key"></i> Reset
+                </button>
+            </div>
+        `).join('');
+    } catch (error) {
+        listagem.innerHTML = '<p>Erro ao carregar usuários.</p>';
+    }
+}
+
+async function confirmarReset(id, nome) {
+    if (confirm(`Deseja resetar a senha de ${nome} para "123456"?`)) {
+        try {
+            await apiFetch(`/usuarios/${id}/reset-password`, { method: 'PUT' });
+            alert('Senha resetada com sucesso!');
+        } catch (error) {
+            alert('Erro ao resetar senha.');
+        }
     }
 }

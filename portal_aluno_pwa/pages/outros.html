@@ -35,6 +35,18 @@
     </button>
 </div>
 
+<a href="#admin_usuarios" class="menu-item admin-only" style="display: none;">
+    <div class="menu-icon"><i class="fas fa-users-cog"></i></div>
+    <span>Gestão de Usuários</span>
+</a>
+
+<script>
+    // Lógica para mostrar apenas se for admin (pode variar conforme seu auth.js)
+    if (userRole === 'admin') {
+        document.querySelector('.admin-only').style.display = 'flex';
+    }
+</script>
+
 <script>
     document.getElementById('btn-logout-outros').onclick = () => {
         if(confirm('Deseja realmente sair?')) {

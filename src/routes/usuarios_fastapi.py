@@ -100,6 +100,27 @@ def update_user(user_id: int, user: schemas.usuario.UsuarioUpdate, db: Session =
     db.refresh(db_user)
     return db_user
 
+# No arquivo src/routes/usuarios_fastapi.py
+
+@router.put("/{user_id}/reset-password", response_model=schemas.usuario.UsuarioRead)
+def reset_user_password(
+    user_id: int, 
+    db: Session = Depends(database.get_db),
+    # Garanta que apenas admins possam chamar esta rota
+    current_user: models.usuario.Usuario = Depends(auth.get_current_admin_user) 
+):
+    db_user = db.query(models.usuario.Usuario).filter(models.usuario.Usuario.id == user_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+
+    # Define a senha padrão criptografada
+    db_user.hashed_password = auth.get_password_hash("123456")
+    
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(user_id: int, db: Session = Depends(database.get_db)):
     db_user = db.query(models.usuario.Usuario).filter(models.usuario.Usuario.id == user_id).first()
