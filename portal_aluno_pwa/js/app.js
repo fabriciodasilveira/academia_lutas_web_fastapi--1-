@@ -25,7 +25,7 @@ const routes = {
     '/prof/conteudos': { page: '/portal/pages/prof_conteudos.html', handler: handleProfConteudos },
     '/aluno/metodo': { page: '/portal/pages/metodo.html', handler: handleAlunoMetodo },
     '/outros': { page: '/portal/pages/outros.html', handler: null },
-    '#admin_usuarios': carregarUsuariosAdmin,
+    '/admin/usuarios': { page: '/portal/pages/admin_usuarios.html',handler: handleAdminUsuarios},
 };
 
 // --- FUNÇÕES DE NAVEGAÇÃO ---
@@ -1251,4 +1251,11 @@ async function confirmarReset(id, nome) {
             alert('Erro ao resetar senha.');
         }
     }
+}
+
+
+async function handleAdminUsuarios() {
+    console.log("Carregando tela de gestão de usuários...");
+    // Chama a função que criamos anteriormente para buscar os dados da API
+    await carregarUsuariosAdmin(); 
 }
