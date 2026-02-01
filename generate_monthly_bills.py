@@ -111,14 +111,20 @@ def generate_bills():
                 # Já existe cobrança para este mês/ano específico
                 continue
 
-            # 4. Criar a nova mensalidade
-            # Mantém sempre o DIA_VENCIMENTO_PADRAO (10) independente do cadastro da matrícula
+            if matricula.plano:
+                valor_plano = matricula.plano.valor
+                logging.info(f"Processando: {matricula.aluno.nome} - Plano: {matricula.plano.nome} (R$ {valor_plano})")
+            else:
+                logging.warning(f"Matrícula ID {matricula.id} sem plano associado. Pulando.")
+                continue
+
+            # 4. Criar a nova mensalidade explicitando o valor do plano
             new_bill = Mensalidade(
                 aluno_id=matricula.aluno_id,
                 plano_id=matricula.plano_id,
                 matricula_id=matricula.id,
-                valor=matricula.plano.valor,
-                data_vencimento=data_vencimento_alvo, # Sempre dia 10 do mês/ano alvo
+                valor=valor_plano, # Aqui garantimos o uso do valor do plano
+                data_vencimento=data_vencimento_alvo,
                 status="pendente"
             )
             db.add(new_bill)
