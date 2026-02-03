@@ -539,7 +539,9 @@ async function handleBeneficiosPage() {
          { logo: '/portal/images/farmaciabompreco.png', nome: 'Farmácia Bom Preço', desconto: '20% compra de medicamentos.', whatsapp: '5532988015391' },
          { logo: '/portal/images/studiosbanni.png', nome: 'Studio Sbanni', desconto: '20% de desconto em todos serviços.', whatsapp: '5532999553342' },
          { logo: '/portal/images/abrace.png', nome: 'Abrace Studio de Pilates', desconto: '10% de desconto na Mensalidade.', whatsapp: '5532988758320' },
-    ];
+         { logo: '/portal/images/paulus.jpeg', nome: 'Paulus Lanches', desconto: '20% hambúrguer e cachorrão e 50% espaço kids', whatsapp: '5532988047752' },
+         { logo: '/portal/images/jujuba.jpeg', nome: 'Jujuba Festas', desconto: '15% OFF em festas do nosso acervo e 20% OFF na papelaria personalizada', whatsapp: '5532988486130' },
+    ];``
 
     list.innerHTML = partners.map(p => `
         <div class="col-6 col-md-4 mb-4">
