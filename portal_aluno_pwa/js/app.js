@@ -541,6 +541,7 @@ async function handleBeneficiosPage() {
          { logo: '/portal/images/abrace.png', nome: 'Abrace Studio de Pilates', desconto: '10% de desconto na Mensalidade.', whatsapp: '5532988758320' },
          { logo: '/portal/images/paulus.jpeg', nome: 'Paulus Hamburgueria.', desconto: '20% hambúrguer e cachorrão e 50% espaço kids', whatsapp: '5532988047752' },
          { logo: '/portal/images/jujuba.jpeg', nome: 'Jujuba Festas.', desconto: '15% OFF em festas do nosso acervo e 20% OFF na papelaria personalizada', whatsapp: '5532988486130' },
+         { logo: '/portal/images/maria.png', nome: 'Maria Brasileira', desconto: 'R$15,00 de desconto nas faxinas de 8h. 20% nas limpezas tecnicas.', whatsapp: '5532920003322' },
     ];``
 
     list.innerHTML = partners.map(p => `
