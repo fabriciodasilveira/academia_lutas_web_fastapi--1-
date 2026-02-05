@@ -1,6 +1,6 @@
 # Dockerfile (Raiz - Backend API)
-# FROM python:3.11-slim
-FROM quay.io/python/cpython:3.11-slim
+FROM python:3.11-slim
+
 
 # Define diretório de trabalho
 WORKDIR /app
