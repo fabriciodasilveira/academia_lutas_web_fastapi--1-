@@ -1,5 +1,5 @@
 # frontend/Dockerfile (Painel Admin)
-FROM python:3.13.12-slim-bookworm
+FROM public.ecr.aws/docker/library/python:3.11-slim
 
 
 WORKDIR /app
