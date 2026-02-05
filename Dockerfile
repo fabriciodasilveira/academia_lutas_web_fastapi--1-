@@ -1,5 +1,6 @@
 # Dockerfile (Raiz - Backend API)
-FROM python:3.11-slim
+# FROM python:3.11-slim
+FROM quay.io/bitnami/python:3.11
 
 # Define diretório de trabalho
 WORKDIR /app
