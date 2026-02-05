@@ -1,5 +1,5 @@
 # Dockerfile (Raiz - Backend API)
-FROM python:3.11-slim
+FROM python:3.13.12-slim-bookworm
 
 
 # Define diretório de trabalho
