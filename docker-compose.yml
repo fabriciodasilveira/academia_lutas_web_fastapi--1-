@@ -2,7 +2,7 @@
 services:
   # 1. Banco de Dados (Substitui o Neon/Render)
   db:
-    image: quay.io/bitnami/postgresql:15.6.0
+    image: public.ecr.aws/docker/library/postgres:15-alpine
     container_name: academia_db
     restart: always
     environment:
