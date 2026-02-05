@@ -2,7 +2,7 @@
 services:
   # 1. Banco de Dados (Substitui o Neon/Render)
   db:
-    image: postgres:15-alpine
+    image: postgres:13-alpine
     container_name: academia_db
     restart: always
     environment:
