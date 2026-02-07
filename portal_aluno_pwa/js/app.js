@@ -1262,3 +1262,82 @@ async function handleAdminUsuarios() {
     // Chama a função que criamos anteriormente para buscar os dados da API
     await carregarUsuariosAdmin(); 
 }
+
+// =====================================================================
+// LÓGICA GLOBAL PARA ALUNO EXTRA (NÃO DEPENDE DAS ROTAS)
+// =====================================================================
+
+// 1. Escuta a digitação no campo de busca do Modal
+document.addEventListener('input', async function(e) {
+    if (e.target.id === 'input-busca-aluno-extra') {
+        const termo = e.target.value;
+        const resultadosDiv = document.getElementById('resultados-busca-extra');
+        
+        if (!resultadosDiv) return;
+
+        if (termo.length < 3) {
+            resultadosDiv.innerHTML = '';
+            return;
+        }
+
+        try {
+            // Busca no backend usando seu endpoint de busca global
+            const alunos = await api.request(`/portal-professor/alunos/buscar?nome=${termo}`);
+            
+            if (alunos.length === 0) {
+                resultadosDiv.innerHTML = '<div class="list-group-item text-muted">Nenhum aluno encontrado.</div>';
+                return;
+            }
+
+            resultadosDiv.innerHTML = alunos.map(a => `
+                <button type="button" class="list-group-item list-group-item-action d-flex align-items-center" 
+                        onclick="window.adicionarExtraManual(${a.id}, '${a.nome}', '${a.foto || ''}')">
+                    <img src="${a.foto || '/portal/images/default-avatar.png'}" class="rounded-circle me-2" width="30" height="30" style="object-fit:cover">
+                    <span class="small">${a.nome}</span>
+                </button>
+            `).join('');
+        } catch (err) {
+            console.error("Erro na busca extra:", err);
+        }
+    }
+});
+
+// 2. Função Global para inserir o aluno na lista de presença
+window.adicionarExtraManual = function(id, nome, foto) {
+    const lista = document.getElementById('lista-chamada');
+    if (!lista) return;
+
+    // Remove avisos de "Selecione uma turma"
+    if (lista.innerText.includes('Selecione')) lista.innerHTML = '';
+
+    // Evita duplicados
+    if (document.querySelector(`[data-aluno-id="${id}"]`)) {
+        alert("Este aluno já está na lista.");
+        return;
+    }
+
+    const html = `
+        <label class="list-group-item d-flex align-items-center justify-content-between p-3 border-warning">
+            <div class="d-flex align-items-center">
+                <img src="${foto || '/portal/images/default-avatar.png'}" class="rounded-circle me-3" width="40" height="40" style="object-fit:cover">
+                <div>
+                    <h6 class="mb-0">${nome}</h6>
+                    <span class="badge bg-warning text-dark" style="font-size:0.6rem">EXTRA</span>
+                </div>
+            </div>
+            <div class="form-check form-switch">
+                <input class="form-check-input fs-4" type="checkbox" data-aluno-id="${id}" checked>
+            </div>
+        </label>`;
+
+    lista.insertAdjacentHTML('beforeend', html);
+    
+    // Fecha o modal automaticamente
+    const modalEl = document.getElementById('modalBuscaAlunoExtra');
+    const modalInstance = bootstrap.Modal.getInstance(modalEl);
+    if (modalInstance) modalInstance.hide();
+    
+    // Ativa o botão de salvar caso esteja desativado
+    const btnSalvar = document.getElementById('btn-salvar-chamada');
+    if (btnSalvar) btnSalvar.disabled = false;
+};
