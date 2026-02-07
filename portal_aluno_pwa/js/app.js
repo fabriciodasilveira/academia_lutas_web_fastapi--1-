@@ -1472,3 +1472,84 @@ function inicializarLogicaExtra() {
         document.getElementById('btn-salvar-chamada').disabled = false;
     };
 }
+
+// --- LÓGICA GLOBAL PARA ALUNO EXTRA (DELEGAÇÃO DE EVENTOS) ---
+// Este bloco funciona de forma independente das suas 1.400 linhas
+document.addEventListener('click', function(e) {
+    // 1. Detecta o clique no botão "Extra"
+    const btnExtra = e.target.closest('#btn-add-extra');
+    if (btnExtra) {
+        e.preventDefault();
+        const modalEl = document.getElementById('modalBuscaAlunoExtra');
+        if (modalEl) {
+            // Usa o Bootstrap global para abrir o modal
+            const modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modalInstance.show();
+        }
+        return;
+    }
+
+    // 2. Detecta o clique em um aluno dentro do resultado da busca
+    const btnAluno = e.target.closest('.btn-resultado-aluno');
+    if (btnAluno) {
+        const { id, nome, foto } = btnAluno.dataset;
+        
+        const listaChamada = document.getElementById('lista-chamada');
+        if (!listaChamada) return;
+
+        // Remove o aviso de "Selecione uma turma" se existir
+        if (listaChamada.innerText.includes('Selecione')) listaChamada.innerHTML = '';
+
+        if (document.querySelector(`[data-aluno-id="${id}"]`)) {
+            alert("Este aluno já está na lista.");
+            return;
+        }
+
+        const novoItem = `
+            <label class="list-group-item d-flex justify-content-between align-items-center p-3 border-warning">
+                <div class="d-flex align-items-center">
+                    <img src="${foto || '/portal_aluno_pwa/images/default-avatar.png'}" class="rounded-circle me-3" width="40" height="40">
+                    <div>
+                        <h6 class="mb-0">${nome}</h6>
+                        <span class="badge bg-warning text-dark" style="font-size:0.6rem">EXTRA</span>
+                    </div>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input fs-4" type="checkbox" data-aluno-id="${id}" checked>
+                </div>
+            </label>`;
+        
+        listaChamada.insertAdjacentHTML('beforeend', novoItem);
+        
+        // Fecha o modal
+        const modalEl = document.getElementById('modalBuscaAlunoExtra');
+        bootstrap.Modal.getInstance(modalEl).hide();
+        
+        // Habilita o botão de salvar da tela de chamada
+        const btnSalvar = document.getElementById('btn-salvar-chamada');
+        if (btnSalvar) btnSalvar.disabled = false;
+    }
+});
+
+// 3. Detecta a digitação no campo de busca do modal
+document.addEventListener('input', async function(e) {
+    if (e.target.id === 'input-busca-aluno-extra') {
+        const termo = e.target.value;
+        const resultadosDiv = document.getElementById('resultados-busca-extra');
+        if (!resultadosDiv || termo.length < 3) return;
+
+        try {
+            // Faz a chamada para o endpoint que criamos no portal_professor_fastapi.py
+            const alunos = await api.request(`/portal-professor/alunos/buscar?nome=${termo}`);
+            
+            resultadosDiv.innerHTML = alunos.map(a => `
+                <button type="button" class="list-group-item list-group-item-action d-flex align-items-center btn-resultado-aluno" 
+                        data-id="${a.id}" data-nome="${a.nome}" data-foto="${a.foto || ''}">
+                    <img src="${a.foto || '/portal_aluno_pwa/images/default-avatar.png'}" class="rounded-circle me-2" width="30" height="30">
+                    <span class="small">${a.nome}</span>
+                </button>`).join('');
+        } catch (err) {
+            console.error("Erro na busca extra:", err);
+        }
+    }
+});
