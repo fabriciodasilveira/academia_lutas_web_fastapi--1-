@@ -70,53 +70,57 @@ const router = async () => {
     }
 };
 
-// --- LÓGICA DA CHAMADA (AQUI ESTÁ O SEGREDO) ---
 async function handleProfChamada() {
     const selectTurma = document.getElementById('select-turma-chamada');
     const inputData = document.getElementById('data-chamada');
     const listaContainer = document.getElementById('lista-chamada');
     const btnSalvar = document.getElementById('btn-salvar-chamada');
 
+    if (!selectTurma || !inputData) return;
+
     inputData.valueAsDate = new Date();
 
-    // Carregar Turmas
+    // 1. Carrega Turmas
     try {
         const turmas = await api.request('/portal-professor/turmas'); 
-        if (turmas.length > 0) {
-            selectTurma.innerHTML = '<option value="" selected disabled>Selecione a turma...</option>' + 
-                turmas.map(t => `<option value="${t.id}">${t.nome} - ${t.horario}</option>`).join('');
-        }
+        selectTurma.innerHTML = '<option value="" selected disabled>Selecione a turma...</option>' + 
+            turmas.map(t => `<option value="${t.id}">${t.nome} - ${t.horario}</option>`).join('');
     } catch (e) { ui.showAlert('Erro ao carregar turmas'); }
 
-    // Carregar Alunos
-    async function carregarAlunos() {
+    // 2. Lógica de Listagem
+    const atualizarLista = async () => {
         if (!selectTurma.value) return;
         listaContainer.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin"></i></div>';
         try {
             const alunos = await api.request(`/portal-professor/turmas/${selectTurma.value}/alunos-chamada?data=${inputData.value}`);
+            if (alunos.length === 0) {
+                listaContainer.innerHTML = '<div class="text-center py-4 text-muted">Nenhum aluno nesta turma.</div>';
+                return;
+            }
             listaContainer.innerHTML = alunos.map(aluno => `
                 <label class="list-group-item d-flex align-items-center justify-content-between p-3">
                     <div class="d-flex align-items-center">
-                        <img src="${aluno.foto || '/portal_aluno_pwa/images/default-avatar.png'}" class="rounded-circle me-3" width="40" height="40">
-                        <div><h6 class="mb-0">${aluno.nome}</h6></div>
+                        <img src="${aluno.foto || '/portal_aluno_pwa/images/default-avatar.png'}" class="rounded-circle me-3" width="40" height="40" style="object-fit:cover">
+                        <h6 class="mb-0">${aluno.nome}</h6>
                     </div>
                     <div class="form-check form-switch">
                         <input class="form-check-input fs-4" type="checkbox" data-aluno-id="${aluno.aluno_id}" ${aluno.presente ? 'checked' : ''}>
                     </div>
                 </label>`).join('');
             btnSalvar.disabled = false;
-        } catch (e) { listaContainer.innerHTML = 'Erro ao carregar.'; }
-    }
+        } catch (e) { listaContainer.innerHTML = 'Erro ao carregar alunos.'; }
+    };
 
-    selectTurma.addEventListener('change', carregarAlunos);
-    inputData.addEventListener('change', carregarAlunos);
+    selectTurma.onchange = atualizarLista;
+    inputData.onchange = atualizarLista;
 
-    // Salvar
+    // 3. Salvar
     btnSalvar.onclick = async () => {
         const presencas = Array.from(listaContainer.querySelectorAll('input[type="checkbox"]')).map(chk => ({
             aluno_id: parseInt(chk.dataset.alunoId),
             presente: chk.checked
         }));
+        btnSalvar.disabled = true;
         try {
             await api.request('/portal-professor/chamada', 'POST', {
                 turma_id: parseInt(selectTurma.value),
@@ -124,7 +128,8 @@ async function handleProfChamada() {
                 presencas: presencas
             });
             ui.showAlert('Chamada salva!', 'success');
-        } catch (e) { ui.showAlert('Erro ao salvar.'); }
+        } catch (e) { ui.showAlert('Erro ao salvar'); }
+        btnSalvar.disabled = false;
     };
 }
 
@@ -1473,65 +1478,40 @@ function inicializarLogicaExtra() {
     };
 }
 
-// --- LÓGICA GLOBAL PARA ALUNO EXTRA (DELEGAÇÃO DE EVENTOS) ---
-// Este bloco funciona de forma independente das suas 1.400 linhas
+// --- LOGICA GLOBAL ALUNO EXTRA (DELEGAÇÃO DE EVENTOS) ---
 document.addEventListener('click', function(e) {
-    // 1. Detecta o clique no botão "Extra"
+    // Abertura do Modal
     const btnExtra = e.target.closest('#btn-add-extra');
     if (btnExtra) {
-        e.preventDefault();
         const modalEl = document.getElementById('modalBuscaAlunoExtra');
-        if (modalEl) {
-            // Usa o Bootstrap global para abrir o modal
-            const modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
-            modalInstance.show();
-        }
+        if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
         return;
     }
 
-    // 2. Detecta o clique em um aluno dentro do resultado da busca
-    const btnAluno = e.target.closest('.btn-resultado-aluno');
-    if (btnAluno) {
-        const { id, nome, foto } = btnAluno.dataset;
+    // Seleção do Aluno na Busca
+    const btnSelect = e.target.closest('.btn-add-manual');
+    if (btnSelect) {
+        const { id, nome, foto } = btnSelect.dataset;
+        const lista = document.getElementById('lista-chamada');
         
-        const listaChamada = document.getElementById('lista-chamada');
-        if (!listaChamada) return;
-
-        // Remove o aviso de "Selecione uma turma" se existir
-        if (listaChamada.innerText.includes('Selecione')) listaChamada.innerHTML = '';
-
-        if (document.querySelector(`[data-aluno-id="${id}"]`)) {
-            alert("Este aluno já está na lista.");
-            return;
-        }
+        if (lista.querySelector('.text-muted')) lista.innerHTML = '';
+        if (document.querySelector(`[data-aluno-id="${id}"]`)) return alert("Aluno já está na lista.");
 
         const novoItem = `
-            <label class="list-group-item d-flex justify-content-between align-items-center p-3 border-warning">
+            <label class="list-group-item d-flex align-items-center justify-content-between p-3 border-warning">
                 <div class="d-flex align-items-center">
                     <img src="${foto || '/portal_aluno_pwa/images/default-avatar.png'}" class="rounded-circle me-3" width="40" height="40">
-                    <div>
-                        <h6 class="mb-0">${nome}</h6>
-                        <span class="badge bg-warning text-dark" style="font-size:0.6rem">EXTRA</span>
-                    </div>
+                    <div><h6 class="mb-0">${nome}</h6><span class="badge bg-warning text-dark" style="font-size:0.6rem">EXTRA</span></div>
                 </div>
-                <div class="form-check form-switch">
-                    <input class="form-check-input fs-4" type="checkbox" data-aluno-id="${id}" checked>
-                </div>
+                <div class="form-check form-switch"><input class="form-check-input fs-4" type="checkbox" data-aluno-id="${id}" checked></div>
             </label>`;
         
-        listaChamada.insertAdjacentHTML('beforeend', novoItem);
-        
-        // Fecha o modal
-        const modalEl = document.getElementById('modalBuscaAlunoExtra');
-        bootstrap.Modal.getInstance(modalEl).hide();
-        
-        // Habilita o botão de salvar da tela de chamada
-        const btnSalvar = document.getElementById('btn-salvar-chamada');
-        if (btnSalvar) btnSalvar.disabled = false;
+        lista.insertAdjacentHTML('beforeend', novoItem);
+        bootstrap.Modal.getInstance(document.getElementById('modalBuscaAlunoExtra')).hide();
+        document.getElementById('btn-salvar-chamada').disabled = false;
     }
 });
 
-// 3. Detecta a digitação no campo de busca do modal
 document.addEventListener('input', async function(e) {
     if (e.target.id === 'input-busca-aluno-extra') {
         const termo = e.target.value;
@@ -1539,17 +1519,13 @@ document.addEventListener('input', async function(e) {
         if (!resultadosDiv || termo.length < 3) return;
 
         try {
-            // Faz a chamada para o endpoint que criamos no portal_professor_fastapi.py
             const alunos = await api.request(`/portal-professor/alunos/buscar?nome=${termo}`);
-            
             resultadosDiv.innerHTML = alunos.map(a => `
-                <button type="button" class="list-group-item list-group-item-action d-flex align-items-center btn-resultado-aluno" 
+                <button type="button" class="list-group-item list-group-item-action d-flex align-items-center btn-add-manual" 
                         data-id="${a.id}" data-nome="${a.nome}" data-foto="${a.foto || ''}">
-                    <img src="${a.foto || '/portal_aluno_pwa/images/default-avatar.png'}" class="rounded-circle me-2" width="30" height="30">
+                    <img src="${a.foto || '/portal_aluno_pwa/images/default-avatar.png'}" class="rounded-circle me-2" width="30">
                     <span class="small">${a.nome}</span>
                 </button>`).join('');
-        } catch (err) {
-            console.error("Erro na busca extra:", err);
-        }
+        } catch (err) { console.error(err); }
     }
 });
