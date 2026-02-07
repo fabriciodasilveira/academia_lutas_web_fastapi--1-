@@ -1354,3 +1354,81 @@ window.adicionarExtraManual = function(id, nome, foto) {
 };
 
 
+/**
+ * LÓGICA GLOBAL "BLINDADA" PARA ALUNO EXTRA
+ * Usa delegação de eventos para garantir funcionamento em SPAs
+ */
+(function() {
+    // 1. Escuta a digitação para busca (Substitui o oninput do HTML)
+    document.addEventListener('input', async (e) => {
+        if (e.target.id === 'input-busca-aluno-extra') {
+            const termo = e.target.value;
+            const resultadosDiv = document.getElementById('resultados-busca-extra');
+            
+            if (!resultadosDiv) return;
+            if (termo.length < 3) { resultadosDiv.innerHTML = ''; return; }
+
+            try {
+                const alunos = await api.request(`/portal-professor/alunos/buscar?nome=${termo}`);
+                
+                if (!alunos || alunos.length === 0) {
+                    resultadosDiv.innerHTML = '<div class="list-group-item text-muted small">Nenhum aluno encontrado.</div>';
+                    return;
+                }
+
+                resultadosDiv.innerHTML = alunos.map(a => `
+                    <button type="button" class="list-group-item list-group-item-action d-flex align-items-center btn-selecionar-extra" 
+                            data-id="${a.id}" data-nome="${a.nome}" data-foto="${a.foto || ''}">
+                        <img src="${a.foto || '/portal/images/default-avatar.png'}" class="rounded-circle me-2" width="30" height="30" style="object-fit:cover">
+                        <span class="small">${a.nome}</span>
+                    </button>
+                `).join('');
+            } catch (err) {
+                console.error("Erro na busca:", err);
+            }
+        }
+    });
+
+    // 2. Escuta o clique no resultado da busca para adicionar na lista
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('.btn-selecionar-extra');
+        if (!btn) return;
+
+        const { id, nome, foto } = btn.dataset;
+        const lista = document.getElementById('lista-chamada');
+        
+        if (!lista) return;
+
+        // Limpa avisos e evita duplicados
+        if (lista.innerText.includes('Selecione')) lista.innerHTML = '';
+        if (document.querySelector(`[data-aluno-id="${id}"]`)) {
+            alert("Aluno já está na lista.");
+            return;
+        }
+
+        const html = `
+            <label class="list-group-item d-flex align-items-center justify-content-between p-3 border-warning">
+                <div class="d-flex align-items-center">
+                    <img src="${foto || '/portal/images/default-avatar.png'}" class="rounded-circle me-3" width="40" height="40" style="object-fit:cover">
+                    <div>
+                        <h6 class="mb-0">${nome}</h6>
+                        <span class="badge bg-warning text-dark" style="font-size:0.6rem">EXTRA</span>
+                    </div>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input fs-4" type="checkbox" data-aluno-id="${id}" checked>
+                </div>
+            </label>`;
+
+        lista.insertAdjacentHTML('beforeend', html);
+        
+        // Fecha o modal nativamente
+        const modalEl = document.getElementById('modalBuscaAlunoExtra');
+        const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        modalInstance.hide();
+
+        // Habilita o botão de salvar
+        const btnSalvar = document.getElementById('btn-salvar-chamada');
+        if (btnSalvar) btnSalvar.disabled = false;
+    });
+})();

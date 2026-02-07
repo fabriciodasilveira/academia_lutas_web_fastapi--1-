@@ -185,14 +185,15 @@ def buscar_alunos_global(
         return []
     
     try:
-        # Busca alunos ativos filtrando pelo nome
+        # Note o .filter(Aluno.status == 'Ativo') - verifique se no seu banco é 'Ativo' ou 'ativo'
         alunos = db.query(Aluno).filter(
             Aluno.nome.ilike(f"%{nome}%"),
-            Aluno.status == 'Ativo' # Use 'Ativo' com A maiúsculo se for o padrão do seu banco
+            Aluno.status == 'Ativo' 
         ).limit(10).all()
         
         return [{"id": a.id, "nome": a.nome, "foto": a.foto} for a in alunos]
     except Exception as e:
-        print(f"Erro na busca: {e}")
-        raise HTTPException(status_code=500, detail="Erro interno na busca de alunos")
+        print(f"ERRO CRÍTICO NA BUSCA: {str(e)}")
+        # Isso ajudará a ver o erro real no log do terminal do servidor
+        raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
 # ------------------------------------
