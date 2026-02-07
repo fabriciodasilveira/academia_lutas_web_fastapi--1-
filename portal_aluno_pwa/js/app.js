@@ -1298,73 +1298,68 @@ window.adicionarExtraManual = function(id, nome, foto) {
 // FUNÇÕES GLOBAIS PARA ALUNO EXTRA NA CHAMADA
 // =====================================================================
 
-// 1. Função de Busca (chamada pelo oninput no HTML)
-window.buscarAlunoExtra = async function(termo) {
-    const resultadosDiv = document.getElementById('resultados-busca-extra');
-    if (!resultadosDiv) return;
+// FORÇAR DECLARAÇÃO GLOBAL IMEDIATA
+(function() {
+    console.log("Inicializando scripts de Aluno Extra...");
 
-    if (termo.length < 3) {
-        resultadosDiv.innerHTML = '';
-        return;
-    }
+    window.buscarAlunoExtra = async function(termo) {
+        const resultadosDiv = document.getElementById('resultados-busca-extra');
+        if (!resultadosDiv) return;
+        if (termo.length < 3) { resultadosDiv.innerHTML = ''; return; }
 
-    try {
-        // Usa o objeto api que já existe no seu sistema
-        const alunos = await api.request(`/portal-professor/alunos/buscar?nome=${termo}`);
-        
-        if (alunos.length === 0) {
-            resultadosDiv.innerHTML = '<div class="list-group-item text-muted">Nenhum aluno encontrado.</div>';
+        try {
+            // Chamada usando o objeto api global do seu sistema
+            const alunos = await api.request(`/portal-professor/alunos/buscar?nome=${termo}`);
+            
+            if (!alunos || alunos.length === 0) {
+                resultadosDiv.innerHTML = '<div class="list-group-item text-muted small">Nenhum aluno encontrado.</div>';
+                return;
+            }
+
+            resultadosDiv.innerHTML = alunos.map(a => `
+                <button type="button" class="list-group-item list-group-item-action d-flex align-items-center" 
+                        onclick="window.adicionarAlunoNaChamada(${a.id}, '${a.nome}', '${a.foto || ''}')">
+                    <img src="${a.foto || '/portal_aluno_pwa/images/default-avatar.png'}" class="rounded-circle me-2" width="30" height="30" style="object-fit:cover">
+                    <span class="small">${a.nome}</span>
+                </button>
+            `).join('');
+        } catch (err) {
+            console.error("Erro na API:", err);
+            resultadosDiv.innerHTML = '<div class="list-group-item text-danger small">Erro ao buscar no servidor.</div>';
+        }
+    };
+
+    window.adicionarAlunoNaChamada = function(id, nome, foto) {
+        const lista = document.getElementById('lista-chamada');
+        if (!lista) return;
+
+        if (lista.innerText.includes('Selecione')) lista.innerHTML = '';
+        if (document.querySelector(`[data-aluno-id="${id}"]`)) {
+            alert("Este aluno já está na lista.");
             return;
         }
 
-        resultadosDiv.innerHTML = alunos.map(a => `
-            <button type="button" class="list-group-item list-group-item-action d-flex align-items-center" 
-                    onclick="window.adicionarAlunoNaChamada(${a.id}, '${a.nome}', '${a.foto || ''}')">
-                <img src="${a.foto || '/portal/images/default-avatar.png'}" class="rounded-circle me-2" width="30" height="30" style="object-fit:cover">
-                <span class="small">${a.nome}</span>
-            </button>
-        `).join('');
-    } catch (err) {
-        console.error("Erro na busca de aluno extra:", err);
-    }
-};
-
-// 2. Função de Inclusão (chamada pelo clique no resultado)
-window.adicionarAlunoNaChamada = function(id, nome, foto) {
-    const lista = document.getElementById('lista-chamada');
-    if (!lista) return;
-
-    // Remove mensagem de lista vazia
-    if (lista.innerText.includes('Selecione')) lista.innerHTML = '';
-
-    // Evita duplicados
-    if (document.querySelector(`[data-aluno-id="${id}"]`)) {
-        alert("Este aluno já está na lista.");
-        return;
-    }
-
-    const html = `
-        <label class="list-group-item d-flex align-items-center justify-content-between p-3 border-warning">
-            <div class="d-flex align-items-center">
-                <img src="${foto || '/portal/images/default-avatar.png'}" class="rounded-circle me-3" width="40" height="40" style="object-fit:cover">
-                <div>
-                    <h6 class="mb-0">${nome}</h6>
-                    <span class="badge bg-warning text-dark" style="font-size:0.6rem">EXTRA</span>
+        const html = `
+            <label class="list-group-item d-flex align-items-center justify-content-between p-3 border-warning">
+                <div class="d-flex align-items-center">
+                    <img src="${foto || '/portal_aluno_pwa/images/default-avatar.png'}" class="rounded-circle me-3" width="40" height="40" style="object-fit:cover">
+                    <div>
+                        <h6 class="mb-0">${nome}</h6>
+                        <span class="badge bg-warning text-dark" style="font-size:0.6rem">EXTRA</span>
+                    </div>
                 </div>
-            </div>
-            <div class="form-check form-switch">
-                <input class="form-check-input fs-4" type="checkbox" data-aluno-id="${id}" checked>
-            </div>
-        </label>`;
+                <div class="form-check form-switch">
+                    <input class="form-check-input fs-4" type="checkbox" data-aluno-id="${id}" checked>
+                </div>
+            </label>`;
 
-    lista.insertAdjacentHTML('beforeend', html);
-    
-    // Fecha o modal (Bootstrap 5)
-    const modalEl = document.getElementById('modalBuscaAlunoExtra');
-    const modalInstance = bootstrap.Modal.getInstance(modalEl);
-    if (modalInstance) modalInstance.hide();
-    
-    // Habilita o botão de salvar
-    const btnSalvar = document.getElementById('btn-salvar-chamada');
-    if (btnSalvar) btnSalvar.disabled = false;
-};
+        lista.insertAdjacentHTML('beforeend', html);
+        
+        // Fechar modal de forma segura
+        const modalEl = document.getElementById('modalBuscaAlunoExtra');
+        const modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modalInstance.hide();
+        
+        document.getElementById('btn-salvar-chamada').disabled = false;
+    };
+})();

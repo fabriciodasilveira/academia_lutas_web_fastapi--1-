@@ -181,17 +181,18 @@ def buscar_alunos_global(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_staff)
 ):
-    """
-    Busca qualquer aluno ativo na academia pelo nome para inclusão extra na chamada.
-    """
     if len(nome) < 3:
         return []
-        
-    alunos = db.query(Aluno).filter(
-        Aluno.nome.ilike(f"%{nome}%"),
-        Aluno.status == 'ativo' # Garante que só busca alunos ativos
-    ).limit(10).all()
     
-    return [{"id": a.id, "nome": a.nome, "foto": a.foto} for a in alunos]
-
+    try:
+        # Busca alunos ativos filtrando pelo nome
+        alunos = db.query(Aluno).filter(
+            Aluno.nome.ilike(f"%{nome}%"),
+            Aluno.status == 'Ativo' # Use 'Ativo' com A maiúsculo se for o padrão do seu banco
+        ).limit(10).all()
+        
+        return [{"id": a.id, "nome": a.nome, "foto": a.foto} for a in alunos]
+    except Exception as e:
+        print(f"Erro na busca: {e}")
+        raise HTTPException(status_code=500, detail="Erro interno na busca de alunos")
 # ------------------------------------
