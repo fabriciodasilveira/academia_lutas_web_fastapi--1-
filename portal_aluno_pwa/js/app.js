@@ -70,7 +70,7 @@ const router = async () => {
     }
 };
 
-// --- HANDLER DA CHAMADA (PROFESSOR) ---
+// --- LÓGICA DA CHAMADA (AQUI ESTÁ O SEGREDO) ---
 async function handleProfChamada() {
     const selectTurma = document.getElementById('select-turma-chamada');
     const inputData = document.getElementById('data-chamada');
@@ -79,49 +79,44 @@ async function handleProfChamada() {
 
     inputData.valueAsDate = new Date();
 
-    // 1. Carregar Turmas
+    // Carregar Turmas
     try {
         const turmas = await api.request('/portal-professor/turmas'); 
         if (turmas.length > 0) {
             selectTurma.innerHTML = '<option value="" selected disabled>Selecione a turma...</option>' + 
                 turmas.map(t => `<option value="${t.id}">${t.nome} - ${t.horario}</option>`).join('');
         }
-    } catch (e) { ui.showAlert('Erro ao carregar turmas', 'danger'); }
+    } catch (e) { ui.showAlert('Erro ao carregar turmas'); }
 
-    // 2. Lógica para carregar alunos da turma
+    // Carregar Alunos
     async function carregarAlunos() {
-        const turmaId = selectTurma.value;
-        const data = inputData.value;
-        if (!turmaId) return;
-
+        if (!selectTurma.value) return;
         listaContainer.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin"></i></div>';
         try {
-            const alunos = await api.request(`/portal-professor/turmas/${turmaId}/alunos-chamada?data=${data}`);
+            const alunos = await api.request(`/portal-professor/turmas/${selectTurma.value}/alunos-chamada?data=${inputData.value}`);
             listaContainer.innerHTML = alunos.map(aluno => `
                 <label class="list-group-item d-flex align-items-center justify-content-between p-3">
                     <div class="d-flex align-items-center">
                         <img src="${aluno.foto || '/portal_aluno_pwa/images/default-avatar.png'}" class="rounded-circle me-3" width="40" height="40">
-                        <div><h6 class="mb-0">${aluno.nome}</h6><small class="text-muted">Matrícula Ativa</small></div>
+                        <div><h6 class="mb-0">${aluno.nome}</h6></div>
                     </div>
                     <div class="form-check form-switch">
                         <input class="form-check-input fs-4" type="checkbox" data-aluno-id="${aluno.aluno_id}" ${aluno.presente ? 'checked' : ''}>
                     </div>
                 </label>`).join('');
             btnSalvar.disabled = false;
-        } catch (e) { listaContainer.innerHTML = '<div class="text-danger text-center">Erro ao carregar.</div>'; }
+        } catch (e) { listaContainer.innerHTML = 'Erro ao carregar.'; }
     }
 
     selectTurma.addEventListener('change', carregarAlunos);
     inputData.addEventListener('change', carregarAlunos);
 
-    // 3. Salvar Chamada
+    // Salvar
     btnSalvar.onclick = async () => {
-        const checkboxes = listaContainer.querySelectorAll('input[type="checkbox"]');
-        const presencas = Array.from(checkboxes).map(chk => ({
+        const presencas = Array.from(listaContainer.querySelectorAll('input[type="checkbox"]')).map(chk => ({
             aluno_id: parseInt(chk.dataset.alunoId),
             presente: chk.checked
         }));
-
         try {
             await api.request('/portal-professor/chamada', 'POST', {
                 turma_id: parseInt(selectTurma.value),
@@ -129,76 +124,77 @@ async function handleProfChamada() {
                 presencas: presencas
             });
             ui.showAlert('Chamada salva!', 'success');
-        } catch (e) { ui.showAlert('Erro ao salvar.', 'danger'); }
+        } catch (e) { ui.showAlert('Erro ao salvar.'); }
     };
-
-    // --- INICIALIZAÇÃO DO ALUNO EXTRA (DENTRO DO CONTEXTO DA PÁGINA) ---
-    initLogicaAlunoExtra();
 }
 
-function initLogicaAlunoExtra() {
-    const btnAdd = document.getElementById('btn-add-extra');
-    const modalEl = document.getElementById('modalBuscaAlunoExtra');
-    const inputBusca = document.getElementById('input-busca-aluno-extra');
-    const resultadosDiv = document.getElementById('resultados-busca-extra');
+// --- LÓGICA GLOBAL PARA O ALUNO EXTRA (DELEGAÇÃO DE EVENTOS) ---
+// Usamos o document para escutar o clique, assim funciona mesmo após trocar de página
+document.addEventListener('click', async (e) => {
+    // 1. Abrir o Modal
+    if (e.target.closest('#btn-add-extra')) {
+        const modalEl = document.getElementById('modalBuscaAlunoExtra');
+        if (modalEl) {
+            const modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modalInstance.show();
+        }
+    }
 
-    if (!btnAdd || !modalEl) return;
+    // 2. Clicar em um aluno na busca
+    const btnAluno = e.target.closest('.btn-resultado-aluno');
+    if (btnAluno) {
+        const { id, nome, foto } = btnAluno.dataset;
+        adicionarAlunoExtraNaLista(id, nome, foto);
+        bootstrap.Modal.getInstance(document.getElementById('modalBuscaAlunoExtra')).hide();
+    }
+});
 
-    const modalInstance = new bootstrap.Modal(modalEl);
-
-    btnAdd.onclick = () => modalInstance.show();
-
-    inputBusca.oninput = async (e) => {
+// Escuta a digitação na busca (Delegação)
+document.addEventListener('input', async (e) => {
+    if (e.target.id === 'input-busca-aluno-extra') {
         const termo = e.target.value;
+        const resultadosDiv = document.getElementById('resultados-busca-extra');
         if (termo.length < 3) return;
+
         try {
             const alunos = await api.request(`/portal-professor/alunos/buscar?nome=${termo}`);
             resultadosDiv.innerHTML = alunos.map(a => `
-                <button class="list-group-item list-group-item-action d-flex align-items-center" onclick="addExtraManual(${a.id}, '${a.nome}', '${a.foto || ''}')">
+                <button class="list-group-item list-group-item-action d-flex align-items-center btn-resultado-aluno" 
+                        data-id="${a.id}" data-nome="${a.nome}" data-foto="${a.foto || ''}">
                     <img src="${a.foto || '/portal_aluno_pwa/images/default-avatar.png'}" class="rounded-circle me-2" width="30">
-                    <span class="small">${a.nome}</span>
+                    <span>${a.nome}</span>
                 </button>`).join('');
         } catch (err) { console.error(err); }
-    };
+    }
+});
 
-    window.addExtraManual = (id, nome, foto) => {
-        const lista = document.getElementById('lista-chamada');
-        if (lista.querySelector('.text-muted')) lista.innerHTML = '';
-        if (document.querySelector(`[data-aluno-id="${id}"]`)) { alert("Aluno já está na lista."); return; }
+function adicionarAlunoExtraNaLista(id, nome, foto) {
+    const lista = document.getElementById('lista-chamada');
+    if (lista.querySelector('.text-muted')) lista.innerHTML = '';
+    if (document.querySelector(`[data-aluno-id="${id}"]`)) return alert("Já está na lista.");
 
-        const html = `
-            <label class="list-group-item d-flex align-items-center justify-content-between p-3 border-warning">
-                <div class="d-flex align-items-center">
-                    <img src="${foto || '/portal_aluno_pwa/images/default-avatar.png'}" class="rounded-circle me-3" width="40">
-                    <div><h6 class="mb-0">${nome}</h6><span class="badge bg-warning text-dark" style="font-size:0.6rem">EXTRA</span></div>
-                </div>
-                <div class="form-check form-switch">
-                    <input class="form-check-input fs-4" type="checkbox" data-aluno-id="${id}" checked>
-                </div>
-            </label>`;
-        lista.insertAdjacentHTML('beforeend', html);
-        modalInstance.hide();
-        document.getElementById('btn-salvar-chamada').disabled = false;
-    };
+    const html = `
+        <label class="list-group-item d-flex align-items-center justify-content-between p-3 border-warning">
+            <div class="d-flex align-items-center">
+                <img src="${foto || '/portal_aluno_pwa/images/default-avatar.png'}" class="rounded-circle me-3" width="40">
+                <div><h6 class="mb-0">${nome}</h6><span class="badge bg-warning text-dark">EXTRA</span></div>
+            </div>
+            <div class="form-check form-switch">
+                <input class="form-check-input fs-4" type="checkbox" data-aluno-id="${id}" checked>
+            </div>
+        </label>`;
+    lista.insertAdjacentHTML('beforeend', html);
+    document.getElementById('btn-salvar-chamada').disabled = false;
 }
 
-// --- RESTANTE DOS HANDLERS (Login, Dashboard, etc - Omitidos para brevidade, mas devem permanecer no seu arquivo) ---
-
-// window.addEventListener('hashchange', router);
-// window.addEventListener('load', router);
-
-// Inicialização
+// Inicialização Final
 window.addEventListener('hashchange', router);
 window.addEventListener('load', () => {
-    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/portal/sw.js').catch(console.error);
-    
-    document.getElementById('logout-button').addEventListener('click', () => {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('userRole');
+    router();
+    document.getElementById('logout-button')?.addEventListener('click', () => {
+        localStorage.clear();
         window.location.hash = '/login';
     });
-    
-    router();
 });
 
 // --- HANDLERS COMUNS ---
