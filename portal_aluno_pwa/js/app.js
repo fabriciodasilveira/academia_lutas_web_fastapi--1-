@@ -1267,6 +1267,34 @@ async function handleAdminUsuarios() {
 // Exemplo de lógica para gerenciar a inclusão de alunos extras
 let modalBusca = null;
 
+// portal_aluno_pwa/js/app.js
+
+function inicializarEventosChamada() {
+    const btn = document.getElementById('btn-add-extra');
+    const modalElement = document.getElementById('modalBuscaAlunoExtra');
+    
+    if (!btn || !modalElement) return;
+
+    // Inicializa o objeto Modal do Bootstrap
+    const modalInstance = new bootstrap.Modal(modalElement);
+
+    btn.addEventListener('click', () => {
+        console.log("Abrindo modal..."); // Debug para seu console
+        modalInstance.show();
+    });
+
+    // Lógica de busca (debounce para não sobrecarregar o servidor)
+    const inputBusca = document.getElementById('input-busca-aluno-extra');
+    inputBusca.addEventListener('input', async (e) => {
+        const termo = e.target.value;
+        if (termo.length >= 3) {
+            // Use o endpoint que criamos no backend
+            const alunos = await api.get(`/portal-professor/alunos/buscar?nome=${termo}`);
+            renderizarResultadosExtra(alunos, modalInstance);
+        }
+    });
+}
+
 function initChamadaExtra() {
     const btnAddExtra = document.getElementById('btn-add-extra');
     const inputBusca = document.getElementById('input-busca-aluno-extra');
