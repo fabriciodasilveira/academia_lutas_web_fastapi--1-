@@ -173,4 +173,25 @@ def list_turmas_professor(
     """
     # Importante: certifique-se que 'Turma' está importado no topo do arquivo
     return db.query(Turma).filter(Turma.ativa == True).order_by(Turma.nome).all()
+
+
+@router.get("/alunos/buscar")
+def buscar_alunos_global(
+    nome: str,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_staff)
+):
+    """
+    Busca qualquer aluno ativo na academia pelo nome para inclusão extra na chamada.
+    """
+    if len(nome) < 3:
+        return []
+        
+    alunos = db.query(Aluno).filter(
+        Aluno.nome.ilike(f"%{nome}%"),
+        Aluno.status == 'ativo' # Garante que só busca alunos ativos
+    ).limit(10).all()
+    
+    return [{"id": a.id, "nome": a.nome, "foto": a.foto} for a in alunos]
+
 # ------------------------------------

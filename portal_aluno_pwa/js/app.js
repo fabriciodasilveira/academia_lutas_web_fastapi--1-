@@ -1262,3 +1262,66 @@ async function handleAdminUsuarios() {
     // Chama a função que criamos anteriormente para buscar os dados da API
     await carregarUsuariosAdmin(); 
 }
+
+
+// Exemplo de lógica para gerenciar a inclusão de alunos extras
+let modalBusca = null;
+
+function initChamadaExtra() {
+    const btnAddExtra = document.getElementById('btn-add-extra');
+    const inputBusca = document.getElementById('input-busca-aluno-extra');
+    const listaResultados = document.getElementById('resultados-busca-extra');
+    
+    modalBusca = new bootstrap.Modal(document.getElementById('modalBuscaAluno'));
+
+    btnAddExtra.onclick = () => modalBusca.show();
+
+    inputBusca.oninput = async (e) => {
+        const termo = e.target.value;
+        if (termo.length < 3) return;
+
+        try {
+            const alunos = await api.get(`/portal-professor/alunos/buscar?nome=${termo}`);
+            listaResultados.innerHTML = alunos.map(aluno => `
+                <button class="list-group-item list-group-item-action d-flex align-items-center" 
+                        onclick="adicionarAlunoNaLista(${aluno.id}, '${aluno.nome}', '${aluno.foto}')">
+                    <img src="${aluno.foto || 'images/default-avatar.png'}" class="rounded-circle me-2" width="30">
+                    ${aluno.nome}
+                </button>
+            `).join('');
+        } catch (err) {
+            console.error("Erro ao buscar alunos", err);
+        }
+    };
+}
+
+function adicionarAlunoNaLista(id, nome, foto) {
+    const listaChamada = document.getElementById('lista-chamada');
+    
+    // Verifica se o aluno já está na lista
+    if (document.querySelector(`[data-aluno-id="${id}"]`)) {
+        alert("Este aluno já está na lista de chamada.");
+        return;
+    }
+
+    // Cria o elemento HTML do aluno com uma tag "EXTRA"
+    const novoItem = document.createElement('div');
+    novoItem.className = "list-group-item d-flex justify-content-between align-items-center border-warning";
+    novoItem.setAttribute('data-aluno-id', id);
+    novoItem.innerHTML = `
+        <div class="d-flex align-items-center">
+            <img src="${foto || 'images/default-avatar.png'}" class="rounded-circle me-3" width="45">
+            <div>
+                <h6 class="mb-0">${nome}</h6>
+                <span class="badge bg-warning text-dark small">Aluno Extra</span>
+            </div>
+        </div>
+        <div class="form-check form-switch">
+            <input class="form-check-input check-presenca" type="checkbox" checked data-id="${id}">
+        </div>
+    `;
+    
+    listaChamada.appendChild(novoItem);
+    modalBusca.hide();
+    document.getElementById('btn-salvar-chamada').disabled = false;
+}
