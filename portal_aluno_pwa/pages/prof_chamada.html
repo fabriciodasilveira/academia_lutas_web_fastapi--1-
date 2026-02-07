@@ -5,13 +5,19 @@
         </a>
         <h3 class="mb-0">Chamada</h3>
     </div>
-        <button class="btn btn-outline-primary btn-sm rounded-pill" 
+    <button class="btn btn-outline-primary btn-sm rounded-pill" 
             data-bs-toggle="modal" 
             data-bs-target="#modalBuscaAlunoExtra">
-        <i class="fas fa-user-plus"></i> Extra
+            <i class="fas fa-user-plus"></i> Add
     </button>
 </div>
 
+
+<button class="btn btn-outline-primary btn-sm rounded-pill" 
+        data-bs-toggle="modal" 
+        data-bs-target="#modalBuscaAlunoExtra">
+    <i class="fas fa-user-plus"></i> Extra
+</button>
 
 <div class="modal fade" id="modalBuscaAlunoExtra" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
@@ -21,11 +27,9 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <input type="text" id="input-busca-aluno-extra" class="form-control" placeholder="Digite o nome do aluno...">
-            <div id="resultados-busca-extra" class="list-group mt-3">
-            
-            </div>
-    </div>
+        <input type="text" id="input-busca-aluno-extra" class="form-control" placeholder="Digite o nome...">
+        <div id="resultados-busca-extra" class="list-group mt-3"></div>
+      </div>
     </div>
   </div>
 </div>
