@@ -15,7 +15,7 @@ const routes = {
     '/events': { page: '/portal/pages/events.html', handler: handleEventsPage },
     '/beneficios': { page: '/portal/pages/beneficios.html', handler: handleBeneficiosPage },
 
-    // Rotas do Professor
+    // Rotas do Professor (NOVAS)
     '/prof/dashboard': { page: '/portal/pages/prof_dashboard.html', handler: handleProfDashboard },
     '/prof/alunos/novo': { page: '/portal/pages/prof_aluno_novo.html', handler: handleProfAlunoNovo },
     '/prof/matricula': { page: '/portal/pages/prof_matricula.html', handler: handleProfMatricula },
@@ -34,17 +34,38 @@ function updateActiveNav(path) {
     const role = localStorage.getItem('userRole');
     const navContainer = document.getElementById('main-nav');
     
-    if (!navContainer) return; 
+    if (!navContainer) return; // Proteção caso a nav não exista no DOM
 
     if (role === 'aluno') {
+        // Menu do Aluno OTIMIZADO (5 Itens)
         navContainer.innerHTML = `
-            <a href="#/dashboard" class="nav__link"><i class="fas fa-user nav__icon"></i><span class="nav__text">Perfil</span></a>
-            <a href="#/payments" class="nav__link"><i class="fas fa-file-invoice-dollar nav__icon"></i><span class="nav__text">Pagar</span></a>
-            <a href="#/aluno/metodo" class="nav__link"><i class="fas fa-play-circle nav__icon" style="font-size: 1.4rem;"></i><span class="nav__text">Aulas</span></a>
-            <a href="#/carteirinha" class="nav__link"><i class="fas fa-id-card nav__icon"></i><span class="nav__text">Carteira</span></a>
-            <a href="#/outros" class="nav__link"><i class="fas fa-bars nav__icon"></i><span class="nav__text">Menu</span></a>
+            <a href="#/dashboard" class="nav__link">
+                <i class="fas fa-user nav__icon"></i>
+                <span class="nav__text">Perfil</span>
+            </a>
+            
+            <a href="#/payments" class="nav__link">
+                <i class="fas fa-file-invoice-dollar nav__icon"></i>
+                <span class="nav__text">Pagar</span>
+            </a>
+            
+            <a href="#/aluno/metodo" class="nav__link">
+                <i class="fas fa-play-circle nav__icon" style="font-size: 1.4rem;"></i>
+                <span class="nav__text">Aulas</span>
+            </a>
+            
+            <a href="#/carteirinha" class="nav__link">
+                <i class="fas fa-id-card nav__icon"></i>
+                <span class="nav__text">Carteira</span>
+            </a>
+            
+            <a href="#/outros" class="nav__link">
+                <i class="fas fa-bars nav__icon"></i>
+                <span class="nav__text">Menu</span>
+            </a>
         `;
-    } else {
+    }else {
+        // Menu do Professor/Staff
         navContainer.innerHTML = `
             <a href="#/prof/dashboard" class="nav__link"><i class="fas fa-home nav__icon"></i><span class="nav__text">Início</span></a>
             <a href="#/prof/financeiro" class="nav__link"><i class="fas fa-cash-register nav__icon"></i><span class="nav__text">Caixa</span></a>
@@ -63,6 +84,7 @@ function updateActiveNav(path) {
 }
 
 const router = async () => {
+    // Determina a rota inicial baseada na role se estiver na raiz
     let currentHash = window.location.hash.slice(1).split('?')[0];
     if (!currentHash) {
         const role = localStorage.getItem('userRole');
@@ -70,11 +92,33 @@ const router = async () => {
     }
 
     updateActiveNav(currentHash);
+    
     const route = routes[currentHash] || routes['/login'];
     const token = localStorage.getItem('accessToken');
 
-    if (!route.public && !token) { window.location.hash = '/login'; return; }
+    const appRootEl = document.getElementById('app-root');
+    const bodyEl = document.body;
+
+    // Ajustes de layout para Login vs App
+    if (route.public) {
+        bodyEl.classList.add('login-active');
+        bodyEl.classList.remove('nav-active');
+        appRootEl.classList.remove('container', 'py-4'); 
+        appRootEl.classList.add('w-100', 'p-0'); 
+    } else {
+        bodyEl.classList.remove('login-active');
+        bodyEl.classList.add('nav-active');
+        appRootEl.classList.remove('w-100', 'p-0');
+        appRootEl.classList.add('container', 'py-4'); 
+    }
+
+    // Proteção de rotas
+    if (!route.public && !token) {
+        window.location.hash = '/login';
+        return;
+    }
     
+    // Se logado e tentar acessar login, manda pra home
     if (route.public && token && currentHash !== '/login/callback') {
         const role = localStorage.getItem('userRole');
         window.location.hash = (role === 'aluno') ? '/dashboard' : '/prof/dashboard';
@@ -91,7 +135,7 @@ const router = async () => {
             appRoot.innerHTML = await response.text();
         } catch (error) {
             console.error(error);
-            appRoot.innerHTML = `<div class="alert alert-danger m-3">Erro ao carregar página.</div>`;
+            appRoot.innerHTML = `<div class="alert alert-danger m-3">Erro ao carregar a página: ${error.message}. <br>Verifique se o arquivo HTML existe em <b>${route.page}</b></div>`;
         }
     }
     
@@ -992,6 +1036,19 @@ window.copiarPix = function() {
 async function pagarMensalidadeOnline(event, id) { await exibirModalPix(`/pagamentos/pix/mensalidade/${id}`, 'mensalidade', id); }
 async function pagarEventoOnline(event, id) { await exibirModalPix(`/pagamentos/pix/inscricao/${id}`, 'inscricao', id); }
 
+// Inicialização
+window.addEventListener('hashchange', router);
+window.addEventListener('load', () => {
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/portal/sw.js').catch(console.error);
+    
+    document.getElementById('logout-button').addEventListener('click', () => {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('userRole');
+        window.location.hash = '/login';
+    });
+    
+    router();
+});
 
 
 //FUNCOES DE VIDEO
@@ -1205,133 +1262,3 @@ async function handleAdminUsuarios() {
     // Chama a função que criamos anteriormente para buscar os dados da API
     await carregarUsuariosAdmin(); 
 }
-
-
-// --- HANDLER DA CHAMADA (PROFESSOR) ---
-async function handleProfChamada() {
-    const selectTurma = document.getElementById('select-turma-chamada');
-    const inputData = document.getElementById('data-chamada');
-    const listaContainer = document.getElementById('lista-chamada');
-    const btnSalvar = document.getElementById('btn-salvar-chamada');
-
-    if (inputData) inputData.valueAsDate = new Date();
-
-    try {
-        const turmas = await api.request('/portal-professor/turmas'); 
-        if (selectTurma) selectTurma.innerHTML = '<option value="" selected disabled>Selecione a turma...</option>' + 
-            turmas.map(t => `<option value="${t.id}">${t.nome} - ${t.horario}</option>`).join('');
-    } catch (e) { ui.showAlert('Erro ao carregar turmas'); }
-
-    const carregar = async () => {
-        if (!selectTurma.value) return;
-        listaContainer.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin"></i></div>';
-        try {
-            const alunos = await api.request(`/portal-professor/turmas/${selectTurma.value}/alunos-chamada?data=${inputData.value}`);
-            listaContainer.innerHTML = alunos.map(aluno => `
-                <label class="list-group-item d-flex align-items-center justify-content-between p-3">
-                    <div class="d-flex align-items-center">
-                        <img src="${aluno.foto || '/portal/images/default-avatar.png'}" class="rounded-circle me-3" width="40" height="40" style="object-fit:cover">
-                        <h6 class="mb-0">${aluno.nome}</h6>
-                    </div>
-                    <div class="form-check form-switch">
-                        <input class="form-check-input fs-4" type="checkbox" data-aluno-id="${aluno.aluno_id}" ${aluno.presente ? 'checked' : ''}>
-                    </div>
-                </label>`).join('');
-            btnSalvar.disabled = false;
-        } catch (e) { listaContainer.innerHTML = 'Erro ao carregar.'; }
-    };
-
-    selectTurma?.addEventListener('change', carregar);
-    inputData?.addEventListener('change', carregar);
-
-    btnSalvar.onclick = async () => {
-        const presencas = Array.from(listaContainer.querySelectorAll('input[type="checkbox"]')).map(chk => ({
-            aluno_id: parseInt(chk.dataset.alunoId), presente: chk.checked
-        }));
-        try {
-            await api.request('/portal-professor/chamada', 'POST', { turma_id: parseInt(selectTurma.value), data: inputData.value, presencas });
-            ui.showAlert('Chamada salva!', 'success');
-        } catch (e) { ui.showAlert('Erro ao salvar'); }
-    };
-}
-
-
-// 1. Monitor de Digitação para Busca
-document.addEventListener('input', async function(e) {
-    if (e.target.id === 'input-busca-aluno-extra') {
-        const termo = e.target.value;
-        const resultadosDiv = document.getElementById('resultados-busca-extra');
-        
-        if (termo.length < 3) {
-            resultadosDiv.innerHTML = '';
-            return;
-        }
-
-        try {
-            const alunos = await api.request(`/portal-professor/alunos/buscar?nome=${termo}`);
-            resultadosDiv.innerHTML = alunos.map(a => `
-                <button type="button" class="list-group-item list-group-item-action d-flex align-items-center" 
-                        onclick="window.adicionarExtraManual(${a.id}, '${a.nome}', '${a.foto || ''}')">
-                    <img src="${a.foto || '/portal/images/default-avatar.png'}" class="rounded-circle me-2" width="30" height="30" style="object-fit:cover">
-                    <span class="small">${a.nome}</span>
-                </button>
-            `).join('');
-        } catch (err) {
-            console.error("Erro na busca:", err);
-        }
-    }
-});
-
-// 2. Função Global para Adicionar o Aluno (chamada pelo onclick acima)
-window.adicionarExtraManual = function(id, nome, foto) {
-    const lista = document.getElementById('lista-chamada');
-    if (!lista) return;
-
-    // Limpa a mensagem de "Selecione uma turma" se ela estiver lá
-    if (lista.innerText.includes('Selecione')) lista.innerHTML = '';
-
-    if (document.querySelector(`[data-aluno-id="${id}"]`)) {
-        alert("Aluno já está na lista.");
-        return;
-    }
-
-    const html = `
-        <label class="list-group-item d-flex align-items-center justify-content-between p-3 border-warning">
-            <div class="d-flex align-items-center">
-                <img src="${foto || '/portal/images/default-avatar.png'}" class="rounded-circle me-3" width="40" height="40" style="object-fit:cover">
-                <div>
-                    <h6 class="mb-0">${nome}</h6>
-                    <span class="badge bg-warning text-dark" style="font-size:0.6rem">EXTRA</span>
-                </div>
-            </div>
-            <div class="form-check form-switch">
-                <input class="form-check-input fs-4" type="checkbox" data-aluno-id="${id}" checked>
-            </div>
-        </label>`;
-
-    lista.insertAdjacentHTML('beforeend', html);
-    
-    // Fecha o modal usando o seletor nativo do Bootstrap
-    const modalEl = document.getElementById('modalBuscaAlunoExtra');
-    const modalInstance = bootstrap.Modal.getInstance(modalEl);
-    if (modalInstance) modalInstance.hide();
-    
-    // Ativa o botão de salvar
-    document.getElementById('btn-salvar-chamada').disabled = false;
-};
-
-
-// ---------------------------------------------------
-// Inicialização
-window.addEventListener('hashchange', router);
-window.addEventListener('load', () => {
-    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/portal/sw.js').catch(console.error);
-    
-    document.getElementById('logout-button').addEventListener('click', () => {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('userRole');
-        window.location.hash = '/login';
-    });
-    
-    router();
-});
