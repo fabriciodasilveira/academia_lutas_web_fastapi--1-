@@ -1262,3 +1262,67 @@ async function handleAdminUsuarios() {
     // Chama a função que criamos anteriormente para buscar os dados da API
     await carregarUsuariosAdmin(); 
 }
+
+
+// --- LÓGICA PARA ADICIONAR ALUNO EXTRA NA CHAMADA ---
+
+// Delegação de cliques (Garante funcionamento em páginas dinâmicas)
+document.addEventListener('click', async (e) => {
+    // 1. Abrir o Modal
+    const btnExtra = e.target.closest('#btn-add-extra');
+    if (btnExtra) {
+        const modalEl = document.getElementById('modalBuscaAlunoExtra');
+        if (modalEl) {
+            const modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modalInstance.show();
+        }
+    }
+
+    // 2. Selecionar aluno na lista de resultados
+    const btnSelect = e.target.closest('.btn-add-manual');
+    if (btnSelect) {
+        const { id, nome, foto } = btnSelect.dataset;
+        const lista = document.getElementById('lista-chamada');
+        
+        if (lista.querySelector('.text-muted')) lista.innerHTML = '';
+        if (document.querySelector(`[data-aluno-id="${id}"]`)) return alert("Aluno já está na lista.");
+
+        const html = `
+            <label class="list-group-item d-flex align-items-center justify-content-between p-3 border-warning" data-aluno-id="${id}">
+                <div class="d-flex align-items-center">
+                    <img src="${foto || '/portal/images/default-avatar.png'}" class="rounded-circle me-3" width="40" height="40" style="object-fit:cover">
+                    <div>
+                        <h6 class="mb-0">${nome}</h6>
+                        <span class="badge bg-warning text-dark" style="font-size:0.6rem">EXTRA</span>
+                    </div>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input fs-4" type="checkbox" data-aluno-id="${id}" checked>
+                </div>
+            </label>`;
+        
+        lista.insertAdjacentHTML('beforeend', html);
+        bootstrap.Modal.getInstance(document.getElementById('modalBuscaAlunoExtra')).hide();
+        document.getElementById('btn-salvar-chamada').disabled = false;
+    }
+});
+
+// Delegação de input para busca no modal
+document.addEventListener('input', async (e) => {
+    if (e.target.id === 'input-busca-aluno-extra') {
+        const termo = e.target.value;
+        const resultadosDiv = document.getElementById('resultados-busca-extra');
+        if (!resultadosDiv || termo.length < 3) return;
+
+        try {
+            // Chamada para o endpoint do seu portal_professor_fastapi.py
+            const alunos = await api.request(`/portal-professor/alunos/buscar?nome=${termo}`);
+            resultadosDiv.innerHTML = alunos.map(a => `
+                <button type="button" class="list-group-item list-group-item-action d-flex align-items-center btn-add-manual" 
+                        data-id="${a.id}" data-nome="${a.nome}" data-foto="${a.foto || ''}">
+                    <img src="${a.foto || '/portal/images/default-avatar.png'}" class="rounded-circle me-2" width="30" height="30">
+                    <span class="small">${a.nome}</span>
+                </button>`).join('');
+        } catch (err) { console.error(err); }
+    }
+});
