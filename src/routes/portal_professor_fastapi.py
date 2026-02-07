@@ -185,4 +185,18 @@ def buscar_alunos_global(nome: str, db: Session = Depends(get_db)):
     
     return [{"id": a.id, "nome": a.nome, "foto": a.foto} for a in alunos]
 
+
+@router.get("/alunos/buscar-global")
+def buscar_alunos_chamada_extra(nome: str, db: Session = Depends(get_db)):
+    try:
+        # Busca alunos que contenham o nome e estejam ativos
+        alunos = db.query(Aluno).filter(
+            Aluno.nome.ilike(f"%{nome}%"),
+            Aluno.status == 'Ativo'
+        ).limit(10).all()
+        
+        return [{"id": a.id, "nome": a.nome, "foto": a.foto} for a in alunos]
+    except Exception as e:
+        print(f"Erro na busca: {e}")
+        return []
 # ------------------------------------

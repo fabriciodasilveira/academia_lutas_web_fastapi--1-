@@ -16,7 +16,7 @@
             <div class="col-8">
                 <label class="form-label small text-muted">Turma</label>
                 <select id="select-turma-chamada" class="form-select">
-                    <option value="" selected disabled>Selecione...</option>
+                    <option value="" selected disabled>Carregando...</option>
                 </select>
             </div>
             <div class="col-4">
@@ -45,55 +45,52 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <input type="text" id="busca-aluno-input" class="form-control" placeholder="Digite o nome do aluno...">
-                <div id="lista-busca-extra" class="list-group mt-3"></div>
+                <input type="text" id="input-busca-extra" class="form-control" placeholder="Digite o nome do aluno..." autocomplete="off">
+                <div id="resultados-extra" class="list-group mt-3"></div>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    // Usamos um bloco anônimo para não conflitar variáveis
+    // Esta parte roda toda vez que a página é injetada pelo router
     (function() {
-        const inputBusca = document.getElementById('busca-aluno-input');
-        const divResultados = document.getElementById('lista-busca-extra');
+        const input = document.getElementById('input-busca-extra');
+        const resultados = document.getElementById('resultados-extra');
 
-        // FUNÇÃO DE BUSCA (oninput)
-        inputBusca.addEventListener('input', async (e) => {
-            const nome = e.target.value;
-            if (nome.length < 3) { divResultados.innerHTML = ''; return; }
+        // Escuta a digitação
+        input.addEventListener('input', async (e) => {
+            const termo = e.target.value;
+            if (termo.length < 3) { resultados.innerHTML = ''; return; }
 
             try {
-                // Chamada direta para sua API Python
-                const alunos = await api.request(`/portal-professor/alunos/buscar?nome=${nome}`);
+                // api.request já existe globalmente no seu app.js
+                const alunos = await api.request(`/portal-professor/alunos/buscar-global?nome=${termo}`);
                 
-                divResultados.innerHTML = alunos.map(a => `
-                    <button class="list-group-item list-group-item-action d-flex align-items-center" 
-                            onclick="adicionarNaLista(${a.id}, '${a.nome}', '${a.foto || ''}')">
-                        <img src="${a.foto || 'images/default-avatar.png'}" class="rounded-circle me-2" width="30" height="30">
-                        ${a.nome}
+                resultados.innerHTML = alunos.map(aluno => `
+                    <button type="button" class="list-group-item list-group-item-action d-flex align-items-center" 
+                            onclick="window.funcaoIncluirExtra(${aluno.id}, '${aluno.nome}', '${aluno.foto || ''}')">
+                        <img src="${aluno.foto || '/portal_aluno_pwa/images/default-avatar.png'}" class="rounded-circle me-2" width="30" height="30">
+                        ${aluno.nome}
                     </button>
                 `).join('');
-            } catch (err) { console.error("Erro na busca", err); }
+            } catch (err) { console.error(err); }
         });
 
-        // FUNÇÃO DE ADIÇÃO (Global para o onclick acima funcionar)
-        window.adicionarNaLista = function(id, nome, foto) {
+        // Função para incluir na lista (Global para o onclick funcionar)
+        window.funcaoIncluirExtra = function(id, nome, foto) {
             const lista = document.getElementById('lista-chamada');
-            
-            // Verifica duplicados
+            if (lista.innerText.includes('Selecione')) lista.innerHTML = '';
+
             if (document.querySelector(`input[data-aluno-id="${id}"]`)) {
                 alert("Aluno já está na lista.");
                 return;
             }
 
-            // Remove aviso de "Selecione uma turma"
-            if (lista.innerText.includes('Selecione')) lista.innerHTML = '';
-
-            const itemHtml = `
+            const html = `
                 <label class="list-group-item d-flex align-items-center justify-content-between p-3 border-warning">
                     <div class="d-flex align-items-center">
-                        <img src="${foto || 'images/default-avatar.png'}" class="rounded-circle me-3" width="40" height="40" style="object-fit:cover">
+                        <img src="${foto || '/portal_aluno_pwa/images/default-avatar.png'}" class="rounded-circle me-3" width="40" height="40" style="object-fit:cover">
                         <div>
                             <h6 class="mb-0">${nome}</h6>
                             <span class="badge bg-warning text-dark" style="font-size:0.6rem">EXTRA</span>
@@ -104,13 +101,12 @@
                     </div>
                 </label>`;
 
-            lista.insertAdjacentHTML('beforeend', itemHtml);
+            lista.insertAdjacentHTML('beforeend', html);
             
-            // Fecha o modal nativamente
+            // Fecha o modal usando a API do Bootstrap que já está no seu index.html
             const modalInstance = bootstrap.Modal.getInstance(document.getElementById('modalExtra'));
-            modalInstance.hide();
+            if (modalInstance) modalInstance.hide();
             
-            // Ativa botão de salvar
             document.getElementById('btn-salvar-chamada').disabled = false;
         };
     })();
