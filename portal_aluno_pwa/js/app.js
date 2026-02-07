@@ -2,42 +2,70 @@ const appRoot = document.getElementById('app-root');
 
 // --- CONFIGURAÇÃO DE ROTAS ---
 const routes = {
-    '/login': { page: '/portal_aluno_pwa/pages/login.html', handler: handleLoginPage, public: true },
+    // Rotas Públicas
+    '/login': { page: '/portal/pages/login.html', handler: handleLoginPage, public: true },
     '/login/callback': { handler: handleLoginCallback, public: true },
-    '/register': { page: '/portal_aluno_pwa/pages/register.html', handler: handleRegisterPage, public: true },
-    '/dashboard': { page: '/portal_aluno_pwa/pages/dashboard.html', handler: handleDashboardPage },
-    '/carteirinha': { page: '/portal_aluno_pwa/pages/carteirinha.html', handler: handleCarteirinhaPage },
-    '/edit-profile': { page: '/portal_aluno_pwa/pages/edit_profile.html', handler: handleEditProfilePage },
-    '/payments': { page: '/portal_aluno_pwa/pages/payments.html', handler: handlePaymentsPage },
-    '/events': { page: '/portal_aluno_pwa/pages/events.html', handler: handleEventsPage },
-    '/beneficios': { page: '/portal_aluno_pwa/pages/beneficios.html', handler: handleBeneficiosPage },
-    '/prof/dashboard': { page: '/portal_aluno_pwa/pages/prof_dashboard.html', handler: handleProfDashboard },
-    '/prof/alunos/novo': { page: '/portal_aluno_pwa/pages/prof_aluno_novo.html', handler: handleProfAlunoNovo },
-    '/prof/matricula': { page: '/portal_aluno_pwa/pages/prof_matricula.html', handler: handleProfMatricula },
-    '/prof/financeiro': { page: '/portal_aluno_pwa/pages/prof_financeiro.html', handler: handleProfFinanceiro },
-    '/prof/despesa': { page: '/portal_aluno_pwa/pages/prof_despesa.html', handler: handleProfDespesa },
-    '/prof/chamada': { page: '/portal_aluno_pwa/pages/prof_chamada.html', handler: handleProfChamada },
-    '/prof/conteudos': { page: '/portal_aluno_pwa/pages/prof_conteudos.html', handler: handleProfConteudos },
-    '/aluno/metodo': { page: '/portal_aluno_pwa/pages/metodo.html', handler: handleAlunoMetodo },
-    '/outros': { page: '/portal_aluno_pwa/pages/outros.html', handler: null },
-    '/admin/usuarios': { page: '/portal_aluno_pwa/pages/admin_usuarios.html', handler: handleAdminUsuarios},
+    '/register': { page: '/portal/pages/register.html', handler: handleRegisterPage, public: true },
+    
+    // Rotas do Aluno
+    '/dashboard': { page: '/portal/pages/dashboard.html', handler: handleDashboardPage },
+    '/carteirinha': { page: '/portal/pages/carteirinha.html', handler: handleCarteirinhaPage },
+    '/edit-profile': { page: '/portal/pages/edit_profile.html', handler: handleEditProfilePage },
+    '/payments': { page: '/portal/pages/payments.html', handler: handlePaymentsPage },
+    '/events': { page: '/portal/pages/events.html', handler: handleEventsPage },
+    '/beneficios': { page: '/portal/pages/beneficios.html', handler: handleBeneficiosPage },
+
+    // Rotas do Professor (NOVAS)
+    '/prof/dashboard': { page: '/portal/pages/prof_dashboard.html', handler: handleProfDashboard },
+    '/prof/alunos/novo': { page: '/portal/pages/prof_aluno_novo.html', handler: handleProfAlunoNovo },
+    '/prof/matricula': { page: '/portal/pages/prof_matricula.html', handler: handleProfMatricula },
+    '/prof/financeiro': { page: '/portal/pages/prof_financeiro.html', handler: handleProfFinanceiro },
+    '/prof/despesa': { page: '/portal/pages/prof_despesa.html', handler: handleProfDespesa },
+    '/prof/chamada': { page: '/portal/pages/prof_chamada.html', handler: handleProfChamada },
+    '/prof/conteudos': { page: '/portal/pages/prof_conteudos.html', handler: handleProfConteudos },
+    '/aluno/metodo': { page: '/portal/pages/metodo.html', handler: handleAlunoMetodo },
+    '/outros': { page: '/portal/pages/outros.html', handler: null },
+    '/admin/usuarios': { page: '/portal/pages/admin_usuarios.html',handler: handleAdminUsuarios},
 };
 
 // --- FUNÇÕES DE NAVEGAÇÃO ---
+
 function updateActiveNav(path) {
     const role = localStorage.getItem('userRole');
     const navContainer = document.getElementById('main-nav');
-    if (!navContainer) return;
+    
+    if (!navContainer) return; // Proteção caso a nav não exista no DOM
 
     if (role === 'aluno') {
+        // Menu do Aluno OTIMIZADO (5 Itens)
         navContainer.innerHTML = `
-            <a href="#/dashboard" class="nav__link"><i class="fas fa-user nav__icon"></i><span class="nav__text">Perfil</span></a>
-            <a href="#/payments" class="nav__link"><i class="fas fa-file-invoice-dollar nav__icon"></i><span class="nav__text">Pagar</span></a>
-            <a href="#/aluno/metodo" class="nav__link"><i class="fas fa-play-circle nav__icon"></i><span class="nav__text">Aulas</span></a>
-            <a href="#/carteirinha" class="nav__link"><i class="fas fa-id-card nav__icon"></i><span class="nav__text">Carteira</span></a>
-            <a href="#/outros" class="nav__link"><i class="fas fa-bars nav__icon"></i><span class="nav__text">Menu</span></a>
+            <a href="#/dashboard" class="nav__link">
+                <i class="fas fa-user nav__icon"></i>
+                <span class="nav__text">Perfil</span>
+            </a>
+            
+            <a href="#/payments" class="nav__link">
+                <i class="fas fa-file-invoice-dollar nav__icon"></i>
+                <span class="nav__text">Pagar</span>
+            </a>
+            
+            <a href="#/aluno/metodo" class="nav__link">
+                <i class="fas fa-play-circle nav__icon" style="font-size: 1.4rem;"></i>
+                <span class="nav__text">Aulas</span>
+            </a>
+            
+            <a href="#/carteirinha" class="nav__link">
+                <i class="fas fa-id-card nav__icon"></i>
+                <span class="nav__text">Carteira</span>
+            </a>
+            
+            <a href="#/outros" class="nav__link">
+                <i class="fas fa-bars nav__icon"></i>
+                <span class="nav__text">Menu</span>
+            </a>
         `;
-    } else {
+    }else {
+        // Menu do Professor/Staff
         navContainer.innerHTML = `
             <a href="#/prof/dashboard" class="nav__link"><i class="fas fa-home nav__icon"></i><span class="nav__text">Início</span></a>
             <a href="#/prof/financeiro" class="nav__link"><i class="fas fa-cash-register nav__icon"></i><span class="nav__text">Caixa</span></a>
@@ -45,9 +73,18 @@ function updateActiveNav(path) {
             <a href="#/prof/matricula" class="nav__link"><i class="fas fa-clipboard-list nav__icon"></i><span class="nav__text">Matrícula</span></a>
         `;
     }
+
+    const navLinks = document.querySelectorAll('.nav__link');
+    navLinks.forEach(link => {
+        link.classList.remove('nav__link--active');
+        if (link.hash && path.startsWith(link.hash.slice(1))) {
+            link.classList.add('nav__link--active');
+        }
+    });
 }
 
 const router = async () => {
+    // Determina a rota inicial baseada na role se estiver na raiz
     let currentHash = window.location.hash.slice(1).split('?')[0];
     if (!currentHash) {
         const role = localStorage.getItem('userRole');
@@ -55,152 +92,57 @@ const router = async () => {
     }
 
     updateActiveNav(currentHash);
+    
     const route = routes[currentHash] || routes['/login'];
     const token = localStorage.getItem('accessToken');
 
-    if (!route.public && !token) { window.location.hash = '/login'; return; }
+    const appRootEl = document.getElementById('app-root');
+    const bodyEl = document.body;
+
+    // Ajustes de layout para Login vs App
+    if (route.public) {
+        bodyEl.classList.add('login-active');
+        bodyEl.classList.remove('nav-active');
+        appRootEl.classList.remove('container', 'py-4'); 
+        appRootEl.classList.add('w-100', 'p-0'); 
+    } else {
+        bodyEl.classList.remove('login-active');
+        bodyEl.classList.add('nav-active');
+        appRootEl.classList.remove('w-100', 'p-0');
+        appRootEl.classList.add('container', 'py-4'); 
+    }
+
+    // Proteção de rotas
+    if (!route.public && !token) {
+        window.location.hash = '/login';
+        return;
+    }
+    
+    // Se logado e tentar acessar login, manda pra home
+    if (route.public && token && currentHash !== '/login/callback') {
+        const role = localStorage.getItem('userRole');
+        window.location.hash = (role === 'aluno') ? '/dashboard' : '/prof/dashboard';
+        return;
+    }
+
+    ui.toggleNav(!route.public);
     
     if (route.page) {
         ui.showLoading(appRoot);
         try {
             const response = await fetch(route.page);
+            if (!response.ok) throw new Error("Página não encontrada");
             appRoot.innerHTML = await response.text();
-            if (route.handler) route.handler();
-        } catch (error) { console.error(error); }
-    }
-};
-
-async function handleProfChamada() {
-    const selectTurma = document.getElementById('select-turma-chamada');
-    const inputData = document.getElementById('data-chamada');
-    const listaContainer = document.getElementById('lista-chamada');
-    const btnSalvar = document.getElementById('btn-salvar-chamada');
-
-    if (!selectTurma || !inputData) return;
-
-    inputData.valueAsDate = new Date();
-
-    // 1. Carrega Turmas
-    try {
-        const turmas = await api.request('/portal-professor/turmas'); 
-        selectTurma.innerHTML = '<option value="" selected disabled>Selecione a turma...</option>' + 
-            turmas.map(t => `<option value="${t.id}">${t.nome} - ${t.horario}</option>`).join('');
-    } catch (e) { ui.showAlert('Erro ao carregar turmas'); }
-
-    // 2. Lógica de Listagem
-    const atualizarLista = async () => {
-        if (!selectTurma.value) return;
-        listaContainer.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin"></i></div>';
-        try {
-            const alunos = await api.request(`/portal-professor/turmas/${selectTurma.value}/alunos-chamada?data=${inputData.value}`);
-            if (alunos.length === 0) {
-                listaContainer.innerHTML = '<div class="text-center py-4 text-muted">Nenhum aluno nesta turma.</div>';
-                return;
-            }
-            listaContainer.innerHTML = alunos.map(aluno => `
-                <label class="list-group-item d-flex align-items-center justify-content-between p-3">
-                    <div class="d-flex align-items-center">
-                        <img src="${aluno.foto || '/portal_aluno_pwa/images/default-avatar.png'}" class="rounded-circle me-3" width="40" height="40" style="object-fit:cover">
-                        <h6 class="mb-0">${aluno.nome}</h6>
-                    </div>
-                    <div class="form-check form-switch">
-                        <input class="form-check-input fs-4" type="checkbox" data-aluno-id="${aluno.aluno_id}" ${aluno.presente ? 'checked' : ''}>
-                    </div>
-                </label>`).join('');
-            btnSalvar.disabled = false;
-        } catch (e) { listaContainer.innerHTML = 'Erro ao carregar alunos.'; }
-    };
-
-    selectTurma.onchange = atualizarLista;
-    inputData.onchange = atualizarLista;
-
-    // 3. Salvar
-    btnSalvar.onclick = async () => {
-        const presencas = Array.from(listaContainer.querySelectorAll('input[type="checkbox"]')).map(chk => ({
-            aluno_id: parseInt(chk.dataset.alunoId),
-            presente: chk.checked
-        }));
-        btnSalvar.disabled = true;
-        try {
-            await api.request('/portal-professor/chamada', 'POST', {
-                turma_id: parseInt(selectTurma.value),
-                data: inputData.value,
-                presencas: presencas
-            });
-            ui.showAlert('Chamada salva!', 'success');
-        } catch (e) { ui.showAlert('Erro ao salvar'); }
-        btnSalvar.disabled = false;
-    };
-}
-
-// --- LÓGICA GLOBAL PARA O ALUNO EXTRA (DELEGAÇÃO DE EVENTOS) ---
-// Usamos o document para escutar o clique, assim funciona mesmo após trocar de página
-document.addEventListener('click', async (e) => {
-    // 1. Abrir o Modal
-    if (e.target.closest('#btn-add-extra')) {
-        const modalEl = document.getElementById('modalBuscaAlunoExtra');
-        if (modalEl) {
-            const modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
-            modalInstance.show();
+        } catch (error) {
+            console.error(error);
+            appRoot.innerHTML = `<div class="alert alert-danger m-3">Erro ao carregar a página: ${error.message}. <br>Verifique se o arquivo HTML existe em <b>${route.page}</b></div>`;
         }
     }
-
-    // 2. Clicar em um aluno na busca
-    const btnAluno = e.target.closest('.btn-resultado-aluno');
-    if (btnAluno) {
-        const { id, nome, foto } = btnAluno.dataset;
-        adicionarAlunoExtraNaLista(id, nome, foto);
-        bootstrap.Modal.getInstance(document.getElementById('modalBuscaAlunoExtra')).hide();
+    
+    if (route.handler) {
+        route.handler();
     }
-});
-
-// Escuta a digitação na busca (Delegação)
-document.addEventListener('input', async (e) => {
-    if (e.target.id === 'input-busca-aluno-extra') {
-        const termo = e.target.value;
-        const resultadosDiv = document.getElementById('resultados-busca-extra');
-        if (termo.length < 3) return;
-
-        try {
-            const alunos = await api.request(`/portal-professor/alunos/buscar?nome=${termo}`);
-            resultadosDiv.innerHTML = alunos.map(a => `
-                <button class="list-group-item list-group-item-action d-flex align-items-center btn-resultado-aluno" 
-                        data-id="${a.id}" data-nome="${a.nome}" data-foto="${a.foto || ''}">
-                    <img src="${a.foto || '/portal_aluno_pwa/images/default-avatar.png'}" class="rounded-circle me-2" width="30">
-                    <span>${a.nome}</span>
-                </button>`).join('');
-        } catch (err) { console.error(err); }
-    }
-});
-
-function adicionarAlunoExtraNaLista(id, nome, foto) {
-    const lista = document.getElementById('lista-chamada');
-    if (lista.querySelector('.text-muted')) lista.innerHTML = '';
-    if (document.querySelector(`[data-aluno-id="${id}"]`)) return alert("Já está na lista.");
-
-    const html = `
-        <label class="list-group-item d-flex align-items-center justify-content-between p-3 border-warning">
-            <div class="d-flex align-items-center">
-                <img src="${foto || '/portal_aluno_pwa/images/default-avatar.png'}" class="rounded-circle me-3" width="40">
-                <div><h6 class="mb-0">${nome}</h6><span class="badge bg-warning text-dark">EXTRA</span></div>
-            </div>
-            <div class="form-check form-switch">
-                <input class="form-check-input fs-4" type="checkbox" data-aluno-id="${id}" checked>
-            </div>
-        </label>`;
-    lista.insertAdjacentHTML('beforeend', html);
-    document.getElementById('btn-salvar-chamada').disabled = false;
-}
-
-// Inicialização Final
-window.addEventListener('hashchange', router);
-window.addEventListener('load', () => {
-    router();
-    document.getElementById('logout-button')?.addEventListener('click', () => {
-        localStorage.clear();
-        window.location.hash = '/login';
-    });
-});
+};
 
 // --- HANDLERS COMUNS ---
 
@@ -966,7 +908,6 @@ async function handleProfChamada() {
             btnSalvar.disabled = false;
         }
     };
-    inicializarLogicaExtra();
 }
 
 
@@ -1095,7 +1036,19 @@ window.copiarPix = function() {
 async function pagarMensalidadeOnline(event, id) { await exibirModalPix(`/pagamentos/pix/mensalidade/${id}`, 'mensalidade', id); }
 async function pagarEventoOnline(event, id) { await exibirModalPix(`/pagamentos/pix/inscricao/${id}`, 'inscricao', id); }
 
-
+// Inicialização
+window.addEventListener('hashchange', router);
+window.addEventListener('load', () => {
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/portal/sw.js').catch(console.error);
+    
+    document.getElementById('logout-button').addEventListener('click', () => {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('userRole');
+        window.location.hash = '/login';
+    });
+    
+    router();
+});
 
 
 //FUNCOES DE VIDEO
@@ -1309,223 +1262,3 @@ async function handleAdminUsuarios() {
     // Chama a função que criamos anteriormente para buscar os dados da API
     await carregarUsuariosAdmin(); 
 }
-
-
-// Exemplo de lógica para gerenciar a inclusão de alunos extras
-let modalBusca = null;
-
-// portal_aluno_pwa/js/app.js
-
-function inicializarEventosChamada() {
-    const btn = document.getElementById('btn-add-extra');
-    const modalElement = document.getElementById('modalBuscaAlunoExtra');
-    
-    if (!btn || !modalElement) return;
-
-    // Inicializa o objeto Modal do Bootstrap
-    const modalInstance = new bootstrap.Modal(modalElement);
-
-    btn.addEventListener('click', () => {
-        console.log("Abrindo modal..."); // Debug para seu console
-        modalInstance.show();
-    });
-
-    // Lógica de busca (debounce para não sobrecarregar o servidor)
-    const inputBusca = document.getElementById('input-busca-aluno-extra');
-    inputBusca.addEventListener('input', async (e) => {
-        const termo = e.target.value;
-        if (termo.length >= 3) {
-            // Use o endpoint que criamos no backend
-            const alunos = await api.get(`/portal-professor/alunos/buscar?nome=${termo}`);
-            renderizarResultadosExtra(alunos, modalInstance);
-        }
-    });
-}
-
-function initChamadaExtra() {
-    const btnAddExtra = document.getElementById('btn-add-extra');
-    const inputBusca = document.getElementById('input-busca-aluno-extra');
-    const listaResultados = document.getElementById('resultados-busca-extra');
-    
-    modalBusca = new bootstrap.Modal(document.getElementById('modalBuscaAluno'));
-
-    btnAddExtra.onclick = () => modalBusca.show();
-
-    inputBusca.oninput = async (e) => {
-        const termo = e.target.value;
-        if (termo.length < 3) return;
-
-        try {
-            const alunos = await api.get(`/portal-professor/alunos/buscar?nome=${termo}`);
-            listaResultados.innerHTML = alunos.map(aluno => `
-                <button class="list-group-item list-group-item-action d-flex align-items-center" 
-                        onclick="adicionarAlunoNaLista(${aluno.id}, '${aluno.nome}', '${aluno.foto}')">
-                    <img src="${aluno.foto || 'images/default-avatar.png'}" class="rounded-circle me-2" width="30">
-                    ${aluno.nome}
-                </button>
-            `).join('');
-        } catch (err) {
-            console.error("Erro ao buscar alunos", err);
-        }
-    };
-}
-
-function adicionarAlunoNaLista(id, nome, foto) {
-    const listaChamada = document.getElementById('lista-chamada');
-    
-    // Verifica se o aluno já está na lista
-    if (document.querySelector(`[data-aluno-id="${id}"]`)) {
-        alert("Este aluno já está na lista de chamada.");
-        return;
-    }
-
-    // Cria o elemento HTML do aluno com uma tag "EXTRA"
-    const novoItem = document.createElement('div');
-    novoItem.className = "list-group-item d-flex justify-content-between align-items-center border-warning";
-    novoItem.setAttribute('data-aluno-id', id);
-    novoItem.innerHTML = `
-        <div class="d-flex align-items-center">
-            <img src="${foto || 'images/default-avatar.png'}" class="rounded-circle me-3" width="45">
-            <div>
-                <h6 class="mb-0">${nome}</h6>
-                <span class="badge bg-warning text-dark small">Aluno Extra</span>
-            </div>
-        </div>
-        <div class="form-check form-switch">
-            <input class="form-check-input check-presenca" type="checkbox" checked data-id="${id}">
-        </div>
-    `;
-    
-    listaChamada.appendChild(novoItem);
-    modalBusca.hide();
-    document.getElementById('btn-salvar-chamada').disabled = false;
-}
-
-function setupExtraStudentFeature() {
-    // 1. Delegação de evento para o clique (evita erro se o botão for recriado)
-    document.removeEventListener('click', handleExtraClick); // Limpa anterior
-    document.addEventListener('click', handleExtraClick);
-}
-
-// --- LÓGICA DE ALUNO EXTRA (Chamada dentro do handleProfChamada) ---
-
-function inicializarLogicaExtra() {
-    const btnAdd = document.getElementById('btn-add-extra');
-    const modalEl = document.getElementById('modalBuscaAlunoExtra');
-    const inputBusca = document.getElementById('input-busca-aluno-extra');
-    const resultadosDiv = document.getElementById('resultados-busca-extra');
-
-    if (!btnAdd || !modalEl) return;
-
-    const modalInstance = new bootstrap.Modal(modalEl);
-
-    // 1. Abre o Modal
-    btnAdd.onclick = (e) => {
-        e.preventDefault();
-        modalInstance.show();
-    };
-
-    // 2. Busca em tempo real
-    inputBusca.oninput = async (e) => {
-        const termo = e.target.value;
-        if (termo.length < 3) return;
-
-        try {
-            // Usa o endpoint que você criou no portal_professor_fastapi.py
-            const alunos = await api.request(`/portal-professor/alunos/buscar?nome=${termo}`);
-            
-            resultadosDiv.innerHTML = alunos.map(aluno => `
-                <button class="list-group-item list-group-item-action d-flex align-items-center" 
-                        onclick="adicionarAlunoExtraNaLista(${aluno.id}, '${aluno.nome}', '${aluno.foto || ''}')">
-                    <img src="${aluno.foto || '/portal/images/default-avatar.png'}" class="rounded-circle me-2" width="30" height="30">
-                    <span class="small">${aluno.nome}</span>
-                </button>
-            `).join('');
-        } catch (err) {
-            console.error("Erro na busca extra:", err);
-        }
-    };
-
-    // 3. Função para inserir na lista (Global para o onclick acima funcionar)
-    window.adicionarAlunoExtraNaLista = (id, nome, foto) => {
-        const lista = document.getElementById('lista-chamada');
-        
-        // Remove mensagem de "selecione uma turma" se for o primeiro aluno
-        if (lista.querySelector('.text-muted')) lista.innerHTML = '';
-
-        if (document.querySelector(`[data-aluno-id="${id}"]`)) {
-            alert("Aluno já está na lista.");
-            return;
-        }
-
-        const html = `
-            <label class="list-group-item d-flex align-items-center justify-content-between p-3 border-warning">
-                <div class="d-flex align-items-center">
-                    <img src="${foto || '/portal/images/default-avatar.png'}" class="rounded-circle me-3" width="40" height="40">
-                    <div>
-                        <h6 class="mb-0">${nome}</h6>
-                        <span class="badge bg-warning text-dark" style="font-size:0.6rem">EXTRA</span>
-                    </div>
-                </div>
-                <div class="form-check form-switch">
-                    <input class="form-check-input fs-4" type="checkbox" data-aluno-id="${id}" checked>
-                </div>
-            </label>`;
-        
-        lista.insertAdjacentHTML('beforeend', html);
-        modalInstance.hide();
-        document.getElementById('btn-salvar-chamada').disabled = false;
-    };
-}
-
-// --- LOGICA GLOBAL ALUNO EXTRA (DELEGAÇÃO DE EVENTOS) ---
-document.addEventListener('click', function(e) {
-    // Abertura do Modal
-    const btnExtra = e.target.closest('#btn-add-extra');
-    if (btnExtra) {
-        const modalEl = document.getElementById('modalBuscaAlunoExtra');
-        if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
-        return;
-    }
-
-    // Seleção do Aluno na Busca
-    const btnSelect = e.target.closest('.btn-add-manual');
-    if (btnSelect) {
-        const { id, nome, foto } = btnSelect.dataset;
-        const lista = document.getElementById('lista-chamada');
-        
-        if (lista.querySelector('.text-muted')) lista.innerHTML = '';
-        if (document.querySelector(`[data-aluno-id="${id}"]`)) return alert("Aluno já está na lista.");
-
-        const novoItem = `
-            <label class="list-group-item d-flex align-items-center justify-content-between p-3 border-warning">
-                <div class="d-flex align-items-center">
-                    <img src="${foto || '/portal_aluno_pwa/images/default-avatar.png'}" class="rounded-circle me-3" width="40" height="40">
-                    <div><h6 class="mb-0">${nome}</h6><span class="badge bg-warning text-dark" style="font-size:0.6rem">EXTRA</span></div>
-                </div>
-                <div class="form-check form-switch"><input class="form-check-input fs-4" type="checkbox" data-aluno-id="${id}" checked></div>
-            </label>`;
-        
-        lista.insertAdjacentHTML('beforeend', novoItem);
-        bootstrap.Modal.getInstance(document.getElementById('modalBuscaAlunoExtra')).hide();
-        document.getElementById('btn-salvar-chamada').disabled = false;
-    }
-});
-
-document.addEventListener('input', async function(e) {
-    if (e.target.id === 'input-busca-aluno-extra') {
-        const termo = e.target.value;
-        const resultadosDiv = document.getElementById('resultados-busca-extra');
-        if (!resultadosDiv || termo.length < 3) return;
-
-        try {
-            const alunos = await api.request(`/portal-professor/alunos/buscar?nome=${termo}`);
-            resultadosDiv.innerHTML = alunos.map(a => `
-                <button type="button" class="list-group-item list-group-item-action d-flex align-items-center btn-add-manual" 
-                        data-id="${a.id}" data-nome="${a.nome}" data-foto="${a.foto || ''}">
-                    <img src="${a.foto || '/portal_aluno_pwa/images/default-avatar.png'}" class="rounded-circle me-2" width="30">
-                    <span class="small">${a.nome}</span>
-                </button>`).join('');
-        } catch (err) { console.error(err); }
-    }
-});
