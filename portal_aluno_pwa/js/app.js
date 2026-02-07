@@ -2,70 +2,42 @@ const appRoot = document.getElementById('app-root');
 
 // --- CONFIGURAÇÃO DE ROTAS ---
 const routes = {
-    // Rotas Públicas
-    '/login': { page: '/portal/pages/login.html', handler: handleLoginPage, public: true },
+    '/login': { page: '/portal_aluno_pwa/pages/login.html', handler: handleLoginPage, public: true },
     '/login/callback': { handler: handleLoginCallback, public: true },
-    '/register': { page: '/portal/pages/register.html', handler: handleRegisterPage, public: true },
-    
-    // Rotas do Aluno
-    '/dashboard': { page: '/portal/pages/dashboard.html', handler: handleDashboardPage },
-    '/carteirinha': { page: '/portal/pages/carteirinha.html', handler: handleCarteirinhaPage },
-    '/edit-profile': { page: '/portal/pages/edit_profile.html', handler: handleEditProfilePage },
-    '/payments': { page: '/portal/pages/payments.html', handler: handlePaymentsPage },
-    '/events': { page: '/portal/pages/events.html', handler: handleEventsPage },
-    '/beneficios': { page: '/portal/pages/beneficios.html', handler: handleBeneficiosPage },
-
-    // Rotas do Professor (NOVAS)
-    '/prof/dashboard': { page: '/portal/pages/prof_dashboard.html', handler: handleProfDashboard },
-    '/prof/alunos/novo': { page: '/portal/pages/prof_aluno_novo.html', handler: handleProfAlunoNovo },
-    '/prof/matricula': { page: '/portal/pages/prof_matricula.html', handler: handleProfMatricula },
-    '/prof/financeiro': { page: '/portal/pages/prof_financeiro.html', handler: handleProfFinanceiro },
-    '/prof/despesa': { page: '/portal/pages/prof_despesa.html', handler: handleProfDespesa },
-    '/prof/chamada': { page: '/portal/pages/prof_chamada.html', handler: handleProfChamada },
-    '/prof/conteudos': { page: '/portal/pages/prof_conteudos.html', handler: handleProfConteudos },
-    '/aluno/metodo': { page: '/portal/pages/metodo.html', handler: handleAlunoMetodo },
-    '/outros': { page: '/portal/pages/outros.html', handler: null },
-    '/admin/usuarios': { page: '/portal/pages/admin_usuarios.html',handler: handleAdminUsuarios},
+    '/register': { page: '/portal_aluno_pwa/pages/register.html', handler: handleRegisterPage, public: true },
+    '/dashboard': { page: '/portal_aluno_pwa/pages/dashboard.html', handler: handleDashboardPage },
+    '/carteirinha': { page: '/portal_aluno_pwa/pages/carteirinha.html', handler: handleCarteirinhaPage },
+    '/edit-profile': { page: '/portal_aluno_pwa/pages/edit_profile.html', handler: handleEditProfilePage },
+    '/payments': { page: '/portal_aluno_pwa/pages/payments.html', handler: handlePaymentsPage },
+    '/events': { page: '/portal_aluno_pwa/pages/events.html', handler: handleEventsPage },
+    '/beneficios': { page: '/portal_aluno_pwa/pages/beneficios.html', handler: handleBeneficiosPage },
+    '/prof/dashboard': { page: '/portal_aluno_pwa/pages/prof_dashboard.html', handler: handleProfDashboard },
+    '/prof/alunos/novo': { page: '/portal_aluno_pwa/pages/prof_aluno_novo.html', handler: handleProfAlunoNovo },
+    '/prof/matricula': { page: '/portal_aluno_pwa/pages/prof_matricula.html', handler: handleProfMatricula },
+    '/prof/financeiro': { page: '/portal_aluno_pwa/pages/prof_financeiro.html', handler: handleProfFinanceiro },
+    '/prof/despesa': { page: '/portal_aluno_pwa/pages/prof_despesa.html', handler: handleProfDespesa },
+    '/prof/chamada': { page: '/portal_aluno_pwa/pages/prof_chamada.html', handler: handleProfChamada },
+    '/prof/conteudos': { page: '/portal_aluno_pwa/pages/prof_conteudos.html', handler: handleProfConteudos },
+    '/aluno/metodo': { page: '/portal_aluno_pwa/pages/metodo.html', handler: handleAlunoMetodo },
+    '/outros': { page: '/portal_aluno_pwa/pages/outros.html', handler: null },
+    '/admin/usuarios': { page: '/portal_aluno_pwa/pages/admin_usuarios.html', handler: handleAdminUsuarios},
 };
 
 // --- FUNÇÕES DE NAVEGAÇÃO ---
-
 function updateActiveNav(path) {
     const role = localStorage.getItem('userRole');
     const navContainer = document.getElementById('main-nav');
-    
-    if (!navContainer) return; // Proteção caso a nav não exista no DOM
+    if (!navContainer) return;
 
     if (role === 'aluno') {
-        // Menu do Aluno OTIMIZADO (5 Itens)
         navContainer.innerHTML = `
-            <a href="#/dashboard" class="nav__link">
-                <i class="fas fa-user nav__icon"></i>
-                <span class="nav__text">Perfil</span>
-            </a>
-            
-            <a href="#/payments" class="nav__link">
-                <i class="fas fa-file-invoice-dollar nav__icon"></i>
-                <span class="nav__text">Pagar</span>
-            </a>
-            
-            <a href="#/aluno/metodo" class="nav__link">
-                <i class="fas fa-play-circle nav__icon" style="font-size: 1.4rem;"></i>
-                <span class="nav__text">Aulas</span>
-            </a>
-            
-            <a href="#/carteirinha" class="nav__link">
-                <i class="fas fa-id-card nav__icon"></i>
-                <span class="nav__text">Carteira</span>
-            </a>
-            
-            <a href="#/outros" class="nav__link">
-                <i class="fas fa-bars nav__icon"></i>
-                <span class="nav__text">Menu</span>
-            </a>
+            <a href="#/dashboard" class="nav__link"><i class="fas fa-user nav__icon"></i><span class="nav__text">Perfil</span></a>
+            <a href="#/payments" class="nav__link"><i class="fas fa-file-invoice-dollar nav__icon"></i><span class="nav__text">Pagar</span></a>
+            <a href="#/aluno/metodo" class="nav__link"><i class="fas fa-play-circle nav__icon"></i><span class="nav__text">Aulas</span></a>
+            <a href="#/carteirinha" class="nav__link"><i class="fas fa-id-card nav__icon"></i><span class="nav__text">Carteira</span></a>
+            <a href="#/outros" class="nav__link"><i class="fas fa-bars nav__icon"></i><span class="nav__text">Menu</span></a>
         `;
-    }else {
-        // Menu do Professor/Staff
+    } else {
         navContainer.innerHTML = `
             <a href="#/prof/dashboard" class="nav__link"><i class="fas fa-home nav__icon"></i><span class="nav__text">Início</span></a>
             <a href="#/prof/financeiro" class="nav__link"><i class="fas fa-cash-register nav__icon"></i><span class="nav__text">Caixa</span></a>
@@ -73,18 +45,9 @@ function updateActiveNav(path) {
             <a href="#/prof/matricula" class="nav__link"><i class="fas fa-clipboard-list nav__icon"></i><span class="nav__text">Matrícula</span></a>
         `;
     }
-
-    const navLinks = document.querySelectorAll('.nav__link');
-    navLinks.forEach(link => {
-        link.classList.remove('nav__link--active');
-        if (link.hash && path.startsWith(link.hash.slice(1))) {
-            link.classList.add('nav__link--active');
-        }
-    });
 }
 
 const router = async () => {
-    // Determina a rota inicial baseada na role se estiver na raiz
     let currentHash = window.location.hash.slice(1).split('?')[0];
     if (!currentHash) {
         const role = localStorage.getItem('userRole');
@@ -92,57 +55,151 @@ const router = async () => {
     }
 
     updateActiveNav(currentHash);
-    
     const route = routes[currentHash] || routes['/login'];
     const token = localStorage.getItem('accessToken');
 
-    const appRootEl = document.getElementById('app-root');
-    const bodyEl = document.body;
-
-    // Ajustes de layout para Login vs App
-    if (route.public) {
-        bodyEl.classList.add('login-active');
-        bodyEl.classList.remove('nav-active');
-        appRootEl.classList.remove('container', 'py-4'); 
-        appRootEl.classList.add('w-100', 'p-0'); 
-    } else {
-        bodyEl.classList.remove('login-active');
-        bodyEl.classList.add('nav-active');
-        appRootEl.classList.remove('w-100', 'p-0');
-        appRootEl.classList.add('container', 'py-4'); 
-    }
-
-    // Proteção de rotas
-    if (!route.public && !token) {
-        window.location.hash = '/login';
-        return;
-    }
-    
-    // Se logado e tentar acessar login, manda pra home
-    if (route.public && token && currentHash !== '/login/callback') {
-        const role = localStorage.getItem('userRole');
-        window.location.hash = (role === 'aluno') ? '/dashboard' : '/prof/dashboard';
-        return;
-    }
-
-    ui.toggleNav(!route.public);
+    if (!route.public && !token) { window.location.hash = '/login'; return; }
     
     if (route.page) {
         ui.showLoading(appRoot);
         try {
             const response = await fetch(route.page);
-            if (!response.ok) throw new Error("Página não encontrada");
             appRoot.innerHTML = await response.text();
-        } catch (error) {
-            console.error(error);
-            appRoot.innerHTML = `<div class="alert alert-danger m-3">Erro ao carregar a página: ${error.message}. <br>Verifique se o arquivo HTML existe em <b>${route.page}</b></div>`;
-        }
-    }
-    
-    if (route.handler) {
-        route.handler();
+            if (route.handler) route.handler();
+        } catch (error) { console.error(error); }
     }
 };
+
+// --- HANDLER DA CHAMADA (PROFESSOR) ---
+async function handleProfChamada() {
+    const selectTurma = document.getElementById('select-turma-chamada');
+    const inputData = document.getElementById('data-chamada');
+    const listaContainer = document.getElementById('lista-chamada');
+    const btnSalvar = document.getElementById('btn-salvar-chamada');
+
+    inputData.valueAsDate = new Date();
+
+    // 1. Carregar Turmas
+    try {
+        const turmas = await api.request('/portal-professor/turmas'); 
+        if (turmas.length > 0) {
+            selectTurma.innerHTML = '<option value="" selected disabled>Selecione a turma...</option>' + 
+                turmas.map(t => `<option value="${t.id}">${t.nome} - ${t.horario}</option>`).join('');
+        }
+    } catch (e) { ui.showAlert('Erro ao carregar turmas', 'danger'); }
+
+    // 2. Lógica para carregar alunos da turma
+    async function carregarAlunos() {
+        const turmaId = selectTurma.value;
+        const data = inputData.value;
+        if (!turmaId) return;
+
+        listaContainer.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin"></i></div>';
+        try {
+            const alunos = await api.request(`/portal-professor/turmas/${turmaId}/alunos-chamada?data=${data}`);
+            listaContainer.innerHTML = alunos.map(aluno => `
+                <label class="list-group-item d-flex align-items-center justify-content-between p-3">
+                    <div class="d-flex align-items-center">
+                        <img src="${aluno.foto || '/portal_aluno_pwa/images/default-avatar.png'}" class="rounded-circle me-3" width="40" height="40">
+                        <div><h6 class="mb-0">${aluno.nome}</h6><small class="text-muted">Matrícula Ativa</small></div>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input fs-4" type="checkbox" data-aluno-id="${aluno.aluno_id}" ${aluno.presente ? 'checked' : ''}>
+                    </div>
+                </label>`).join('');
+            btnSalvar.disabled = false;
+        } catch (e) { listaContainer.innerHTML = '<div class="text-danger text-center">Erro ao carregar.</div>'; }
+    }
+
+    selectTurma.addEventListener('change', carregarAlunos);
+    inputData.addEventListener('change', carregarAlunos);
+
+    // 3. Salvar Chamada
+    btnSalvar.onclick = async () => {
+        const checkboxes = listaContainer.querySelectorAll('input[type="checkbox"]');
+        const presencas = Array.from(checkboxes).map(chk => ({
+            aluno_id: parseInt(chk.dataset.alunoId),
+            presente: chk.checked
+        }));
+
+        try {
+            await api.request('/portal-professor/chamada', 'POST', {
+                turma_id: parseInt(selectTurma.value),
+                data: inputData.value,
+                presencas: presencas
+            });
+            ui.showAlert('Chamada salva!', 'success');
+        } catch (e) { ui.showAlert('Erro ao salvar.', 'danger'); }
+    };
+
+    // --- INICIALIZAÇÃO DO ALUNO EXTRA (DENTRO DO CONTEXTO DA PÁGINA) ---
+    initLogicaAlunoExtra();
+}
+
+function initLogicaAlunoExtra() {
+    const btnAdd = document.getElementById('btn-add-extra');
+    const modalEl = document.getElementById('modalBuscaAlunoExtra');
+    const inputBusca = document.getElementById('input-busca-aluno-extra');
+    const resultadosDiv = document.getElementById('resultados-busca-extra');
+
+    if (!btnAdd || !modalEl) return;
+
+    const modalInstance = new bootstrap.Modal(modalEl);
+
+    btnAdd.onclick = () => modalInstance.show();
+
+    inputBusca.oninput = async (e) => {
+        const termo = e.target.value;
+        if (termo.length < 3) return;
+        try {
+            const alunos = await api.request(`/portal-professor/alunos/buscar?nome=${termo}`);
+            resultadosDiv.innerHTML = alunos.map(a => `
+                <button class="list-group-item list-group-item-action d-flex align-items-center" onclick="addExtraManual(${a.id}, '${a.nome}', '${a.foto || ''}')">
+                    <img src="${a.foto || '/portal_aluno_pwa/images/default-avatar.png'}" class="rounded-circle me-2" width="30">
+                    <span class="small">${a.nome}</span>
+                </button>`).join('');
+        } catch (err) { console.error(err); }
+    };
+
+    window.addExtraManual = (id, nome, foto) => {
+        const lista = document.getElementById('lista-chamada');
+        if (lista.querySelector('.text-muted')) lista.innerHTML = '';
+        if (document.querySelector(`[data-aluno-id="${id}"]`)) { alert("Aluno já está na lista."); return; }
+
+        const html = `
+            <label class="list-group-item d-flex align-items-center justify-content-between p-3 border-warning">
+                <div class="d-flex align-items-center">
+                    <img src="${foto || '/portal_aluno_pwa/images/default-avatar.png'}" class="rounded-circle me-3" width="40">
+                    <div><h6 class="mb-0">${nome}</h6><span class="badge bg-warning text-dark" style="font-size:0.6rem">EXTRA</span></div>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input fs-4" type="checkbox" data-aluno-id="${id}" checked>
+                </div>
+            </label>`;
+        lista.insertAdjacentHTML('beforeend', html);
+        modalInstance.hide();
+        document.getElementById('btn-salvar-chamada').disabled = false;
+    };
+}
+
+// --- RESTANTE DOS HANDLERS (Login, Dashboard, etc - Omitidos para brevidade, mas devem permanecer no seu arquivo) ---
+
+// window.addEventListener('hashchange', router);
+// window.addEventListener('load', router);
+
+// Inicialização
+window.addEventListener('hashchange', router);
+window.addEventListener('load', () => {
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/portal/sw.js').catch(console.error);
+    
+    document.getElementById('logout-button').addEventListener('click', () => {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('userRole');
+        window.location.hash = '/login';
+    });
+    
+    router();
+});
 
 // --- HANDLERS COMUNS ---
 
@@ -1037,19 +1094,7 @@ window.copiarPix = function() {
 async function pagarMensalidadeOnline(event, id) { await exibirModalPix(`/pagamentos/pix/mensalidade/${id}`, 'mensalidade', id); }
 async function pagarEventoOnline(event, id) { await exibirModalPix(`/pagamentos/pix/inscricao/${id}`, 'inscricao', id); }
 
-// Inicialização
-window.addEventListener('hashchange', router);
-window.addEventListener('load', () => {
-    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/portal/sw.js').catch(console.error);
-    
-    document.getElementById('logout-button').addEventListener('click', () => {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('userRole');
-        window.location.hash = '/login';
-    });
-    
-    router();
-});
+
 
 
 //FUNCOES DE VIDEO
