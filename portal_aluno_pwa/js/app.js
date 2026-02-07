@@ -804,111 +804,6 @@ async function handleProfDespesa() {
 }
 
 
-async function handleProfChamada() {
-    const selectTurma = document.getElementById('select-turma-chamada');
-    const inputData = document.getElementById('data-chamada');
-    const listaContainer = document.getElementById('lista-chamada');
-    const btnSalvar = document.getElementById('btn-salvar-chamada');
-
-    inputData.valueAsDate = new Date();
-
-    // 1. Carregar Turmas (URL CORRIGIDA)
-    try {
-        // Atenção ao hífen: /portal-professor
-        const turmas = await api.request('/portal-professor/turmas'); 
-        if (turmas.length > 0) {
-            selectTurma.innerHTML = '<option value="" selected disabled>Selecione a turma...</option>' + 
-                turmas.map(t => `<option value="${t.id}">${t.nome} - ${t.horario}</option>`).join('');
-        } else {
-            selectTurma.innerHTML = '<option disabled>Nenhuma turma encontrada</option>';
-        }
-    } catch (e) {
-        console.error(e);
-        ui.showAlert('Erro ao carregar turmas', 'danger');
-    }
-
-    async function carregarAlunos() {
-        const turmaId = selectTurma.value;
-        const data = inputData.value;
-        if (!turmaId) return;
-
-        listaContainer.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>';
-        btnSalvar.disabled = true;
-
-        try {
-            // URL CORRIGIDA
-            const alunos = await api.request(`/portal-professor/turmas/${turmaId}/alunos-chamada?data=${data}`);
-            
-            if (alunos.length === 0) {
-                listaContainer.innerHTML = '<div class="text-center py-4 text-muted">Nenhum aluno matriculado nesta turma.</div>';
-                return;
-            }
-
-            let html = '';
-            alunos.forEach(aluno => {
-                const checked = aluno.presente ? 'checked' : '';
-                const avatar = aluno.foto ? 
-                    `<img src="${aluno.foto}" class="rounded-circle me-3" width="40" height="40" style="object-fit:cover">` :
-                    `<div class="rounded-circle bg-light d-flex align-items-center justify-content-center me-3" style="width:40px; height:40px"><i class="fas fa-user text-secondary"></i></div>`;
-
-                html += `
-                <label class="list-group-item d-flex align-items-center justify-content-between p-3 cursor-pointer">
-                    <div class="d-flex align-items-center">
-                        ${avatar}
-                        <div>
-                            <h6 class="mb-0">${aluno.nome}</h6>
-                            <small class="text-muted">Matrícula Ativa</small>
-                        </div>
-                    </div>
-                    <div class="form-check form-switch">
-                        <input class="form-check-input fs-4" type="checkbox" data-aluno-id="${aluno.aluno_id}" ${checked}>
-                    </div>
-                </label>`;
-            });
-
-            listaContainer.innerHTML = html;
-            btnSalvar.disabled = false;
-
-        } catch (e) {
-            console.error(e);
-            listaContainer.innerHTML = '<div class="text-danger text-center p-3">Erro ao carregar alunos.</div>';
-        }
-    }
-
-    selectTurma.addEventListener('change', carregarAlunos);
-    inputData.addEventListener('change', carregarAlunos);
-
-    btnSalvar.onclick = async () => {
-        const checkboxes = listaContainer.querySelectorAll('input[type="checkbox"]');
-        const presencas = [];
-        checkboxes.forEach(chk => {
-            presencas.push({
-                aluno_id: parseInt(chk.dataset.alunoId),
-                presente: chk.checked
-            });
-        });
-
-        const payload = {
-            turma_id: parseInt(selectTurma.value),
-            data: inputData.value,
-            presencas: presencas
-        };
-
-        const originalText = btnSalvar.innerHTML;
-        btnSalvar.disabled = true; btnSalvar.innerHTML = 'Salvando...';
-
-        try {
-            // URL CORRIGIDA
-            await api.request('/portal-professor/chamada', 'POST', payload);
-            ui.showAlert('Chamada salva com sucesso!', 'success');
-        } catch (e) {
-            ui.showAlert('Erro ao salvar chamada.', 'danger');
-        } finally {
-            btnSalvar.innerHTML = originalText;
-            btnSalvar.disabled = false;
-        }
-    };
-}
 
 
 // --- FUNÇÕES GLOBAIS DE AÇÃO ---
@@ -1267,8 +1162,65 @@ async function handleAdminUsuarios() {
 // LÓGICA GLOBAL PARA ALUNO EXTRA (NÃO DEPENDE DAS ROTAS)
 // =====================================================================
 
-// 1. Escuta a digitação no campo de busca do Modal
-document.addEventListener('input', async function(e) {
+async function handleProfChamada() {
+    const selectTurma = document.getElementById('select-turma-chamada');
+    const inputData = document.getElementById('data-chamada');
+    const listaContainer = document.getElementById('lista-chamada');
+    const btnSalvar = document.getElementById('btn-salvar-chamada');
+
+    if (!selectTurma || !inputData) return;
+    inputData.valueAsDate = new Date();
+
+    try {
+        const turmas = await api.request('/portal-professor/turmas'); 
+        selectTurma.innerHTML = '<option value="" selected disabled>Selecione a turma...</option>' + 
+            turmas.map(t => `<option value="${t.id}">${t.nome} - ${t.horario}</option>`).join('');
+    } catch (e) { ui.showAlert('Erro ao carregar turmas'); }
+
+    const atualizarLista = async () => {
+        if (!selectTurma.value) return;
+        listaContainer.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin"></i></div>';
+        try {
+            const alunos = await api.request(`/portal-professor/turmas/${selectTurma.value}/alunos-chamada?data=${inputData.value}`);
+            listaContainer.innerHTML = alunos.map(aluno => `
+                <label class="list-group-item d-flex align-items-center justify-content-between p-3" data-aluno-id="${aluno.aluno_id}">
+                    <div class="d-flex align-items-center">
+                        <img src="${aluno.foto || '/portal/images/default-avatar.png'}" class="rounded-circle me-3" width="40" height="40" style="object-fit:cover">
+                        <h6 class="mb-0">${aluno.nome}</h6>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input fs-4" type="checkbox" data-aluno-id="${aluno.aluno_id}" ${aluno.presente ? 'checked' : ''}>
+                    </div>
+                </label>`).join('');
+            btnSalvar.disabled = false;
+        } catch (e) { listaContainer.innerHTML = 'Erro ao carregar alunos.'; }
+    };
+
+    selectTurma.onchange = atualizarLista;
+    inputData.onchange = atualizarLista;
+
+    btnSalvar.onclick = async () => {
+        const presencas = Array.from(listaContainer.querySelectorAll('input[type="checkbox"]')).map(chk => ({
+            aluno_id: parseInt(chk.dataset.alunoId),
+            presente: chk.checked
+        }));
+        try {
+            await api.request('/portal-professor/chamada', 'POST', {
+                turma_id: parseInt(selectTurma.value),
+                data: inputData.value,
+                presencas: presencas
+            });
+            ui.showAlert('Chamada salva!', 'success');
+        } catch (e) { ui.showAlert('Erro ao salvar'); }
+    };
+}
+
+// =====================================================================
+// CORREÇÃO: LÓGICA GLOBAL "BLINDADA" PARA BUSCA E ADIÇÃO DE ALUNO EXTRA
+// =====================================================================
+
+// 1. Ouvinte Global de Digitação (Monitora o input de busca no modal)
+document.addEventListener('input', async (e) => {
     if (e.target.id === 'input-busca-aluno-extra') {
         const termo = e.target.value;
         const resultadosDiv = document.getElementById('resultados-busca-extra');
@@ -1281,7 +1233,7 @@ document.addEventListener('input', async function(e) {
         }
 
         try {
-            // Busca no backend usando seu endpoint de busca global
+            // Chamada ao seu backend (Python)
             const alunos = await api.request(`/portal-professor/alunos/buscar?nome=${termo}`);
             
             if (alunos.length === 0) {
@@ -1302,12 +1254,12 @@ document.addEventListener('input', async function(e) {
     }
 });
 
-// 2. Função Global para inserir o aluno na lista de presença
+// 2. Função Global para inserir o aluno na lista (chamada pelo onclick acima)
 window.adicionarExtraManual = function(id, nome, foto) {
     const lista = document.getElementById('lista-chamada');
     if (!lista) return;
 
-    // Remove avisos de "Selecione uma turma"
+    // Remove aviso de lista vazia
     if (lista.innerText.includes('Selecione')) lista.innerHTML = '';
 
     // Evita duplicados
@@ -1317,7 +1269,7 @@ window.adicionarExtraManual = function(id, nome, foto) {
     }
 
     const html = `
-        <label class="list-group-item d-flex align-items-center justify-content-between p-3 border-warning">
+        <label class="list-group-item d-flex align-items-center justify-content-between p-3 border-warning" data-aluno-id="${id}">
             <div class="d-flex align-items-center">
                 <img src="${foto || '/portal/images/default-avatar.png'}" class="rounded-circle me-3" width="40" height="40" style="object-fit:cover">
                 <div>
@@ -1332,12 +1284,11 @@ window.adicionarExtraManual = function(id, nome, foto) {
 
     lista.insertAdjacentHTML('beforeend', html);
     
-    // Fecha o modal automaticamente
+    // Fecha o modal
     const modalEl = document.getElementById('modalBuscaAlunoExtra');
     const modalInstance = bootstrap.Modal.getInstance(modalEl);
     if (modalInstance) modalInstance.hide();
     
-    // Ativa o botão de salvar caso esteja desativado
-    const btnSalvar = document.getElementById('btn-salvar-chamada');
-    if (btnSalvar) btnSalvar.disabled = false;
+    // Habilita salvar
+    document.getElementById('btn-salvar-chamada').disabled = false;
 };
