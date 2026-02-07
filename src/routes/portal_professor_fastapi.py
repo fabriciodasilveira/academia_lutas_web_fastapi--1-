@@ -176,24 +176,13 @@ def list_turmas_professor(
 
 
 @router.get("/alunos/buscar")
-def buscar_alunos_global(
-    nome: str,
-    db: Session = Depends(get_db),
-    current_user: Usuario = Depends(get_current_staff)
-):
-    if len(nome) < 3:
-        return []
+def buscar_alunos_global(nome: str, db: Session = Depends(get_db)):
+    # Busca qualquer aluno ativo que contenha o nome digitado
+    alunos = db.query(Aluno).filter(
+        Aluno.nome.ilike(f"%{nome}%"),
+        Aluno.status == 'Ativo'
+    ).limit(10).all()
     
-    try:
-        # Note o .filter(Aluno.status == 'Ativo') - verifique se no seu banco é 'Ativo' ou 'ativo'
-        alunos = db.query(Aluno).filter(
-            Aluno.nome.ilike(f"%{nome}%"),
-            Aluno.status == 'Ativo' 
-        ).limit(10).all()
-        
-        return [{"id": a.id, "nome": a.nome, "foto": a.foto} for a in alunos]
-    except Exception as e:
-        print(f"ERRO CRÍTICO NA BUSCA: {str(e)}")
-        # Isso ajudará a ver o erro real no log do terminal do servidor
-        raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
+    return [{"id": a.id, "nome": a.nome, "foto": a.foto} for a in alunos]
+
 # ------------------------------------

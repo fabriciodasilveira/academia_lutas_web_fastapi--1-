@@ -5,38 +5,9 @@
         </a>
         <h3 class="mb-0">Chamada</h3>
     </div>
-    <button class="btn btn-outline-primary btn-sm rounded-pill" 
-        data-bs-toggle="modal" 
-        data-bs-target="#modalBuscaAlunoExtra">
-    <i class="fas fa-user-plus"></i> Extra
-</button>
-</div>
-
-
-<button class="btn btn-outline-primary btn-sm rounded-pill" 
-        data-bs-toggle="modal" 
-        data-bs-target="#modalBuscaAlunoExtra">
-    <i class="fas fa-user-plus"></i> Extra
-</button>
-
-<div class="modal fade" id="modalBuscaAlunoExtra" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Adicionar Aluno Extra</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <input type="text" 
-                id="input-busca-aluno-extra" 
-                class="form-control" 
-                placeholder="Digite o nome..." 
-                autocomplete="off">
-               
-        <div id="resultados-busca-extra" class="list-group mt-3"></div>
-      </div>
-    </div>
-  </div>
+    <button class="btn btn-outline-primary btn-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#modalExtra">
+        <i class="fas fa-user-plus"></i> Extra
+    </button>
 </div>
 
 <div class="card shadow-sm border-0 mb-3">
@@ -45,7 +16,7 @@
             <div class="col-8">
                 <label class="form-label small text-muted">Turma</label>
                 <select id="select-turma-chamada" class="form-select">
-                    <option value="" selected disabled>Carregando turmas...</option>
+                    <option value="" selected disabled>Selecione...</option>
                 </select>
             </div>
             <div class="col-4">
@@ -57,9 +28,7 @@
 </div>
 
 <div id="lista-chamada" class="list-group shadow-sm mb-4">
-    <div class="text-center py-4 text-muted">
-        Selecione uma turma para iniciar.
-    </div>
+    <div class="text-center py-4 text-muted">Selecione uma turma para iniciar.</div>
 </div>
 
 <div class="d-grid fixed-bottom p-3 bg-white border-top" style="z-index: 1000;">
@@ -67,20 +36,82 @@
         <i class="fas fa-check-circle me-2"></i> Salvar Presenças
     </button>
 </div>
-<div style="height: 80px;"></div>
 
-<div class="modal fade" id="modalBuscaAlunoExtra" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Adicionar Aluno Extra</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <input type="text" id="input-busca-aluno-extra" class="form-control" placeholder="Digite o nome do aluno...">
-        <div id="resultados-busca-extra" class="list-group mt-3">
+<div class="modal fade" id="modalExtra" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Adicionar Aluno Extra</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-      </div>
+            <div class="modal-body">
+                <input type="text" id="busca-aluno-input" class="form-control" placeholder="Digite o nome do aluno...">
+                <div id="lista-busca-extra" class="list-group mt-3"></div>
+            </div>
+        </div>
     </div>
-  </div>
 </div>
+
+<script>
+    // Usamos um bloco anônimo para não conflitar variáveis
+    (function() {
+        const inputBusca = document.getElementById('busca-aluno-input');
+        const divResultados = document.getElementById('lista-busca-extra');
+
+        // FUNÇÃO DE BUSCA (oninput)
+        inputBusca.addEventListener('input', async (e) => {
+            const nome = e.target.value;
+            if (nome.length < 3) { divResultados.innerHTML = ''; return; }
+
+            try {
+                // Chamada direta para sua API Python
+                const alunos = await api.request(`/portal-professor/alunos/buscar?nome=${nome}`);
+                
+                divResultados.innerHTML = alunos.map(a => `
+                    <button class="list-group-item list-group-item-action d-flex align-items-center" 
+                            onclick="adicionarNaLista(${a.id}, '${a.nome}', '${a.foto || ''}')">
+                        <img src="${a.foto || 'images/default-avatar.png'}" class="rounded-circle me-2" width="30" height="30">
+                        ${a.nome}
+                    </button>
+                `).join('');
+            } catch (err) { console.error("Erro na busca", err); }
+        });
+
+        // FUNÇÃO DE ADIÇÃO (Global para o onclick acima funcionar)
+        window.adicionarNaLista = function(id, nome, foto) {
+            const lista = document.getElementById('lista-chamada');
+            
+            // Verifica duplicados
+            if (document.querySelector(`input[data-aluno-id="${id}"]`)) {
+                alert("Aluno já está na lista.");
+                return;
+            }
+
+            // Remove aviso de "Selecione uma turma"
+            if (lista.innerText.includes('Selecione')) lista.innerHTML = '';
+
+            const itemHtml = `
+                <label class="list-group-item d-flex align-items-center justify-content-between p-3 border-warning">
+                    <div class="d-flex align-items-center">
+                        <img src="${foto || 'images/default-avatar.png'}" class="rounded-circle me-3" width="40" height="40" style="object-fit:cover">
+                        <div>
+                            <h6 class="mb-0">${nome}</h6>
+                            <span class="badge bg-warning text-dark" style="font-size:0.6rem">EXTRA</span>
+                        </div>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input fs-4" type="checkbox" data-aluno-id="${id}" checked>
+                    </div>
+                </label>`;
+
+            lista.insertAdjacentHTML('beforeend', itemHtml);
+            
+            // Fecha o modal nativamente
+            const modalInstance = bootstrap.Modal.getInstance(document.getElementById('modalExtra'));
+            modalInstance.hide();
+            
+            // Ativa botão de salvar
+            document.getElementById('btn-salvar-chamada').disabled = false;
+        };
+    })();
+</script>
