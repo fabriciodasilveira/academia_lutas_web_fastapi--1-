@@ -1294,10 +1294,12 @@ window.adicionarExtraManual = function(id, nome, foto) {
 };
 
 
-// --- LÓGICA GLOBAL PARA ALUNO EXTRA ---
+// =====================================================================
+// FUNÇÕES GLOBAIS PARA ALUNO EXTRA NA CHAMADA
+// =====================================================================
 
-// Esta função faz a busca no banco de dados enquanto você digita
-async function buscarAlunoExtra(termo) {
+// 1. Função de Busca (chamada pelo oninput no HTML)
+window.buscarAlunoExtra = async function(termo) {
     const resultadosDiv = document.getElementById('resultados-busca-extra');
     if (!resultadosDiv) return;
 
@@ -1307,7 +1309,7 @@ async function buscarAlunoExtra(termo) {
     }
 
     try {
-        // Chamada para o seu backend Python
+        // Usa o objeto api que já existe no seu sistema
         const alunos = await api.request(`/portal-professor/alunos/buscar?nome=${termo}`);
         
         if (alunos.length === 0) {
@@ -1317,25 +1319,25 @@ async function buscarAlunoExtra(termo) {
 
         resultadosDiv.innerHTML = alunos.map(a => `
             <button type="button" class="list-group-item list-group-item-action d-flex align-items-center" 
-                    onclick="adicionarAlunoNaChamada(${a.id}, '${a.nome}', '${a.foto || ''}')">
-                <img src="${a.foto || '/portal_aluno_pwa/images/default-avatar.png'}" class="rounded-circle me-2" width="30" height="30" style="object-fit:cover">
+                    onclick="window.adicionarAlunoNaChamada(${a.id}, '${a.nome}', '${a.foto || ''}')">
+                <img src="${a.foto || '/portal/images/default-avatar.png'}" class="rounded-circle me-2" width="30" height="30" style="object-fit:cover">
                 <span class="small">${a.nome}</span>
             </button>
         `).join('');
     } catch (err) {
-        console.error("Erro na busca:", err);
+        console.error("Erro na busca de aluno extra:", err);
     }
-}
+};
 
-// Esta função joga o aluno selecionado para a lista de presença
-function adicionarAlunoNaChamada(id, nome, foto) {
+// 2. Função de Inclusão (chamada pelo clique no resultado)
+window.adicionarAlunoNaChamada = function(id, nome, foto) {
     const lista = document.getElementById('lista-chamada');
     if (!lista) return;
 
-    // Limpa o texto "Selecione uma turma" se ele estiver lá
+    // Remove mensagem de lista vazia
     if (lista.innerText.includes('Selecione')) lista.innerHTML = '';
 
-    // Verifica se já foi adicionado
+    // Evita duplicados
     if (document.querySelector(`[data-aluno-id="${id}"]`)) {
         alert("Este aluno já está na lista.");
         return;
@@ -1344,7 +1346,7 @@ function adicionarAlunoNaChamada(id, nome, foto) {
     const html = `
         <label class="list-group-item d-flex align-items-center justify-content-between p-3 border-warning">
             <div class="d-flex align-items-center">
-                <img src="${foto || '/portal_aluno_pwa/images/default-avatar.png'}" class="rounded-circle me-3" width="40" height="40" style="object-fit:cover">
+                <img src="${foto || '/portal/images/default-avatar.png'}" class="rounded-circle me-3" width="40" height="40" style="object-fit:cover">
                 <div>
                     <h6 class="mb-0">${nome}</h6>
                     <span class="badge bg-warning text-dark" style="font-size:0.6rem">EXTRA</span>
@@ -1357,7 +1359,7 @@ function adicionarAlunoNaChamada(id, nome, foto) {
 
     lista.insertAdjacentHTML('beforeend', html);
     
-    // Fecha o modal
+    // Fecha o modal (Bootstrap 5)
     const modalEl = document.getElementById('modalBuscaAlunoExtra');
     const modalInstance = bootstrap.Modal.getInstance(modalEl);
     if (modalInstance) modalInstance.hide();
@@ -1365,8 +1367,4 @@ function adicionarAlunoNaChamada(id, nome, foto) {
     // Habilita o botão de salvar
     const btnSalvar = document.getElementById('btn-salvar-chamada');
     if (btnSalvar) btnSalvar.disabled = false;
-}
-
-// Torna as funções disponíveis para o HTML
-window.buscarAlunoExtra = buscarAlunoExtra;
-window.adicionarAlunoNaChamada = adicionarAlunoNaChamada;
+};
