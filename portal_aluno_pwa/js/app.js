@@ -1353,3 +1353,28 @@ function adicionarAlunoNaLista(id, nome, foto) {
     modalBusca.hide();
     document.getElementById('btn-salvar-chamada').disabled = false;
 }
+
+function setupExtraStudentFeature() {
+    // 1. Delegação de evento para o clique (evita erro se o botão for recriado)
+    document.removeEventListener('click', handleExtraClick); // Limpa anterior
+    document.addEventListener('click', handleExtraClick);
+}
+
+function handleExtraClick(e) {
+    const btn = e.target.closest('#btn-add-extra');
+    if (!btn) return;
+
+    e.preventDefault();
+    e.stopPropagation(); // Impede que extensões capturem o clique
+
+    const modalEl = document.getElementById('modalBuscaAlunoExtra');
+    if (modalEl) {
+        // Inicializa ou recupera a instância do modal
+        let modalInstance = bootstrap.Modal.getInstance(modalEl);
+        if (!modalInstance) {
+            modalInstance = new bootstrap.Modal(modalEl);
+        }
+        modalInstance.show();
+        console.log("Modal extra disparado com sucesso.");
+    }
+}

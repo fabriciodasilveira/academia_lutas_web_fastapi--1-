@@ -1,13 +1,15 @@
-<div class="d-flex align-items-center mb-3">
-    <a href="#/prof/dashboard" class="text-decoration-none text-secondary me-3">
-        <i class="fas fa-arrow-left fa-lg"></i>
-    </a>
-    <h3 class="mb-0">Chamada</h3>
-</div>
 
-<button id="btn-add-extra" class="btn btn-outline-primary btn-sm rounded-pill">
-    <i class="fas fa-user-plus"></i> Add
-</button>
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <div class="d-flex align-items-center">
+        <a href="#/prof/dashboard" class="text-decoration-none text-secondary me-3">
+            <i class="fas fa-arrow-left fa-lg"></i>
+        </a>
+        <h3 class="mb-0">Chamada</h3>
+    </div>
+    <button id="btn-add-extra" class="btn btn-outline-primary btn-sm rounded-pill">
+        <i class="fas fa-user-plus"></i> Add
+    </button>
+</div>
 
 <div class="modal fade" id="modalBuscaAlunoExtra" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
@@ -17,7 +19,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <input type="text" id="input-busca-aluno-extra" class="form-control" placeholder="Nome do aluno...">
+        <input type="text" id="input-busca-aluno-extra" class="form-control" placeholder="Digite o nome do aluno...">
         <div id="resultados-busca-extra" class="list-group mt-2"></div>
       </div>
     </div>
