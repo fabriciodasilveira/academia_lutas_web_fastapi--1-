@@ -1207,95 +1207,111 @@ async function handleAdminUsuarios() {
 }
 
 
-// tela de presença do professor
-
+// --- HANDLER DA CHAMADA (PROFESSOR) ---
 async function handleProfChamada() {
     const selectTurma = document.getElementById('select-turma-chamada');
     const inputData = document.getElementById('data-chamada');
-    const lista = document.getElementById('lista-chamada');
+    const listaContainer = document.getElementById('lista-chamada');
     const btnSalvar = document.getElementById('btn-salvar-chamada');
 
-    inputData.valueAsDate = new Date();
+    if (inputData) inputData.valueAsDate = new Date();
 
     try {
         const turmas = await api.request('/portal-professor/turmas'); 
-        selectTurma.innerHTML = '<option value="" selected disabled>Selecione a turma...</option>' + 
-            turmas.map(t => `<option value="${t.id}">${t.nome}</option>`).join('');
-    } catch (e) {}
+        if (selectTurma) selectTurma.innerHTML = '<option value="" selected disabled>Selecione a turma...</option>' + 
+            turmas.map(t => `<option value="${t.id}">${t.nome} - ${t.horario}</option>`).join('');
+    } catch (e) { ui.showAlert('Erro ao carregar turmas'); }
 
-    const atualizar = async () => {
+    const carregar = async () => {
         if (!selectTurma.value) return;
-        lista.innerHTML = 'Carregando...';
-        const alunos = await api.request(`/portal-professor/turmas/${selectTurma.value}/alunos-chamada?data=${inputData.value}`);
-        lista.innerHTML = alunos.map(a => `
-            <label class="list-group-item d-flex justify-content-between align-items-center p-3">
-                <span>${a.nome}</span>
-                <div class="form-check form-switch">
-                    <input class="form-check-input fs-4" type="checkbox" data-aluno-id="${a.aluno_id}" ${a.presente ? 'checked' : ''}>
-                </div>
-            </label>`).join('');
-        btnSalvar.disabled = false;
+        listaContainer.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin"></i></div>';
+        try {
+            const alunos = await api.request(`/portal-professor/turmas/${selectTurma.value}/alunos-chamada?data=${inputData.value}`);
+            listaContainer.innerHTML = alunos.map(aluno => `
+                <label class="list-group-item d-flex align-items-center justify-content-between p-3">
+                    <div class="d-flex align-items-center">
+                        <img src="${aluno.foto || '/portal/images/default-avatar.png'}" class="rounded-circle me-3" width="40" height="40" style="object-fit:cover">
+                        <h6 class="mb-0">${aluno.nome}</h6>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input fs-4" type="checkbox" data-aluno-id="${aluno.aluno_id}" ${aluno.presente ? 'checked' : ''}>
+                    </div>
+                </label>`).join('');
+            btnSalvar.disabled = false;
+        } catch (e) { listaContainer.innerHTML = 'Erro ao carregar.'; }
     };
 
-    selectTurma.addEventListener('change', atualizar);
-    inputData.addEventListener('change', atualizar);
+    selectTurma?.addEventListener('change', carregar);
+    inputData?.addEventListener('change', carregar);
 
     btnSalvar.onclick = async () => {
-        const presencas = Array.from(lista.querySelectorAll('input[type="checkbox"]')).map(chk => ({
+        const presencas = Array.from(listaContainer.querySelectorAll('input[type="checkbox"]')).map(chk => ({
             aluno_id: parseInt(chk.dataset.alunoId), presente: chk.checked
         }));
-        await api.request('/portal-professor/chamada', 'POST', { turma_id: parseInt(selectTurma.value), data: inputData.value, presencas });
-        ui.showAlert('Salvo!', 'success');
+        try {
+            await api.request('/portal-professor/chamada', 'POST', { turma_id: parseInt(selectTurma.value), data: inputData.value, presencas });
+            ui.showAlert('Chamada salva!', 'success');
+        } catch (e) { ui.showAlert('Erro ao salvar'); }
     };
 }
 
-// --- LÓGICA PARA ADICIONAR ALUNO EXTRA NA CHAMADA ---
+// =====================================================================
+// LÓGICA GLOBAL "BLINDADA" PARA ALUNO EXTRA (RESOLVE O PROBLEMA DO BOTÃO)
+// =====================================================================
 
-document.addEventListener('click', async (e) => {
-    // 1. Detectar clique no botão "Extra"
-    const btnAddExtra = e.target.closest('#btn-add-extra');
-    if (btnAddExtra) {
+document.addEventListener('click', function(e) {
+    // 1. Detecta o clique no botão "Extra"
+    const btnExtra = e.target.closest('#btn-add-extra');
+    if (btnExtra) {
         e.preventDefault();
         const modalEl = document.getElementById('modalBuscaAlunoExtra');
         if (modalEl) {
+            // Inicializa e abre o modal usando o Bootstrap global
             const modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
             modalInstance.show();
         }
+        return;
     }
 
-    // 2. Detectar clique no aluno da busca
-    const btnAluno = e.target.closest('.btn-add-manual');
+    // 2. Detecta o clique em um aluno do resultado da busca
+    const btnAluno = e.target.closest('.btn-resultado-aluno');
     if (btnAluno) {
         const { id, nome, foto } = btnAluno.dataset;
         const lista = document.getElementById('lista-chamada');
-        if (document.querySelector(`[data-aluno-id="${id}"]`)) return alert("Já está na lista.");
+        
+        if (lista.innerText.includes('Selecione')) lista.innerHTML = '';
+        if (document.querySelector(`[data-aluno-id="${id}"]`)) return alert("Aluno já está na lista.");
 
         const html = `
             <label class="list-group-item d-flex justify-content-between align-items-center p-3 border-warning">
                 <div class="d-flex align-items-center">
-                    <img src="${foto || '/portal/images/default-avatar.png'}" class="rounded-circle me-3" width="40">
+                    <img src="${foto || '/portal/images/default-avatar.png'}" class="rounded-circle me-3" width="40" height="40">
                     <div><h6 class="mb-0">${nome}</h6><span class="badge bg-warning text-dark">EXTRA</span></div>
                 </div>
-                <input class="form-check-input fs-4" type="checkbox" data-aluno-id="${id}" checked>
+                <div class="form-check form-switch"><input class="form-check-input fs-4" type="checkbox" data-aluno-id="${id}" checked></div>
             </label>`;
-        if (lista.innerText.includes('Selecione')) lista.innerHTML = '';
+        
         lista.insertAdjacentHTML('beforeend', html);
         bootstrap.Modal.getInstance(document.getElementById('modalBuscaAlunoExtra')).hide();
         document.getElementById('btn-salvar-chamada').disabled = false;
     }
 });
 
-document.addEventListener('input', async (e) => {
+document.addEventListener('input', async function(e) {
     if (e.target.id === 'input-busca-aluno-extra') {
         const termo = e.target.value;
+        const resultadosDiv = document.getElementById('resultados-busca-extra');
         if (termo.length < 3) return;
-        const alunos = await api.request(`/portal-professor/alunos/buscar?nome=${termo}`);
-        document.getElementById('resultados-busca-extra').innerHTML = alunos.map(a => `
-            <button class="list-group-item list-group-item-action d-flex align-items-center btn-add-manual" 
-                    data-id="${a.id}" data-nome="${a.nome}" data-foto="${a.foto || ''}">
-                <img src="${a.foto || '/portal/images/default-avatar.png'}" class="rounded-circle me-2" width="30">
-                <span>${a.nome}</span>
-            </button>`).join('');
+
+        try {
+            const alunos = await api.request(`/portal-professor/alunos/buscar?nome=${termo}`);
+            resultadosDiv.innerHTML = alunos.map(a => `
+                <button type="button" class="list-group-item list-group-item-action d-flex align-items-center btn-resultado-aluno" 
+                        data-id="${a.id}" data-nome="${a.nome}" data-foto="${a.foto || ''}">
+                    <img src="${a.foto || '/portal/images/default-avatar.png'}" class="rounded-circle me-2" width="30">
+                    <span>${a.nome}</span>
+                </button>`).join('');
+        } catch (err) { console.error(err); }
     }
 });
 
