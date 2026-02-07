@@ -1255,66 +1255,70 @@ async function handleProfChamada() {
     };
 }
 
-// =====================================================================
-// LÓGICA GLOBAL "BLINDADA" PARA ALUNO EXTRA (RESOLVE O PROBLEMA DO BOTÃO)
-// =====================================================================
 
-document.addEventListener('click', function(e) {
-    // 1. Detecta o clique no botão "Extra"
-    const btnExtra = e.target.closest('#btn-add-extra');
-    if (btnExtra) {
-        e.preventDefault();
-        const modalEl = document.getElementById('modalBuscaAlunoExtra');
-        if (modalEl) {
-            // Inicializa e abre o modal usando o Bootstrap global
-            const modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
-            modalInstance.show();
-        }
-        return;
-    }
-
-    // 2. Detecta o clique em um aluno do resultado da busca
-    const btnAluno = e.target.closest('.btn-resultado-aluno');
-    if (btnAluno) {
-        const { id, nome, foto } = btnAluno.dataset;
-        const lista = document.getElementById('lista-chamada');
-        
-        if (lista.innerText.includes('Selecione')) lista.innerHTML = '';
-        if (document.querySelector(`[data-aluno-id="${id}"]`)) return alert("Aluno já está na lista.");
-
-        const html = `
-            <label class="list-group-item d-flex justify-content-between align-items-center p-3 border-warning">
-                <div class="d-flex align-items-center">
-                    <img src="${foto || '/portal/images/default-avatar.png'}" class="rounded-circle me-3" width="40" height="40">
-                    <div><h6 class="mb-0">${nome}</h6><span class="badge bg-warning text-dark">EXTRA</span></div>
-                </div>
-                <div class="form-check form-switch"><input class="form-check-input fs-4" type="checkbox" data-aluno-id="${id}" checked></div>
-            </label>`;
-        
-        lista.insertAdjacentHTML('beforeend', html);
-        bootstrap.Modal.getInstance(document.getElementById('modalBuscaAlunoExtra')).hide();
-        document.getElementById('btn-salvar-chamada').disabled = false;
-    }
-});
-
+// 1. Monitor de Digitação para Busca
 document.addEventListener('input', async function(e) {
     if (e.target.id === 'input-busca-aluno-extra') {
         const termo = e.target.value;
         const resultadosDiv = document.getElementById('resultados-busca-extra');
-        if (termo.length < 3) return;
+        
+        if (termo.length < 3) {
+            resultadosDiv.innerHTML = '';
+            return;
+        }
 
         try {
             const alunos = await api.request(`/portal-professor/alunos/buscar?nome=${termo}`);
             resultadosDiv.innerHTML = alunos.map(a => `
-                <button type="button" class="list-group-item list-group-item-action d-flex align-items-center btn-resultado-aluno" 
-                        data-id="${a.id}" data-nome="${a.nome}" data-foto="${a.foto || ''}">
-                    <img src="${a.foto || '/portal/images/default-avatar.png'}" class="rounded-circle me-2" width="30">
-                    <span>${a.nome}</span>
-                </button>`).join('');
-        } catch (err) { console.error(err); }
+                <button type="button" class="list-group-item list-group-item-action d-flex align-items-center" 
+                        onclick="window.adicionarExtraManual(${a.id}, '${a.nome}', '${a.foto || ''}')">
+                    <img src="${a.foto || '/portal/images/default-avatar.png'}" class="rounded-circle me-2" width="30" height="30" style="object-fit:cover">
+                    <span class="small">${a.nome}</span>
+                </button>
+            `).join('');
+        } catch (err) {
+            console.error("Erro na busca:", err);
+        }
     }
 });
 
+// 2. Função Global para Adicionar o Aluno (chamada pelo onclick acima)
+window.adicionarExtraManual = function(id, nome, foto) {
+    const lista = document.getElementById('lista-chamada');
+    if (!lista) return;
+
+    // Limpa a mensagem de "Selecione uma turma" se ela estiver lá
+    if (lista.innerText.includes('Selecione')) lista.innerHTML = '';
+
+    if (document.querySelector(`[data-aluno-id="${id}"]`)) {
+        alert("Aluno já está na lista.");
+        return;
+    }
+
+    const html = `
+        <label class="list-group-item d-flex align-items-center justify-content-between p-3 border-warning">
+            <div class="d-flex align-items-center">
+                <img src="${foto || '/portal/images/default-avatar.png'}" class="rounded-circle me-3" width="40" height="40" style="object-fit:cover">
+                <div>
+                    <h6 class="mb-0">${nome}</h6>
+                    <span class="badge bg-warning text-dark" style="font-size:0.6rem">EXTRA</span>
+                </div>
+            </div>
+            <div class="form-check form-switch">
+                <input class="form-check-input fs-4" type="checkbox" data-aluno-id="${id}" checked>
+            </div>
+        </label>`;
+
+    lista.insertAdjacentHTML('beforeend', html);
+    
+    // Fecha o modal usando o seletor nativo do Bootstrap
+    const modalEl = document.getElementById('modalBuscaAlunoExtra');
+    const modalInstance = bootstrap.Modal.getInstance(modalEl);
+    if (modalInstance) modalInstance.hide();
+    
+    // Ativa o botão de salvar
+    document.getElementById('btn-salvar-chamada').disabled = false;
+};
 
 
 // ---------------------------------------------------

@@ -1,5 +1,5 @@
-const CACHE_NAME = 'aluno-portal-v1.24'; // Mudei a versão para forçar atualização
-const IMAGES_CACHE_NAME = 'aluno-images-v3.6'; // Cache separado para imagens
+const CACHE_NAME = 'aluno-portal-v1.25'; // Mudei a versão para forçar atualização
+const IMAGES_CACHE_NAME = 'aluno-images-v3.7'; // Cache separado para imagens
 
 const urlsToCache = [
     '/portal',
