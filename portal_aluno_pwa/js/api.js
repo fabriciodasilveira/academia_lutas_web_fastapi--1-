@@ -33,6 +33,8 @@ const api = {
             throw error;
         }
     },
+
+    
     
     register: (data) => api.request('/portal/register', 'POST', data, false, false),
     getProfile: () => api.request('/portal/me'),
@@ -94,5 +96,9 @@ const api = {
             console.error('API Error:', error);
             throw error;
         }
+    },
+
+    async saveFcmToken(token) {
+        return await this.request('/usuarios/register-token', 'POST', { token });
     }
 };

@@ -19,6 +19,8 @@ class Usuario(Base):
     role = Column(String, nullable=False, default="pendente")
     
     ultimo_acesso = Column(DateTime, nullable=True)
+    
+    fcm_tokenfcm_token = Column(String, nullable=True)
 
     # 3. Relação revertida para "um-para-um" (aluno, singular)
     aluno = relationship("Aluno", back_populates="usuario", uselist=False)

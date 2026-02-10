@@ -1,5 +1,5 @@
-const CACHE_NAME = 'aluno-portal-v1.26'; // Mudei a versão para forçar atualização
-const IMAGES_CACHE_NAME = 'portal-aluno-v3.8'; // Cache separado para imagens
+const CACHE_NAME = 'aluno-portal-v1.27'; // Mudei a versão para forçar atualização
+const IMAGES_CACHE_NAME = 'portal-aluno-v3.9'; // Cache separado para imagens
 
 const urlsToCache = [
     '/portal',
@@ -77,4 +77,26 @@ self.addEventListener('fetch', event => {
                 return fetch(event.request);
             })
     );
+});
+
+
+// No final do seu sw.js existente
+self.addEventListener('push', (event) => {
+    const data = event.data ? event.data.json() : { title: 'Academia', body: 'Nova mensagem!' };
+    
+    const options = {
+        body: data.body,
+        icon: '/portal/images/icone.png',
+        badge: '/portal/images/icone.png',
+        data: { url: data.url || '/portal/#/dashboard' }
+    };
+
+    event.waitUntil(
+        self.registration.showNotification(data.title, options)
+    );
+});
+
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+    event.waitUntil(clients.openWindow(event.notification.data.url));
 });

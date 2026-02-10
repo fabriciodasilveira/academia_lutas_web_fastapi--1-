@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_ # <--- IMPORTANTE: Import para a busca
 
 from src import database, models, schemas, auth
+from models.usuario import Usuario
+from src.auth import get_current_user
 from src.auth import get_password_hash, get_admin_user
 
 router = APIRouter(
@@ -129,3 +131,15 @@ def delete_user(user_id: int, db: Session = Depends(database.get_db)):
     db.delete(db_user)
     db.commit()
     return None
+
+
+
+@router.post("/register-token")
+async def register_fcm_token(data: dict, current_user: Usuario = Depends(get_current_user), db: Session = Depends(database.get_db)):
+    token = data.get("token")
+    if not token:
+        raise HTTPException(status_code=400, detail="Token não fornecido")
+    
+    current_user.fcm_token = token
+    db.commit()
+    return {"status": "success", "message": "Token registrado"}
