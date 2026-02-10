@@ -587,3 +587,4 @@ watchfiles==1.1.0
 websockets==15.0.1
 Werkzeug==3.0.1
 whitenoise==6.11.0
+firebase-admin==6.5.0
