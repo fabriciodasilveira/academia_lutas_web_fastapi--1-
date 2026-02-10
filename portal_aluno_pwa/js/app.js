@@ -1434,23 +1434,24 @@ window.adicionarExtraManual = function(id, nome, foto) {
 })();
 
 
-// Adicione esta função ao final do app.js
 async function setupPushNotifications() {
     try {
-        // Verifica se o navegador suporta
-        if (!('Notification' in window)) return;
-
+        if (!('Notification' in window) || !window.fcm) return;
+        
         const permission = await Notification.requestPermission();
         if (permission === 'granted') {
-            // Aqui você usará o SDK do Firebase que será importado no index.html
-            // Por enquanto, imagine que pegamos o token:
-            const token = await obterTokenFirebase(); 
-            await api.saveFcmToken(token);
-            console.log("Notificações configuradas!");
+            const token = await window.fcm.getToken(window.fcm.messaging, { 
+                vapidKey: window.fcm.vapidKey 
+            });
+            
+            if (token) {
+                console.log("Token FCM Gerado:", token);
+                // Envia o token legítimo para o seu banco
+                await api.request('/usuarios/register-token', 'POST', { token: token });
+            }
         }
     } catch (error) {
         console.error("Erro ao configurar notificações:", error);
     }
-}
 
 // Chame essa função após o login bem-sucedido ou no router do dashboard
