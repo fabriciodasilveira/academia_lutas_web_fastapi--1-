@@ -6,9 +6,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_ # <--- IMPORTANTE: Import para a busca
 
 from src import database, models, schemas, auth
-from models.usuario import Usuario
-from src.auth import get_current_user
-from src.auth import get_password_hash, get_admin_user
+from src.models.usuario import Usuario
+from src.auth import get_password_hash, get_admin_user, get_current_user
 
 router = APIRouter(
     prefix="/api/v1/usuarios",
