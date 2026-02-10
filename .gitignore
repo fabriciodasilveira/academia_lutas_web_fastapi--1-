@@ -57,3 +57,5 @@ docs/_build/
 htmlcov/
 *.db
 database/Uteis.txt
+
+serviceAccountKey.json
