@@ -1453,5 +1453,5 @@ async function setupPushNotifications() {
     } catch (error) {
         console.error("Erro ao configurar notificações:", error);
     }
-
+}
 // Chame essa função após o login bem-sucedido ou no router do dashboard
