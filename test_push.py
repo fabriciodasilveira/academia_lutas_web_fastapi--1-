@@ -18,7 +18,7 @@ if cert_json:
     cred = credentials.Certificate(cert_info)
 else:
     # Fallback local se o arquivo existir
-    cred = credentials.Certificate("src/serviceAccountKey.json")
+    cred = credentials.Certificate("serviceAccountKey.json")
 
 if not firebase_admin._apps:
     firebase_admin.initialize_app(cred)
