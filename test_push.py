@@ -2,41 +2,53 @@ import firebase_admin
 from firebase_admin import credentials, messaging
 from sqlalchemy.orm import Session
 from src.database import SessionLocal
-from src.models.usuario import Usuario
 import os
+import json
 
-# 1. Inicializa o Firebase
-# Garanta que o arquivo serviceAccountKey.json esteja na mesma pasta ou ajuste o caminho
-cred = credentials.Certificate("serviceAccountKey.json")
-firebase_admin.initialize_app(cred)
+# --- ADICIONE ESTES IMPORTS PARA REGISTRAR OS MODELOS ---
+from src.models.usuario import Usuario
+from src.models.aluno import Aluno  # Importar explicitamente para o SQLAlchemy localizá-lo
+# -------------------------------------------------------
+
+# 1. Inicializa o Firebase via Variável de Ambiente (Correção da Chave)
+cert_json = os.environ.get('FIREBASE_SERVICE_ACCOUNT_JSON')
+if cert_json:
+    cert_info = json.loads(cert_json)
+    cert_info['private_key'] = cert_info['private_key'].replace('\\n', '\n')
+    cred = credentials.Certificate(cert_info)
+else:
+    # Fallback local se o arquivo existir
+    cred = credentials.Certificate("src/serviceAccountKey.json")
+
+if not firebase_admin._apps:
+    firebase_admin.initialize_app(cred)
 
 def enviar_notificacao_teste(username, titulo, mensagem):
     db = SessionLocal()
     try:
-        # 2. Busca o usuário e o token no banco
+        # Busca o usuário
         user = db.query(Usuario).filter(Usuario.username == username).first()
         
         if not user or not user.fcm_token:
-            print(f"Erro: Usuário '{username}' não encontrado ou não possui fcm_token.")
+            print(f"Erro: Usuário '{username}' não encontrado ou sem fcm_token.")
             return
 
-        print(f"Enviando notificação para {username} (Token: {user.fcm_token[:15]}...)")
+        print(f"Token encontrado: {user.fcm_token[:20]}...")
 
-        # 3. Monta a mensagem (Estrutura idêntica à que o sw.js espera)
+        # Monta a mensagem
         message = messaging.Message(
             notification=messaging.Notification(
                 title=titulo,
                 body=mensagem,
             ),
             data={
-                'url': '/portal/#/dashboard', # Página que abrirá ao clicar
+                'url': '/portal/#/dashboard',
             },
             token=user.fcm_token,
         )
 
-        # 4. Envia
         response = messaging.send(message)
-        print('Sucesso! Mensagem enviada com ID:', response)
+        print('Sucesso! ID da mensagem:', response)
 
     except Exception as e:
         print('Erro ao enviar push:', str(e))
@@ -44,5 +56,4 @@ def enviar_notificacao_teste(username, titulo, mensagem):
         db.close()
 
 if __name__ == "__main__":
-    # Substitua 'admin' pelo seu username de teste que registrou o token
-    enviar_notificacao_teste('admin', 'Academia AZE', 'Sua primeira notificação real funcionou! 🚀')
+    enviar_notificacao_teste('admin', 'Teste Academia', 'O circuito completo funcionou! 🥋')
