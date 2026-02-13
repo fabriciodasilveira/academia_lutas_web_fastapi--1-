@@ -136,7 +136,7 @@ def delete_user(user_id: int, db: Session = Depends(database.get_db)):
 @router.post("/register-token")
 async def register_fcm_token(
     data: dict, 
-    db: Session = Depends(get_db),
+    db: Session = Depends(database.get_db),
     current_user: Usuario = Depends(get_current_user)
 ):
     token = data.get("token")
