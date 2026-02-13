@@ -1,7 +1,7 @@
 const CACHE_NAME = 'aluno-portal-v1.27'; // Mudei a versão para forçar atualização
 const IMAGES_CACHE_NAME = 'portal-aluno-v3.9'; // Cache separado para imagens
 
-// Importa o SDK do Firebase para Service Workers
+// Importa os scripts necessários
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js');
 
@@ -13,6 +13,17 @@ firebase.initializeApp({
 });
 
 const messaging = firebase.messaging();
+
+// Captura a mensagem quando o app está fechado
+messaging.onBackgroundMessage((payload) => {
+    const notificationTitle = payload.notification.title;
+    const notificationOptions = {
+        body: payload.notification.body,
+        icon: '/portal/images/icone.png',
+        data: { url: payload.data.url }
+    };
+    self.registration.showNotification(notificationTitle, notificationOptions);
+});
 
 const urlsToCache = [
     '/portal',

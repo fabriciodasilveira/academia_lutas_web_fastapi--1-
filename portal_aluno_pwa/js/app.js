@@ -1437,21 +1437,30 @@ window.adicionarExtraManual = function(id, nome, foto) {
 async function setupPushNotifications() {
     try {
         if (!('Notification' in window) || !window.fcm) return;
-        
+
         const permission = await Notification.requestPermission();
         if (permission === 'granted') {
-            const token = await window.fcm.getToken(window.fcm.messaging, { 
-                vapidKey: window.fcm.vapidKey 
-            });
             
+            // 1. Registramos o seu Service Worker manualmente (ajustando o caminho para o seu projeto)
+            const registration = await navigator.serviceWorker.register('/portal/sw.js');
+            
+            // 2. Passamos o registro para o getToken. 
+            // Isso IMPEDE o erro 404, pois o Firebase para de procurar o arquivo padrão.
+            const token = await window.fcm.getToken(window.fcm.messaging, { 
+                vapidKey: window.fcm.vapidKey,
+                serviceWorkerRegistration: registration 
+            });
+
             if (token) {
-                console.log("Token FCM Gerado:", token);
-                // Envia o token legítimo para o seu banco
-                await api.request('/usuarios/register-token', 'POST', { token: token });
+                console.log("✅ TOKEN GERADO COM SUCESSO:", token);
+                
+                // Envia para o seu banco de dados
+                const response = await api.request('/usuarios/register-token', 'POST', { token: token });
+                console.log("💾 Resposta do servidor:", response);
             }
         }
     } catch (error) {
-        console.error("Erro ao configurar notificações:", error);
+        console.error("❌ Erro ao configurar notificações:", error);
     }
 }
 // Chame essa função após o login bem-sucedido ou no router do dashboard
