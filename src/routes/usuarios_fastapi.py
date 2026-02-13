@@ -142,3 +142,12 @@ async def register_fcm_token(data: dict, current_user: Usuario = Depends(get_cur
     current_user.fcm_token = token
     db.commit()
     return {"status": "success"}
+
+@router.post("/register-token")
+async def register_token(data: dict, current_user: Usuario = Depends(get_current_user), db: Session = Depends(database.get_db)):
+    token = data.get("token")
+    if token:
+        current_user.fcm_token = token
+        db.commit()
+        return {"status": "success", "message": "Token atualizado"}
+    return {"status": "error", "message": "Token não enviado"}, 400

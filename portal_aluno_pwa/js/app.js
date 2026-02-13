@@ -1434,6 +1434,38 @@ window.adicionarExtraManual = function(id, nome, foto) {
 })();
 
 
+// Adicione esta função ao final do seu app.js
+async function sincronizarTokenPush() {
+    try {
+        // 1. Só tenta se o Firebase carregou e o usuário está logado
+        if (!window.fcm || !localStorage.getItem('accessToken')) return;
+
+        // 2. Registra/Pega o Service Worker
+        const registration = await navigator.serviceWorker.register('/portal/sw.js');
+        
+        // 3. Pede o Token ao Google
+        const token = await window.fcm.getToken(window.fcm.messaging, { 
+            vapidKey: window.fcm.vapidKey,
+            serviceWorkerRegistration: registration 
+        });
+
+        if (token) {
+            console.log("🔄 Sincronizando Token Push...");
+            // 4. Envia para o seu banco via API
+            await api.request('/usuarios/register-token', 'POST', { token: token });
+        }
+    } catch (error) {
+        console.warn("Não foi possível sincronizar o token de notificação:", error);
+    }
+}
+
+// Chame a função dentro do seu window.addEventListener('load', ...)
+window.addEventListener('load', () => {
+    // ... seu código de registro de SW existente ...
+    sincronizarTokenPush(); // Adicione isso aqui!
+    router();
+});
+
 async function setupPushNotifications() {
     try {
         if (!('Notification' in window) || !window.fcm) {
