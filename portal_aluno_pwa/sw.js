@@ -14,15 +14,27 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// Captura a mensagem quando o app está fechado
 messaging.onBackgroundMessage((payload) => {
-    const notificationTitle = payload.notification.title;
+    console.log('Mensagem recebida em background: ', payload);
+
+    // Prioriza o título/corpo que vem do Python, ou usa um padrão
+    const notificationTitle = payload.notification?.title || "AZE Studio";
+    
     const notificationOptions = {
-        body: payload.notification.body,
-        icon: '/portal/images/icone.png',
-        data: { url: payload.data.url }
+        body: payload.notification?.body || "Você tem uma nova atualização!",
+        icon: '/portal/images/icone.png', // O ícone da academia
+        badge: '/portal/images/icone.png', // Ícone pequeno que aparece na barra de status (Android)
+        vibrate: [200, 100, 200], // Vibração para celular
+        data: {
+            url: payload.data?.url || '/portal/#/dashboard'
+        },
+        // Adiciona um botão de ação rápido
+        actions: [
+            { action: 'open', title: 'Abrir App' }
+        ]
     };
-    self.registration.showNotification(notificationTitle, notificationOptions);
+
+    return self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
 const urlsToCache = [
