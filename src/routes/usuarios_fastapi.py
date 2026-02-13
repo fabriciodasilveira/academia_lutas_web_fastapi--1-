@@ -133,36 +133,22 @@ def delete_user(user_id: int, db: Session = Depends(database.get_db)):
 
 
 
-@router.post("/register-token")
-async def register_fcm_token(
-    data: dict, 
-    db: Session = Depends(database.get_db),
-    current_user: Usuario = Depends(get_current_user)
-):
-    token = data.get("token")
-    if not token:
-        raise HTTPException(status_code=400, detail="Token não fornecido")
-    
-    # Atualiza o campo fcm_token do usuário logado
-    current_user.fcm_token = token
-    db.add(current_user) # Garante que o objeto está na sessão
-    db.commit()          # Grava no PostgreSQL
-    
-    return {"status": "success", "message": "Token salvo com sucesso"}
+# No final de src/routes/usuarios_fastapi.py
 
 @router.post("/register-token")
-async def register_fcm_token(
+def register_fcm_token(
     data: dict, 
     db: Session = Depends(database.get_db),
-    current_user: Usuario = Depends(get_current_user) # APENAS isso, sem travas de admin
+    # Use get_current_active_user para garantir que apenas usuários logados e ativos registrem token
+    current_user: models.usuario.Usuario = Depends(auth.get_current_active_user) 
 ):
     token = data.get("token")
     if not token:
         raise HTTPException(status_code=400, detail="Token não fornecido")
     
-    # Se houver alguma linha aqui testando if current_user.role != 'admin', REMOVA.
-    
+    # Atualiza o token do usuário logado
     current_user.fcm_token = token
+    db.add(current_user)
     db.commit()
     
-    return {"status": "success", "message": "Token atualizado com sucesso"}
+    return {"status": "success", "message": "Token registrado com sucesso"}

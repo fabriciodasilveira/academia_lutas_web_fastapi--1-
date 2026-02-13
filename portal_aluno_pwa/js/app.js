@@ -999,9 +999,9 @@ window.addEventListener('load', () => {
         navigator.serviceWorker.register('/portal/sw.js')
             .then(reg => {
                 console.log('SW registrado com sucesso');
-                // Tenta sincronizar o token assim que o SW estiver pronto, se estiver logado
+                // CORREÇÃO: Nome da função corrigido aqui
                 if (localStorage.getItem('accessToken')) {
-                    sincronizarTokenPush();
+                    setupPushNotifications(); 
                 }
             })
             .catch(console.error);
