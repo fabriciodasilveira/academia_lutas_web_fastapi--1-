@@ -136,18 +136,19 @@ def delete_user(user_id: int, db: Session = Depends(database.get_db)):
 @router.post("/register-token")
 async def register_fcm_token(
     data: dict, 
-    db: Session = Depends(database.get_db),
+    db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user)
 ):
     token = data.get("token")
     if not token:
         raise HTTPException(status_code=400, detail="Token não fornecido")
     
-    # Atualiza o token no objeto do usuário
+    # Atualiza o campo fcm_token do usuário logado
     current_user.fcm_token = token
-    db.commit() # Salva no Postgres
+    db.add(current_user) # Garante que o objeto está na sessão
+    db.commit()          # Grava no PostgreSQL
     
-    return {"status": "success", "message": "Token atualizado com sucesso"}
+    return {"status": "success", "message": "Token salvo com sucesso"}
 
 @router.post("/register-token")
 async def register_token(data: dict, current_user: Usuario = Depends(get_current_user), db: Session = Depends(database.get_db)):
