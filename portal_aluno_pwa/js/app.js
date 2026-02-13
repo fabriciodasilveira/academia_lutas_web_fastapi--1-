@@ -994,21 +994,31 @@ async function pagarEventoOnline(event, id) { await exibirModalPix(`/pagamentos/
 // Inicialização
 window.addEventListener('hashchange', router);
 window.addEventListener('load', () => {
-    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/portal/sw.js').catch(console.error);
+    // 1. Registro do Service Worker
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/portal/sw.js')
+            .then(reg => {
+                console.log('SW registrado com sucesso');
+                // Tenta sincronizar o token assim que o SW estiver pronto, se estiver logado
+                if (localStorage.getItem('accessToken')) {
+                    sincronizarTokenPush();
+                }
+            })
+            .catch(console.error);
+    }
     
-    document.getElementById('logout-button').addEventListener('click', () => {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('userRole');
-        window.location.hash = '/login';
-
-        if (localStorage.getItem('accessToken')) {
-                sincronizarTokenPush();
-        }
-    });
+    // 2. Configuração do Logout (Corrigido para não tentar sincronizar ao sair)
+    const logoutBtn = document.getElementById('logout-button');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('userRole');
+            window.location.hash = '/login';
+        });
+    }
     
     router();
 });
-
 
 //FUNCOES DE VIDEO
 
