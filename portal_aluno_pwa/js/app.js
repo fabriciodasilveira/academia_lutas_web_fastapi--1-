@@ -1436,31 +1436,36 @@ window.adicionarExtraManual = function(id, nome, foto) {
 
 async function setupPushNotifications() {
     try {
-        if (!('Notification' in window) || !window.fcm) return;
+        if (!('Notification' in window) || !window.fcm) {
+            console.error("Firebase não inicializado ou navegador não suporta notificações.");
+            return;
+        }
 
+        // 1. Solicita permissão (O navegador abrirá o pop-up)
         const permission = await Notification.requestPermission();
+        
         if (permission === 'granted') {
-            
-            // 1. Registramos o seu Service Worker manualmente (ajustando o caminho para o seu projeto)
+            console.log("Permissão concedida. Registrando Service Worker...");
+
+            // 2. Registra o seu SW manualmente para evitar o erro 404
             const registration = await navigator.serviceWorker.register('/portal/sw.js');
             
-            // 2. Passamos o registro para o getToken. 
-            // Isso IMPEDE o erro 404, pois o Firebase para de procurar o arquivo padrão.
+            // 3. Obtém o token passando o registro do SW
             const token = await window.fcm.getToken(window.fcm.messaging, { 
                 vapidKey: window.fcm.vapidKey,
                 serviceWorkerRegistration: registration 
             });
 
             if (token) {
-                console.log("✅ TOKEN GERADO COM SUCESSO:", token);
-                
-                // Envia para o seu banco de dados
-                const response = await api.request('/usuarios/register-token', 'POST', { token: token });
-                console.log("💾 Resposta do servidor:", response);
+                console.log("✅ TOKEN GERADO:", token);
+                // Envia para o seu backend
+                await api.request('/usuarios/register-token', 'POST', { token: token });
+                alert("Notificações ativadas com sucesso!");
             }
+        } else {
+            alert("Você bloqueou as notificações. Ative-as nas configurações do navegador (ícone de cadeado).");
         }
     } catch (error) {
-        console.error("❌ Erro ao configurar notificações:", error);
+        console.error("❌ Erro detalhado:", error);
     }
 }
-// Chame essa função após o login bem-sucedido ou no router do dashboard
