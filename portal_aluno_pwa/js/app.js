@@ -993,18 +993,19 @@ async function pagarEventoOnline(event, id) { await exibirModalPix(`/pagamentos/
 
 // Inicialização
 window.addEventListener('hashchange', router);
-// --- INICIALIZAÇÃO ---
 window.addEventListener('load', () => {
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/portal/sw.js').then(reg => {
-            console.log('DEBUG: Service Worker Registrado com sucesso.');
-            
-            // Se o usuário estiver logado, dispara a sincronização
-            if (localStorage.getItem('accessToken')) {
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/portal/sw.js').catch(console.error);
+    
+    document.getElementById('logout-button').addEventListener('click', () => {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('userRole');
+        window.location.hash = '/login';
+
+        if (localStorage.getItem('accessToken')) {
                 sincronizarTokenPush();
-            }
-        });
-    }
+        }
+    });
+    
     router();
 });
 
@@ -1437,37 +1438,8 @@ window.adicionarExtraManual = function(id, nome, foto) {
 })();
 
 
-// --- FUNÇÃO DE SINCRONIZAÇÃO COM ALERTAS DE DEBUG ---
-async function sincronizarTokenPush() {
-    console.log("DEBUG: Tentando sincronizar Push...");
-    try {
-        if (!window.fcm) {
-            console.error("DEBUG: Objeto window.fcm não encontrado. Verifique o index.html");
-            return;
-        }
 
-        const registration = await navigator.serviceWorker.ready;
-        const token = await window.fcm.getToken(window.fcm.messaging, { 
-            vapidKey: window.fcm.vapidKey,
-            serviceWorkerRegistration: registration 
-        });
 
-        if (token) {
-            console.log("DEBUG: Token FCM gerado:", token);
-            
-            // Tenta enviar para o servidor
-            const res = await api.request('/usuarios/register-token', 'POST', { token: token });
-            
-            if (res.status === "success") {
-                console.log("✅ SUCESSO NO BACKEND:", res.message);
-            } else {
-                console.error("❌ ERRO NO BACKEND:", res);
-            }
-        }
-    } catch (error) {
-        console.error("DEBUG: Falha total na sincronização:", error);
-    }
-}
 
 async function setupPushNotifications() {
     try {
