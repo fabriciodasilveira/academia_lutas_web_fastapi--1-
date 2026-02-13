@@ -134,14 +134,22 @@ def delete_user(user_id: int, db: Session = Depends(database.get_db)):
 
 
 @router.post("/register-token")
-async def register_fcm_token(data: dict, current_user: Usuario = Depends(get_current_user), db: Session = Depends(database.get_db)):
+async def register_fcm_token(
+    data: dict, 
+    current_user: Usuario = Depends(get_current_user), 
+    db: Session = Depends(database.get_db)
+):
     token = data.get("token")
     if not token:
-        return {"status": "error", "message": "Token missing"}
+        return {"status": "error", "message": "Token não fornecido"}
     
+    # Atualiza o token do usuário logado
     current_user.fcm_token = token
-    db.commit()
-    return {"status": "success"}
+    db.add(current_user)
+    db.commit() # ESSA LINHA É CRUCIAL
+    db.refresh(current_user)
+    
+    return {"status": "success", "token_registrado": token}
 
 @router.post("/register-token")
 async def register_token(data: dict, current_user: Usuario = Depends(get_current_user), db: Session = Depends(database.get_db)):

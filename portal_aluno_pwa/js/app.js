@@ -1001,7 +1001,7 @@ window.addEventListener('load', () => {
         localStorage.removeItem('userRole');
         window.location.hash = '/login';
     });
-    
+    sincronizarTokenPush()
     router();
 });
 
@@ -1434,37 +1434,35 @@ window.adicionarExtraManual = function(id, nome, foto) {
 })();
 
 
-// Adicione esta função ao final do seu app.js
 async function sincronizarTokenPush() {
     try {
-        // 1. Só tenta se o Firebase carregou e o usuário está logado
-        if (!window.fcm || !localStorage.getItem('accessToken')) return;
+        const tokenAcesso = localStorage.getItem('accessToken');
+        if (!window.fcm || !tokenAcesso) return;
 
-        // 2. Registra/Pega o Service Worker
+        // 1. Registra o SW e obtém o Token do Firebase
         const registration = await navigator.serviceWorker.register('/portal/sw.js');
-        
-        // 3. Pede o Token ao Google
-        const token = await window.fcm.getToken(window.fcm.messaging, { 
+        const tokenFCM = await window.fcm.getToken(window.fcm.messaging, { 
             vapidKey: window.fcm.vapidKey,
             serviceWorkerRegistration: registration 
         });
 
-        if (token) {
-            console.log("🔄 Sincronizando Token Push...");
-            // 4. Envia para o seu banco via API
-            await api.request('/usuarios/register-token', 'POST', { token: token });
+        if (tokenFCM) {
+            console.log("Token FCM gerado:", tokenFCM);
+            
+            // 2. Envia para o seu backend FastAPI
+            const res = await api.request('/usuarios/register-token', 'POST', { token: tokenFCM });
+            
+            if (res.status === "success") {
+                console.log("✅ Token gravado com sucesso no banco de dados!");
+            } else {
+                console.error("❌ O servidor recebeu o token mas não gravou:", res);
+            }
         }
     } catch (error) {
-        console.warn("Não foi possível sincronizar o token de notificação:", error);
+        console.error("Erro na sincronização do Push:", error);
     }
 }
 
-// Chame a função dentro do seu window.addEventListener('load', ...)
-window.addEventListener('load', () => {
-    // ... seu código de registro de SW existente ...
-    sincronizarTokenPush(); // Adicione isso aqui!
-    router();
-});
 
 async function setupPushNotifications() {
     try {
