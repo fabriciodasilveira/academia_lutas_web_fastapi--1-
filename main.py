@@ -132,6 +132,7 @@ app.include_router(usuarios_fastapi.router)
 app.include_router(portal_aluno_fastapi.router)
 app.include_router(portal_professor_fastapi.router)
 app.include_router(conteudos_fastapi.router)
+app.include_router(usuarios_fastapi.router, prefix="/usuarios", tags=["Usuarios"])
 
 
 

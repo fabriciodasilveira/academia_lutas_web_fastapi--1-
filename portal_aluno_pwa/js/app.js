@@ -1000,8 +1000,12 @@ window.addEventListener('load', () => {
         localStorage.removeItem('accessToken');
         localStorage.removeItem('userRole');
         window.location.hash = '/login';
+
+        if (localStorage.getItem('accessToken')) {
+                sincronizarTokenPush();
+        }
     });
-    sincronizarTokenPush()
+    
     router();
 });
 
@@ -1434,32 +1438,30 @@ window.adicionarExtraManual = function(id, nome, foto) {
 })();
 
 
+// A FUNÇÃO COMPLETA PARA VOCÊ COPIAR
 async function sincronizarTokenPush() {
+    console.log("Iniciando sincronização de Push...");
     try {
-        const tokenAcesso = localStorage.getItem('accessToken');
-        if (!window.fcm || !tokenAcesso) return;
+        if (!window.fcm) {
+            console.warn("FCM ainda não carregou no index.html");
+            return;
+        }
 
-        // 1. Registra o SW e obtém o Token do Firebase
-        const registration = await navigator.serviceWorker.register('/portal/sw.js');
-        const tokenFCM = await window.fcm.getToken(window.fcm.messaging, { 
+        const registration = await navigator.serviceWorker.ready;
+        const token = await window.fcm.getToken(window.fcm.messaging, { 
             vapidKey: window.fcm.vapidKey,
             serviceWorkerRegistration: registration 
         });
 
-        if (tokenFCM) {
-            console.log("Token FCM gerado:", tokenFCM);
-            
-            // 2. Envia para o seu backend FastAPI
-            const res = await api.request('/usuarios/register-token', 'POST', { token: tokenFCM });
-            
-            if (res.status === "success") {
-                console.log("✅ Token gravado com sucesso no banco de dados!");
-            } else {
-                console.error("❌ O servidor recebeu o token mas não gravou:", res);
-            }
+        if (token) {
+            console.log("Token FCM obtido:", token);
+            // IMPORTANTE: O caminho deve ser /usuarios/register-token 
+            // porque definimos o prefixo "/usuarios" no main.py
+            const res = await api.request('/usuarios/register-token', 'POST', { token: token });
+            console.log("Resposta do servidor:", res);
         }
     } catch (error) {
-        console.error("Erro na sincronização do Push:", error);
+        console.error("Erro fatal na sincronização:", error);
     }
 }
 
