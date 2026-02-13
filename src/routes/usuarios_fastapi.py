@@ -151,10 +151,18 @@ async def register_fcm_token(
     return {"status": "success", "message": "Token salvo com sucesso"}
 
 @router.post("/register-token")
-async def register_token(data: dict, current_user: Usuario = Depends(get_current_user), db: Session = Depends(database.get_db)):
+async def register_fcm_token(
+    data: dict, 
+    db: Session = Depends(database.get_db),
+    current_user: Usuario = Depends(get_current_user) # APENAS isso, sem travas de admin
+):
     token = data.get("token")
-    if token:
-        current_user.fcm_token = token
-        db.commit()
-        return {"status": "success", "message": "Token atualizado"}
-    return {"status": "error", "message": "Token não enviado"}, 400
+    if not token:
+        raise HTTPException(status_code=400, detail="Token não fornecido")
+    
+    # Se houver alguma linha aqui testando if current_user.role != 'admin', REMOVA.
+    
+    current_user.fcm_token = token
+    db.commit()
+    
+    return {"status": "success", "message": "Token atualizado com sucesso"}
