@@ -133,22 +133,18 @@ def delete_user(user_id: int, db: Session = Depends(database.get_db)):
 
 
 
-# No final de src/routes/usuarios_fastapi.py
-
 @router.post("/register-token")
 def register_fcm_token(
     data: dict, 
     db: Session = Depends(database.get_db),
-    # Use get_current_active_user para garantir que apenas usuários logados e ativos registrem token
-    current_user: models.usuario.Usuario = Depends(auth.get_current_active_user) 
+    current_user: Usuario = Depends(database.get_current_active_user) # Verifica se está logado
 ):
     token = data.get("token")
     if not token:
         raise HTTPException(status_code=400, detail="Token não fornecido")
     
-    # Atualiza o token do usuário logado
     current_user.fcm_token = token
     db.add(current_user)
     db.commit()
     
-    return {"status": "success", "message": "Token registrado com sucesso"}
+    return {"status": "success", "message": "Token salvo com sucesso"}
