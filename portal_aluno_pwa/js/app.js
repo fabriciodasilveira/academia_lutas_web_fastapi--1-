@@ -530,7 +530,7 @@ async function handleBeneficiosPage() {
     const list = document.getElementById('partners-list');
     const mensagemWhatsapp = encodeURIComponent("Sou da Academia AZE Studio e vim pelo clube de descontos para parceiros.");
     const partners = [
-         { logo: '/portal/images/endocrinologia-ArthurMalhano.png', nome: 'Dr Arthur Malhano', desconto: 'Desconto de 25% de desconto.', whatsapp: '5532984143651' },
+         { logo: '/portal/images/endocrinologia-ArthurMalhano.png', nome: 'Dr Arthur Malhano', desconto: 'Desconto de 25% nas consultas.', whatsapp: '5532984143651' },
          { logo: '/portal/images/bull.png', nome: 'Arthur Carvalho Duarte - ARQUITETURA', desconto: 'Desconto de 20% em seu projeto.', whatsapp: '5532988810989' },
          { logo: '/portal/images/alexandria.png', nome: 'Alexandria Hamburgueria', desconto: '20% de desconto em todos os Rodízios.', whatsapp: '5532933003620' },
          { logo: '/portal/images/lucasStarck.png', nome: 'Lucas Starck - Nutricionista', desconto: 'Consulta com 50% de desconto.', whatsapp: '5532998180941' },
