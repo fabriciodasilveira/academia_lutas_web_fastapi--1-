@@ -1,6 +1,7 @@
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.orm import relationship
 from src.database import Base
+
 
 class Usuario(Base):
     __tablename__ = "usuarios"
@@ -16,6 +17,8 @@ class Usuario(Base):
     nome = Column(String)
     hashed_password = Column(String, nullable=True) 
     role = Column(String, nullable=False, default="pendente")
+    
+    ultimo_acesso = Column(DateTime, nullable=True)
 
     # 3. Relação revertida para "um-para-um" (aluno, singular)
     aluno = relationship("Aluno", back_populates="usuario", uselist=False)

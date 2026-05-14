@@ -8,6 +8,7 @@ from src.schemas import usuario as schemas_usuario # Importa especificamente e d
 from src import auth, database, models, schemas
 import os # Importe o 'os' para usar variáveis de ambiente
 import logging
+from datetime import datetime
 
 
 router = APIRouter(
@@ -22,6 +23,11 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     # Trocamos get_user (por email) para get_user_by_username
     user = auth.get_user_by_username(db, username=form_data.username)
     # --- FIM DA ALTERAÇÃO ---
+    
+    # Grava acesso do usuário no banco de dados
+    user.ultimo_acesso = datetime.now()
+    db.commit()
+    # Fim do commit de acesso do usuário
 
     if not user or not user.hashed_password or not auth.verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
@@ -45,7 +51,7 @@ async def login_google(request: Request):
     Redireciona o usuário para a página de login do Google.
     Armazena a origem (PWA ou Flask) na sessão para o callback.
     """
-    backend_url = os.getenv("BACKEND_URL", "http://localhost:8000")
+    backend_url = os.getenv("BACKEND_URL", "http://localhost:8005")
     redirect_uri = f"{backend_url}/api/v1/auth/callback/google"
 
     # Guarda a origem da solicitação na sessão do usuário

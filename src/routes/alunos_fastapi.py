@@ -7,7 +7,7 @@ import shutil
 from typing import List, Optional
 from pathlib import Path
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Body
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
 import logging
@@ -28,6 +28,11 @@ from src.image_utils import process_avatar_image
 from src.models import usuario as models_usuario
 from src import auth
 import re
+from src.models.graduacao import Graduacao 
+from src.models.presenca import Presenca  
+from src.models.usuario import Usuario
+from sqlalchemy import func      
+from src.models.inscricao import Inscricao          
 
 
 router = APIRouter(
@@ -406,30 +411,108 @@ def get_aluno_historico(aluno_id: int, db: Session = Depends(get_db)):
 @router.get("/{aluno_id}/status-detalhado")
 def get_aluno_status_detalhado(aluno_id: int, db: Session = Depends(get_db)):
     """
-    Retorna a situação geral e o status financeiro de um aluno.
+    Retorna a situação geral, status financeiro e AGORA AS ESTATÍSTICAS.
     """
     aluno = db.query(Aluno).filter(Aluno.id == aluno_id).first()
     if not aluno:
         raise HTTPException(status_code=404, detail="Aluno não encontrado")
 
-    # 1. Verifica a Situação Geral (se tem alguma matrícula ativa)
-    matricula_ativa = db.query(Matricula).filter(
-        Matricula.aluno_id == aluno_id,
-        Matricula.ativa == True
-    ).first()
-    
+    # 1. Situação Geral
+    matricula_ativa = db.query(Matricula).filter(Matricula.aluno_id == aluno_id, Matricula.ativa == True).first()
     situacao_geral = "Ativo" if matricula_ativa else "Inativo"
 
-    # 2. Verifica o Status da Mensalidade
+    # 2. Status Financeiro
     mensalidades_pendentes = db.query(func.sum(Mensalidade.valor)).filter(
-        Mensalidade.aluno_id == aluno_id,
-        Mensalidade.status == 'pendente'
+        Mensalidade.aluno_id == aluno_id, Mensalidade.status == 'pendente'
     ).scalar() or 0.0
-
     status_mensalidade = "Em dia" if mensalidades_pendentes == 0 else "Pendente"
+
+    # 3. Estatísticas (CÓDIGO NOVO QUE FALTAVA)
+    total_turmas = db.query(Matricula).filter(Matricula.aluno_id == aluno_id, Matricula.ativa == True).count()
+    total_eventos = db.query(Inscricao).filter(Inscricao.aluno_id == aluno_id).count()
+    total_presencas = db.query(Presenca).filter(Presenca.aluno_id == aluno_id, Presenca.presente == True).count()
+    total_faltas = db.query(Presenca).filter(Presenca.aluno_id == aluno_id, Presenca.presente == False).count()
 
     return {
         "situacao_geral": situacao_geral,
         "status_mensalidade": status_mensalidade,
-        "valor_pendente": mensalidades_pendentes
+        "valor_pendente": mensalidades_pendentes,
+        # Dados novos para o gráfico
+        "total_turmas": total_turmas,
+        "total_eventos": total_eventos,
+        "total_presencas": total_presencas,
+        "total_faltas": total_faltas
     }
+
+@router.get("/{aluno_id}/historico-graduacao")
+def get_historico_graduacao(aluno_id: int, db: Session = Depends(get_db)):
+    """Retorna todo o histórico de faixas do aluno"""
+    return db.query(Graduacao).filter(Graduacao.aluno_id == aluno_id).order_by(Graduacao.data_graduacao.desc()).all()
+
+@router.get("/{aluno_id}/previa-graduacao")
+def get_previa_graduacao(aluno_id: int, db: Session = Depends(get_db)):
+    """
+    Calcula quantas aulas o aluno fez.
+    CORREÇÃO: Se for Faixa Branca, conta o histórico inteiro.
+    """
+    aluno = db.query(Aluno).filter(Aluno.id == aluno_id).first()
+    if not aluno:
+        raise HTTPException(status_code=404, detail="Aluno não encontrado")
+
+    query = db.query(func.count(Presenca.id)).filter(
+        Presenca.aluno_id == aluno_id,
+        Presenca.presente == True
+    )
+
+    # Lógica Inteligente:
+    # Se não for Faixa Branca, filtramos apenas as aulas DEPOIS da última graduação.
+    # Se for Faixa Branca, pegamos TUDO (ignora a data_ultima_graduacao que pode estar errada).
+    if aluno.faixa_atual and "branca" not in aluno.faixa_atual.lower():
+        query = query.filter(Presenca.data >= aluno.data_ultima_graduacao)
+
+    total_aulas = query.scalar() or 0
+
+    return {
+        "faixa_atual": aluno.faixa_atual,
+        "data_ultima": aluno.data_ultima_graduacao,
+        "aulas_realizadas": total_aulas
+    }
+
+@router.post("/{aluno_id}/graduar")
+def graduar_aluno(
+    aluno_id: int, 
+    nova_faixa: str = Body(..., embed=True),
+    observacao: Optional[str] = Body(None, embed=True),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(auth.get_current_active_user)
+):
+    aluno = db.query(Aluno).filter(Aluno.id == aluno_id).first()
+    if not aluno:
+        raise HTTPException(status_code=404, detail="Aluno não encontrado")
+
+    # Reutiliza a lógica da prévia para gravar o número correto de aulas no histórico
+    query = db.query(func.count(Presenca.id)).filter(
+        Presenca.aluno_id == aluno_id,
+        Presenca.presente == True
+    )
+    if aluno.faixa_atual and "branca" not in aluno.faixa_atual.lower():
+        query = query.filter(Presenca.data >= aluno.data_ultima_graduacao)
+    
+    aulas_nesta_faixa = query.scalar() or 0
+
+    # 1. Cria o registro no histórico
+    nova_graduacao = Graduacao(
+        aluno_id=aluno_id,
+        faixa=nova_faixa,
+        data_graduacao=datetime.utcnow().date(),
+        aulas_acumuladas=aulas_nesta_faixa,
+        observacao=observacao
+    )
+    db.add(nova_graduacao)
+
+    # 2. Atualiza o perfil do aluno
+    aluno.faixa_atual = nova_faixa
+    aluno.data_ultima_graduacao = datetime.utcnow().date()
+
+    db.commit()
+    return {"message": f"Aluno promovido para {nova_faixa}!", "aulas_registradas": aulas_nesta_faixa}

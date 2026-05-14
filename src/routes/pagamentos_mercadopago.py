@@ -59,7 +59,7 @@ def create_pix_payment(db: Session, item_id: int, item_type: str, payer_email: s
         }
 
         # URL do Webhook (Deve ser HTTPS público para funcionar em produção)
-        base_url = os.getenv("BACKEND_URL", "http://localhost:8000")
+        base_url = os.getenv("BACKEND_URL", "http://localhost:8005")
         # Remove a barra final se houver para evitar //api...
         base_url = base_url.rstrip('/') 
         notification_url = f"{base_url}/api/v1/pagamentos/mercadopago/webhook"

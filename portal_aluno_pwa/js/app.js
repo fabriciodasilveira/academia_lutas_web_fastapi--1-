@@ -20,6 +20,12 @@ const routes = {
     '/prof/alunos/novo': { page: '/portal/pages/prof_aluno_novo.html', handler: handleProfAlunoNovo },
     '/prof/matricula': { page: '/portal/pages/prof_matricula.html', handler: handleProfMatricula },
     '/prof/financeiro': { page: '/portal/pages/prof_financeiro.html', handler: handleProfFinanceiro },
+    '/prof/despesa': { page: '/portal/pages/prof_despesa.html', handler: handleProfDespesa },
+    '/prof/chamada': { page: '/portal/pages/prof_chamada.html', handler: handleProfChamada },
+    '/prof/conteudos': { page: '/portal/pages/prof_conteudos.html', handler: handleProfConteudos },
+    '/aluno/metodo': { page: '/portal/pages/metodo.html', handler: handleAlunoMetodo },
+    '/outros': { page: '/portal/pages/outros.html', handler: null },
+    '/admin/usuarios': { page: '/portal/pages/admin_usuarios.html',handler: handleAdminUsuarios},
 };
 
 // --- FUNÇÕES DE NAVEGAÇÃO ---
@@ -31,15 +37,34 @@ function updateActiveNav(path) {
     if (!navContainer) return; // Proteção caso a nav não exista no DOM
 
     if (role === 'aluno') {
-        // Menu do Aluno
+        // Menu do Aluno OTIMIZADO (5 Itens)
         navContainer.innerHTML = `
-            <a href="#/dashboard" class="nav__link"><i class="fas fa-user nav__icon"></i><span class="nav__text">Perfil</span></a>
-            <a href="#/payments" class="nav__link"><i class="fas fa-file-invoice-dollar nav__icon"></i><span class="nav__text">Pagamentos</span></a>
-            <a href="#/events" class="nav__link"><i class="fas fa-calendar-alt nav__icon"></i><span class="nav__text">Eventos</span></a>
-            <a href="#/carteirinha" class="nav__link"><i class="fas fa-id-card nav__icon"></i><span class="nav__text">Carteirinha</span></a>
-            <a href="#/beneficios" class="nav__link"><i class="fas fa-handshake nav__icon"></i><span class="nav__text">Benefícios</span></a>
+            <a href="#/dashboard" class="nav__link">
+                <i class="fas fa-user nav__icon"></i>
+                <span class="nav__text">Perfil</span>
+            </a>
+            
+            <a href="#/payments" class="nav__link">
+                <i class="fas fa-file-invoice-dollar nav__icon"></i>
+                <span class="nav__text">Pagar</span>
+            </a>
+            
+            <a href="#/aluno/metodo" class="nav__link">
+                <i class="fas fa-play-circle nav__icon" style="font-size: 1.4rem;"></i>
+                <span class="nav__text">Aulas</span>
+            </a>
+            
+            <a href="#/carteirinha" class="nav__link">
+                <i class="fas fa-id-card nav__icon"></i>
+                <span class="nav__text">Carteira</span>
+            </a>
+            
+            <a href="#/outros" class="nav__link">
+                <i class="fas fa-bars nav__icon"></i>
+                <span class="nav__text">Menu</span>
+            </a>
         `;
-    } else {
+    }else {
         // Menu do Professor/Staff
         navContainer.innerHTML = `
             <a href="#/prof/dashboard" class="nav__link"><i class="fas fa-home nav__icon"></i><span class="nav__text">Início</span></a>
@@ -505,15 +530,19 @@ async function handleBeneficiosPage() {
     const list = document.getElementById('partners-list');
     const mensagemWhatsapp = encodeURIComponent("Sou da Academia AZE Studio e vim pelo clube de descontos para parceiros.");
     const partners = [
-         { logo: '/portal/images/iron.png', nome: 'Centro de Treinamento Iron Gym', desconto: '25% de desconto na Mensalidade.', whatsapp: '5532985062330' },
+         { logo: '/portal/images/endocrinologia-ArthurMalhano.png', nome: 'Dr Arthur Malhano', desconto: 'Desconto de 25% nas consultas.', whatsapp: '5532984143651' },
          { logo: '/portal/images/bull.png', nome: 'Arthur Carvalho Duarte - ARQUITETURA', desconto: 'Desconto de 20% em seu projeto.', whatsapp: '5532988810989' },
          { logo: '/portal/images/alexandria.png', nome: 'Alexandria Hamburgueria', desconto: '20% de desconto em todos os Rodízios.', whatsapp: '5532933003620' },
          { logo: '/portal/images/lucasStarck.png', nome: 'Lucas Starck - Nutricionista', desconto: 'Consulta com 50% de desconto.', whatsapp: '5532998180941' },
          { logo: '/portal/images/casadoanimal.png', nome: 'Casa do Animal Porto', desconto: '25% compra de animais, 20% para Acessórios Pet', whatsapp: '5532998641939' },
          { logo: '/portal/images/mamaefazaFesta.png', nome: 'Mamãe Faz a Festa', desconto: '20% de desconto em todos serviços.', whatsapp: '5532988992094' },
+         { logo: '/portal/images/iron.png', nome: 'Centro de Treinamento Iron Gym', desconto: '25% de desconto na Mensalidade.', whatsapp: '5532985062330' },
          { logo: '/portal/images/farmaciabompreco.png', nome: 'Farmácia Bom Preço', desconto: '20% compra de medicamentos.', whatsapp: '5532988015391' },
          { logo: '/portal/images/studiosbanni.png', nome: 'Studio Sbanni', desconto: '20% de desconto em todos serviços.', whatsapp: '5532999553342' },
          { logo: '/portal/images/abrace.png', nome: 'Abrace Studio de Pilates', desconto: '10% de desconto na Mensalidade.', whatsapp: '5532988758320' },
+         { logo: '/portal/images/paulus.jpeg', nome: 'Paulus Hamburgueria.', desconto: '20% hambúrguer e cachorrão e 50% espaço kids', whatsapp: '5532988047752' },
+         { logo: '/portal/images/jujuba.jpeg', nome: 'Jujuba Festas.', desconto: '15% OFF em festas do nosso acervo e 20% OFF na papelaria personalizada', whatsapp: '5532988486130' },
+         { logo: '/portal/images/maria.png', nome: 'Maria Brasileira', desconto: 'R$15,00 de desconto nas faxinas de 8h. 20% nas limpezas tecnicas.', whatsapp: '5532920003322' },
     ];
 
     list.innerHTML = partners.map(p => `
@@ -713,6 +742,176 @@ async function handleProfMatricula() {
     };
 }
 
+async function handleProfDespesa() {
+    const form = document.getElementById('form-despesa');
+    const selectCat = document.getElementById('select-categoria');
+    const inputData = document.getElementById('data-despesa');
+
+    // Define data de hoje
+    inputData.valueAsDate = new Date();
+
+    // 1. Carregar Categorias
+    const categoriasPadrao = ["Manutenção", "Compra de equipamento", "Compra de insumo", "Outros"];
+    try {
+        selectCat.innerHTML = '<option value="" selected disabled>Carregando...</option>';
+        let categoriasApi = [];
+        try {
+            categoriasApi = await api.request('/categorias?tipo=despesa');
+        } catch (e) { console.warn("Usando categorias locais."); }
+
+        if (categoriasApi && categoriasApi.length > 0) {
+            selectCat.innerHTML = '<option value="" selected disabled>Selecione...</option>' + 
+                categoriasApi.map(c => `<option value="${c.nome}">${c.nome}</option>`).join('');
+        } else {
+            selectCat.innerHTML = categoriasPadrao.map(c => `<option value="${c}">${c}</option>`).join('');
+        }
+    } catch (e) {
+        selectCat.innerHTML = categoriasPadrao.map(c => `<option value="${c}">${c}</option>`).join('');
+    }
+
+    // 2. Envio do Formulário (CORRIGIDO)
+    form.onsubmit = async (e) => {
+        e.preventDefault();
+        const btn = form.querySelector('button');
+        const originalText = btn.innerHTML;
+        btn.disabled = true; btn.innerHTML = 'Enviando...';
+
+        const formData = new FormData(form);
+        
+        try {
+            // --- CORREÇÃO AQUI ---
+            // Usamos api.request em vez de fetch.
+            // O 4º parâmetro 'true' avisa a API que é um upload de arquivo (FormData)
+            // e ela ajusta os headers automaticamente.
+            await api.request('/financeiro/lancar-despesa', 'POST', formData, true);
+
+            ui.showAlert('Despesa e recibo salvos com sucesso!', 'success');
+            
+            // Limpeza do formulário
+            form.reset();
+            inputData.valueAsDate = new Date();
+            // Limpa o input file manualmente para garantir
+            const fileInput = document.getElementById('input-arquivo');
+            if(fileInput) fileInput.value = ""; 
+
+        } catch (err) {
+            console.error(err);
+            ui.showAlert(err.message || 'Erro ao lançar despesa.', 'danger');
+        } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    };
+}
+
+
+async function handleProfChamada() {
+    const selectTurma = document.getElementById('select-turma-chamada');
+    const inputData = document.getElementById('data-chamada');
+    const listaContainer = document.getElementById('lista-chamada');
+    const btnSalvar = document.getElementById('btn-salvar-chamada');
+
+    inputData.valueAsDate = new Date();
+
+    // 1. Carregar Turmas (URL CORRIGIDA)
+    try {
+        // Atenção ao hífen: /portal-professor
+        const turmas = await api.request('/portal-professor/turmas'); 
+        if (turmas.length > 0) {
+            selectTurma.innerHTML = '<option value="" selected disabled>Selecione a turma...</option>' + 
+                turmas.map(t => `<option value="${t.id}">${t.nome} - ${t.horario}</option>`).join('');
+        } else {
+            selectTurma.innerHTML = '<option disabled>Nenhuma turma encontrada</option>';
+        }
+    } catch (e) {
+        console.error(e);
+        ui.showAlert('Erro ao carregar turmas', 'danger');
+    }
+
+    async function carregarAlunos() {
+        const turmaId = selectTurma.value;
+        const data = inputData.value;
+        if (!turmaId) return;
+
+        listaContainer.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>';
+        btnSalvar.disabled = true;
+
+        try {
+            // URL CORRIGIDA
+            const alunos = await api.request(`/portal-professor/turmas/${turmaId}/alunos-chamada?data=${data}`);
+            
+            if (alunos.length === 0) {
+                listaContainer.innerHTML = '<div class="text-center py-4 text-muted">Nenhum aluno matriculado nesta turma.</div>';
+                return;
+            }
+
+            let html = '';
+            alunos.forEach(aluno => {
+                const checked = aluno.presente ? 'checked' : '';
+                const avatar = aluno.foto ? 
+                    `<img src="${aluno.foto}" class="rounded-circle me-3" width="40" height="40" style="object-fit:cover">` :
+                    `<div class="rounded-circle bg-light d-flex align-items-center justify-content-center me-3" style="width:40px; height:40px"><i class="fas fa-user text-secondary"></i></div>`;
+
+                html += `
+                <label class="list-group-item d-flex align-items-center justify-content-between p-3 cursor-pointer">
+                    <div class="d-flex align-items-center">
+                        ${avatar}
+                        <div>
+                            <h6 class="mb-0">${aluno.nome}</h6>
+                            <small class="text-muted">Matrícula Ativa</small>
+                        </div>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input fs-4" type="checkbox" data-aluno-id="${aluno.aluno_id}" ${checked}>
+                    </div>
+                </label>`;
+            });
+
+            listaContainer.innerHTML = html;
+            btnSalvar.disabled = false;
+
+        } catch (e) {
+            console.error(e);
+            listaContainer.innerHTML = '<div class="text-danger text-center p-3">Erro ao carregar alunos.</div>';
+        }
+    }
+
+    selectTurma.addEventListener('change', carregarAlunos);
+    inputData.addEventListener('change', carregarAlunos);
+
+    btnSalvar.onclick = async () => {
+        const checkboxes = listaContainer.querySelectorAll('input[type="checkbox"]');
+        const presencas = [];
+        checkboxes.forEach(chk => {
+            presencas.push({
+                aluno_id: parseInt(chk.dataset.alunoId),
+                presente: chk.checked
+            });
+        });
+
+        const payload = {
+            turma_id: parseInt(selectTurma.value),
+            data: inputData.value,
+            presencas: presencas
+        };
+
+        const originalText = btnSalvar.innerHTML;
+        btnSalvar.disabled = true; btnSalvar.innerHTML = 'Salvando...';
+
+        try {
+            // URL CORRIGIDA
+            await api.request('/portal-professor/chamada', 'POST', payload);
+            ui.showAlert('Chamada salva com sucesso!', 'success');
+        } catch (e) {
+            ui.showAlert('Erro ao salvar chamada.', 'danger');
+        } finally {
+            btnSalvar.innerHTML = originalText;
+            btnSalvar.disabled = false;
+        }
+    };
+}
+
+
 // --- FUNÇÕES GLOBAIS DE AÇÃO ---
 
 window.receberDinheiro = async (id, nome, valor) => {
@@ -851,3 +1050,216 @@ window.addEventListener('load', () => {
     
     router();
 });
+
+
+//FUNCOES DE VIDEO
+
+
+// ==========================================================
+// MÓDULO DE VÍDEOS E MÉTODO DE ENSINO (Adicionado Manualmente)
+// ==========================================================
+
+// Função Auxiliar: Extrai ID do YouTube
+function getYoutubeId(url) {
+    if (!url) return null;
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+}
+
+// 1. Lógica da Tela do Professor (Gestão)
+async function handleProfConteudos() {
+    const form = document.getElementById('form-novo-conteudo');
+    const lista = document.getElementById('lista-conteudos-prof');
+
+    async function carregarAulas() {
+        try {
+            const aulas = await api.request('/conteudos');
+            if(lista) lista.innerHTML = '';
+            
+            if (aulas.length === 0 && lista) {
+                lista.innerHTML = '<div class="text-center text-muted my-4">Nenhuma aula cadastrada.</div>';
+                return;
+            }
+
+            if(lista) {
+                aulas.forEach(aula => {
+                    const videoId = getYoutubeId(aula.video_url);
+                    const thumb = videoId ? `https://img.youtube.com/vi/${videoId}/default.jpg` : 'portal/images/icone.png';
+                    
+                    lista.innerHTML += `
+                        <div class="card mb-3 shadow-sm border-0">
+                            <div class="card-body d-flex align-items-center">
+                                <img src="${thumb}" class="rounded me-3" width="80" style="object-fit: cover;">
+                                <div class="flex-grow-1">
+                                    <small class="text-primary fw-bold text-uppercase">Semana ${aula.semana}</small>
+                                    <h6 class="mb-0 text-dark">${aula.titulo}</h6>
+                                    <small class="text-muted">${aula.modulo}</small>
+                                </div>
+                                <button class="btn btn-sm btn-outline-danger ms-2" onclick="deletarConteudo(${aula.id})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+        } catch (e) {
+            console.error(e);
+            if(window.ui) ui.showAlert('Erro ao carregar aulas.', 'danger');
+        }
+    }
+
+    if(form) {
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            const payload = {
+                modulo: document.getElementById('input-modulo').value,
+                semana: parseInt(document.getElementById('input-semana').value),
+                ordem: parseInt(document.getElementById('input-ordem').value),
+                titulo: document.getElementById('input-titulo').value,
+                video_url: document.getElementById('input-video').value,
+                descricao: document.getElementById('input-descricao').value
+            };
+
+            const btn = form.querySelector('button[type="submit"]');
+            const originalText = btn.innerHTML;
+            btn.disabled = true; btn.innerHTML = 'Salvando...';
+
+            try {
+                await api.request('/conteudos', 'POST', payload);
+                if(window.ui) ui.showAlert('Aula publicada!', 'success');
+                form.reset();
+                carregarAulas();
+            } catch (error) {
+                if(window.ui) ui.showAlert('Erro ao salvar.', 'danger');
+            } finally {
+                btn.disabled = false; btn.innerHTML = originalText;
+            }
+        };
+    }
+
+    // Torna a função global para ser acessível pelo onclick do HTML
+    window.deletarConteudo = async (id) => {
+        if(!confirm('Tem certeza que deseja apagar?')) return;
+        try {
+            await api.request(`/conteudos/${id}`, 'DELETE');
+            carregarAulas();
+        } catch (e) {
+            if(window.ui) ui.showAlert('Erro ao deletar.', 'danger');
+        }
+    };
+
+    carregarAulas();
+}
+
+// 2. Lógica da Tela do Aluno (Visualização)
+async function handleAlunoMetodo() {
+    const container = document.getElementById('metodo-container');
+    if(container) container.innerHTML = '<div class="text-center py-5"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
+
+    try {
+        const aulas = await api.request('/conteudos');
+        
+        if (aulas.length === 0 && container) {
+            container.innerHTML = '<div class="text-center py-5 text-muted">Nenhuma aula disponível ainda.</div>';
+            return;
+        }
+
+        const semanas = {};
+        aulas.forEach(aula => {
+            if (!semanas[aula.semana]) semanas[aula.semana] = [];
+            semanas[aula.semana].push(aula);
+        });
+
+        let html = '';
+        Object.keys(semanas).sort((a,b) => a - b).forEach(numSemana => {
+            const listaAulas = semanas[numSemana];
+            
+            html += `
+                <div class="mb-4">
+                    <h6 class="text-uppercase text-secondary fw-bold px-2 mb-2 border-bottom pb-1">
+                        <i class="fas fa-calendar-week me-2"></i>Semana ${numSemana}
+                    </h6>
+                    <div class="list-group shadow-sm rounded-3 border-0">
+            `;
+
+            listaAulas.forEach(aula => {
+                const videoId = getYoutubeId(aula.video_url);
+                const collapseId = `video-${aula.id}`;
+                
+                html += `
+                    <div class="list-group-item border-0 p-0 bg-white mb-1">
+                        <div class="d-flex align-items-center p-3 cursor-pointer" 
+                             data-bs-toggle="collapse" data-bs-target="#${collapseId}">
+                            <div class="bg-primary bg-opacity-10 rounded-circle p-2 text-primary me-3">
+                                <i class="fas fa-play fa-sm"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-0 fw-bold">${aula.titulo}</h6>
+                                <small class="text-muted" style="font-size: 0.8rem;">${aula.modulo}</small>
+                            </div>
+                            <i class="fas fa-chevron-down text-muted small"></i>
+                        </div>
+                        <div class="collapse bg-light" id="${collapseId}">
+                            <div class="p-3">
+                                <div class="ratio ratio-16x9 rounded overflow-hidden shadow-sm">
+                                    <iframe src="https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1" 
+                                            title="${aula.titulo}" allowfullscreen></iframe>
+                                </div>
+                                <p class="mt-2 mb-0 text-secondary small">${aula.descricao || ''}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            html += `</div></div>`;
+        });
+        
+        if(container) container.innerHTML = html;
+
+    } catch (e) {
+        console.error(e);
+        if(container) container.innerHTML = '<div class="text-danger text-center">Erro ao carregar método.</div>';
+    }
+}
+
+
+async function carregarUsuariosAdmin() {
+    const listagem = document.getElementById('usersList');
+    try {
+        const usuarios = await apiFetch('/usuarios/'); // Rota que retorna todos os usuários
+        listagem.innerHTML = usuarios.map(user => `
+            <div class="user-card">
+                <div class="user-info">
+                    <h3>${user.nome || 'Sem nome'}</h3>
+                    <p><strong>User:</strong> ${user.username}</p>
+                    <p><strong>Acesso:</strong> ${user.ultimo_acesso ? new Date(user.ultimo_acesso).toLocaleString() : 'Nunca'}</p>
+                </div>
+                <button class="btn-reset" onclick="confirmarReset(${user.id}, '${user.nome}')">
+                    <i class="fas fa-key"></i> Reset
+                </button>
+            </div>
+        `).join('');
+    } catch (error) {
+        listagem.innerHTML = '<p>Erro ao carregar usuários.</p>';
+    }
+}
+
+async function confirmarReset(id, nome) {
+    if (confirm(`Deseja resetar a senha de ${nome} para "123456"?`)) {
+        try {
+            await apiFetch(`/usuarios/${id}/reset-password`, { method: 'PUT' });
+            alert('Senha resetada com sucesso!');
+        } catch (error) {
+            alert('Erro ao resetar senha.');
+        }
+    }
+}
+
+
+async function handleAdminUsuarios() {
+    console.log("Carregando tela de gestão de usuários...");
+    // Chama a função que criamos anteriormente para buscar os dados da API
+    await carregarUsuariosAdmin(); 
+}

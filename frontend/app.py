@@ -14,8 +14,8 @@ import io # Para Exportação
 app = Flask(__name__)
 app.secret_key = 'dev-secret-key-change-in-production'
 
-# API_BASE_URL = 'http://localhost:8000'
-API_BASE_URL = os.environ.get('API_BASE_URL', 'http://localhost:8000')
+# API_BASE_URL = 'http://localhost:8005'
+API_BASE_URL = os.environ.get('API_BASE_URL', 'http://localhost:8005')
 
 
 logging.basicConfig(
@@ -144,6 +144,12 @@ def index():
         "datasets": {"alunos": [], "eventos": []}
     }
     
+    # --- NOVO DICIONÁRIO PARA FREQUÊNCIA ---
+    frequencia_data = {
+        "alunos_em_risco": [],
+        "top_assiduos": []
+    }
+    
     try:
         # Busca o total de ALUNOS ATIVOS
         alunos_ativos_resp = api_request("/alunos?status=ativo&limit=1")
@@ -172,11 +178,17 @@ def index():
         chart_response = api_request("/dashboard/atividades-recentes")
         if chart_response and chart_response.status_code == 200:
             chart_data = chart_response.json()
+            
+        # --- NOVA CHAMADA PARA O RELATÓRIO DE FREQUÊNCIA ---
+        freq_resp = api_request("/dashboard/relatorio-frequencia")
+        if freq_resp and freq_resp.status_code == 200:
+            frequencia_data = freq_resp.json()
+        # ---------------------------------------------------
                 
     except Exception as e:
         app.logger.error(f"Erro ao buscar estatísticas do dashboard: {e}")
     
-    return render_template('index.html', stats=stats, chart_data=chart_data)
+    return render_template('index.html', stats=stats, chart_data=chart_data, frequencia=frequencia_data)
 
 @app.route('/alunos')
 @login_required
@@ -958,10 +970,16 @@ def financeiro_transacoes():
     return render_template("financeiro/transacoes.html", transacoes=transacoes, stats=stats, categorias=categorias)
 
 
+# Em frontend/app.py
+
 @app.route("/financeiro/salvar_transacao", methods=["POST"])
 @login_required
 def financeiro_salvar_transacao():
     try:
+        # Captura os dados do formulário
+        beneficiario = request.form.get("beneficiario_id")
+        abatido = request.form.get("valor_abatido_caixa")
+        
         transacao_data = {
             "id": request.form.get("id"),
             "tipo": request.form.get("tipo"),
@@ -970,10 +988,15 @@ def financeiro_salvar_transacao():
             "valor": float(request.form.get("valor").replace(',', '.')),
             "status": request.form.get("status"),
             "observacoes": request.form.get("observacoes"),
-            "data": request.form.get("data")
+            "data": request.form.get("data"),
+            
+            # --- NOVOS CAMPOS DO CAIXA VIRTUAL ---
+            "beneficiario_id": int(beneficiario) if beneficiario else None,
+            "valor_abatido_caixa": float(abatido) if abatido else 0.0
         }
         
-        transacao_data = {k: v for k, v in transacao_data.items() if v}
+        # Remove chaves com valor None (exceto valor_abatido_caixa que pode ser 0)
+        transacao_data = {k: v for k, v in transacao_data.items() if v is not None}
 
         transacao_id = request.form.get("id")
         if transacao_id:
@@ -1001,6 +1024,30 @@ def financeiro_salvar_transacao():
     
     return redirect(url_for("financeiro_transacoes"))
 
+
+@app.route("/financeiro/exportar")
+@login_required
+def financeiro_exportar():
+    """
+    Rota no Frontend que serve como ponte para baixar o Excel gerado pelo Backend.
+    """
+    # Chama a rota do Backend que criamos anteriormente
+    response = api_request("/financeiro/exportar-excel")
+    
+    if response and response.status_code == 200:
+        # Repassa o arquivo recebido do Backend para o navegador do usuário
+        return Response(
+            response.content,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            headers={"Content-Disposition": "attachment;filename=historico_financeiro.xlsx"}
+        )
+    else:
+        error_msg = "Erro ao baixar arquivo."
+        if response:
+            try: error_msg = response.json().get('detail', error_msg)
+            except: pass
+        flash(error_msg, "error")
+        return redirect(url_for('financeiro_transacoes'))
 
 @app.route("/financeiro/deletar_transacao/<int:id>", methods=["POST"])
 @login_required
@@ -1735,6 +1782,35 @@ def portal_aluno_edit():
     
     return redirect(url_for('portal_aluno_dashboard'))
 
+
+@app.route("/alunos/<int:id>/historico-graduacao")
+@login_required
+def ajax_historico_graduacao(id):
+    # O Flask chama o Backend aqui
+    response = api_request(f"/alunos/{id}/historico-graduacao")
+    if response and response.status_code == 200:
+        return jsonify(response.json())
+    return jsonify([]), 200 # Retorna lista vazia em caso de erro
+
+@app.route("/alunos/<int:id>/previa-graduacao")
+@login_required
+def ajax_previa_graduacao(id):
+    response = api_request(f"/alunos/{id}/previa-graduacao")
+    if response and response.status_code == 200:
+        return jsonify(response.json())
+    return jsonify({"error": "Erro ao buscar prévia"}), 404
+
+@app.route("/alunos/<int:id>/graduar", methods=["POST"])
+@login_required
+def ajax_graduar_aluno(id):
+    data = request.json # Recebe o JSON do Javascript
+    # Repassa para o Backend
+    response = api_request(f"/alunos/{id}/graduar", method="POST", json=data)
+    
+    if response and response.status_code == 200:
+        return jsonify(response.json())
+    else:
+        return jsonify({"error": "Erro ao graduar"}), 400
 
 if __name__ == '__main__':
     print("Iniciando aplicação Flask de depuração...")

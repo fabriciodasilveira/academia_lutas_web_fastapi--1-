@@ -1,7 +1,7 @@
 // JavaScript customizado para Academia de Lutas
 
 // Configuração da API
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = 'http://localhost:8005';
 
 // Inicialização quando o DOM estiver carregado
 document.addEventListener('DOMContentLoaded', function() {

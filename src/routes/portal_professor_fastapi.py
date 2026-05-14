@@ -13,6 +13,10 @@ from src.models.aluno import Aluno
 from src.models.usuario import Usuario
 from src.schemas.aluno import AlunoCreate
 from src.routes.alunos_fastapi import create_aluno as core_create_aluno # Reutiliza lógica core
+from src.models.presenca import Presenca # <--- Novo Import
+from src.models.matricula import Matricula # <--- Novo Import
+from src.models.turma import Turma # <--- Novo Import
+from datetime import date # <--- Novo Import
 
 router = APIRouter(
     prefix="/api/v1/portal-professor",
@@ -84,3 +88,89 @@ def receber_mensalidade_dinheiro(
     db.commit()
     
     return {"message": "Pagamento recebido com sucesso!", "valor": mensalidade.valor}
+
+
+@router.get("/turmas/{turma_id}/alunos-chamada")
+def get_alunos_para_chamada(turma_id: int, data: str = None, db: Session = Depends(get_db)):
+    data_chamada = datetime.utcnow().date()
+    if data:
+        try: data_chamada = datetime.strptime(data, '%Y-%m-%d').date()
+        except: pass
+
+    matriculas = db.query(Matricula).filter(
+        Matricula.turma_id == turma_id,
+        Matricula.ativa == True
+    ).all()
+
+    presencas_hoje = db.query(Presenca).filter(
+        Presenca.turma_id == turma_id,
+        Presenca.data == data_chamada
+    ).all()
+    map_presenca = {p.aluno_id: p.presente for p in presencas_hoje}
+
+    lista_alunos = []
+    for m in matriculas:
+        status = map_presenca.get(m.aluno_id, False) 
+        lista_alunos.append({
+            "aluno_id": m.aluno_id,
+            "nome": m.aluno.nome,
+            "foto": m.aluno.foto, 
+            "presente": status
+        })
+    return lista_alunos
+
+@router.post("/chamada")
+def salvar_chamada(
+    dados: dict, # Espera { "turma_id": 1, "data": "2023-10-27", "presencas": [ { "aluno_id": 1, "presente": true } ] }
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(auth.get_current_active_user)
+):
+    turma_id = dados.get("turma_id")
+    data_str = dados.get("data")
+    lista_presencas = dados.get("presencas", [])
+
+    try:
+        data_chamada = datetime.strptime(data_str, '%Y-%m-%d').date()
+    except:
+        data_chamada = datetime.utcnow().date()
+
+    # Vamos usar a estratégia de "Apagar e Recriar" ou "Atualizar" para o dia.
+    # Mais simples: Verifica um por um.
+    
+    for item in lista_presencas:
+        aluno_id = item.get("aluno_id")
+        veio = item.get("presente")
+
+        # Busca se já existe registro
+        registro = db.query(Presenca).filter(
+            Presenca.turma_id == turma_id,
+            Presenca.aluno_id == aluno_id,
+            Presenca.data == data_chamada
+        ).first()
+
+        if registro:
+            registro.presente = veio
+        else:
+            novo_registro = Presenca(
+                turma_id=turma_id,
+                aluno_id=aluno_id,
+                data=data_chamada,
+                presente=veio
+            )
+            db.add(novo_registro)
+    
+    db.commit()
+    return {"status": "sucesso", "mensagem": "Chamada salva com sucesso!"}
+
+
+@router.get("/turmas")
+def list_turmas_professor(
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_staff)
+):
+    """
+    Lista todas as turmas ativas para preencher o dropdown da chamada.
+    """
+    # Importante: certifique-se que 'Turma' está importado no topo do arquivo
+    return db.query(Turma).filter(Turma.ativa == True).order_by(Turma.nome).all()
+# ------------------------------------

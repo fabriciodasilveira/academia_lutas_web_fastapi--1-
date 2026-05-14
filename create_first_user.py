@@ -18,6 +18,7 @@ from src.models.financeiro import Financeiro
 
 def create_first_user():
     db = SessionLocal()
+    
     try:
         # Verifica se o usuário já existe (agora buscando por username)
         user = db.query(Usuario).filter(Usuario.username == "admin").first()

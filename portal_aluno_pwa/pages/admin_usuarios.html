@@ -1,0 +1,23 @@
+<div class="header-pwa">
+    <button onclick="window.location.hash = '#outros'" class="btn-back"><i class="fas fa-arrow-left"></i></button>
+    <h1>Gestão de Usuários</h1>
+</div>
+
+<div class="content-pwa">
+    <div class="search-container">
+        <input type="text" id="searchUser" placeholder="Buscar por nome ou usuário..." onkeyup="filterUsers()">
+    </div>
+
+    <div id="usersList" class="list-container">
+        <div class="loading">Carregando usuários...</div>
+    </div>
+</div>
+
+<style>
+    .user-card { background: white; padding: 15px; border-radius: 10px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
+    .user-info h3 { margin: 0; font-size: 16px; color: #333; }
+    .user-info p { margin: 2px 0; font-size: 12px; color: #666; }
+    .btn-reset { background: #ffc107; color: #000; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; }
+    .search-container { margin-bottom: 15px; }
+    .search-container input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd; }
+</style>
