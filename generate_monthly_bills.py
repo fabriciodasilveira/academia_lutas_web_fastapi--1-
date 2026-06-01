@@ -23,6 +23,7 @@ from src.models.produto import Produto
 from src.models.professor import Professor
 from src.models.turma import Turma
 from src.models.usuario import Usuario
+from src.models.graduacao import Graduacao
 # ------------------------------------------------------
 
 # Configuração básica de logging
